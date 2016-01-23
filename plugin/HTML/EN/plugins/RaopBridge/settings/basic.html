@@ -1,0 +1,145 @@
+[% PROCESS settings/header.html %]
+
+	[% YESNOBOX = [['',''], ['yes','1'], ['no','0']] %]
+
+		
+	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_AUTORUN" desc="PLUGIN_RAOPBRIDGE_AUTORUN_DESC" %]
+		<input name="autorun" type="checkbox" [% IF autorun %] checked [% END %]> [% "PLUGIN_RAOPBRIDGE_RUNNING_$running" | string %] [% IF binary %] ([% binary %]) [% END %]
+		&nbsp&nbsp<b><a href="[% webroot %]RAOPBRIDGE-guide.htm" target="user guide">[% "PLUGIN_RAOPBRIDGE_USERGUIDELINK" | string %]</a></b>
+		[%IF running %] <b><font color="red">&nbsp&nbsp[% "PLUGIN_RAOPBRIDGE_WARNING" | string %]</font></b> [% END %]
+	[% END %]
+	
+	[% IF binaries.size > 1 %]
+		[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_BINARIES" desc="PLUGIN_RAOPBRIDGE_BINARIES_DESC" %]
+			<select class="stdedit" name="bin" id="bin">
+			[% FOREACH entry IN binaries %]
+				<option [% IF entry == bin %]selected[% found = 1 %][% END %] value="[% entry %]">[% entry %]</option>
+			[% END %]
+			[% IF not found %]
+				<option selected value="">[% "PLUGIN_RAOPBRIDGE_BINARIES" | string %]</option>
+			[% END %]
+			</select>
+		[% END %]
+	[% END %]
+		
+	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_OPTIONS" desc="PLUGIN_RAOPBRIDGE_OPTIONS_DESC" %]
+		<input type="text" class="stdedit" name="opts" id="opts" value="[% opts %]" size="100">
+	[% END %]
+	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_DEBUG" desc="PLUGIN_RAOPBRIDGE_DEBUG_DESC" %]
+		<select class="stdedit" name="debugs" id="debugs">
+		[% FOREACH entry IN [ '', 'all', 'output', 'stream', 'slimproto', 'decode', 'slimmain', 'raop', 'util', 'web', 'main'] %]
+			<option [% IF entry == debugs %]selected[% END %] value="[% entry %]">[% "PLUGIN_RAOPBRIDGE_$entry" | string %]</option>
+		[% END %]
+		</select>
+	[% END %]
+	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_LOGGING" desc="PLUGIN_RAOPBRIDGE_LOGGING_DESC" %]
+		<input name="logging" type="checkbox" [% IF logging %] checked [% END %]>&nbsp[% "PLUGIN_RAOPBRIDGE_LOGENABLE" | string %]
+		&nbsp<a href="[% webroot %]raopbridge-log.log" target="log">[% "PLUGIN_RAOPBRIDGE_LOGLINK" | string %]</a>
+		&nbsp[% "PLUGIN_RAOPBRIDGE_LOGSIZE" | string %]&nbsp<input type="text" class="stdedit" name="log_limit" id="log_limit" value="[% log_limit %]" size="2"> 
+		&nbsp<input name="eraselog" type="checkbox" [% IF eraselog %] checked [% END %]>&nbsp[% "PLUGIN_RAOPBRIDGE_ERASELOG" | string %]
+		&nbsp<input name="cleanlog" type="submit" value=[% "PLUGIN_RAOPBRIDGE_CLEANLOG" | string %]> 
+	[% END %]
+	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_CONFIG" desc="PLUGIN_RAOPBRIDGE_CONFIG_DESC" %]
+		[% configpath %]
+		<input type="text" class="stdedit" name="configfile" id="configfile" value="[% configfile %]" size="20">
+		<a href="[% webroot %]raopbridge-config.xml" target="config">[% "PLUGIN_RAOPBRIDGE_CONFLINK" | string %]</a>
+		&nbsp&nbsp<input name="autosave" type="checkbox" [% IF autosave %] checked [% END %]>[% "PLUGIN_RAOPBRIDGE_AUTOSAVECONFIG" | string %]
+		[% IF binary %]
+			&nbsp<input name="genconfig" type="submit" onclick="alert('generating configuration will take ~30 seconds')" value=[% "PLUGIN_RAOPBRIDGE_GENCONFIG" | string %]>
+		[% END %]	
+		&nbsp<input name="delconfig" type="submit" value=[% "PLUGIN_RAOPBRIDGE_DELCONFIG" | string %]>
+	[% END %]
+	
+	[% IF !xmlparams %]
+		[% WRAPPER settingSection %]
+			<b><font color=red>[% "PLUGIN_RAOPBRIDGE_NOCONFIG" | string %]</font></b>
+		[% END %]	
+	[% ELSE %]
+	
+	<input hidden type="text" class="stdedit" name="xmlparams" id="xmlparams" value="1" size="5">
+	<input hidden type="text" class="stdedit" name="prevseldevice" id="prevseldevice" value="[% prevseldevice %]" size="5">
+	
+	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_SCAN" desc="PLUGIN_RAOPBRIDGE_SCAN_DESC" %]
+		[% "PLUGIN_RAOPBRIDGE_SCANINTERVAL" | string %]</th>&nbsp<td><input type="text" class="stdedit" name="scan_interval" id="scan_interval" value="[% scan_interval %]" size="2"> (s)
+		[% "PLUGIN_RAOPBRIDGE_SCANTIMEOUT" | string %]&nbsp<input type="text" class="stdedit" name="scan_timeout" id="scan_timeout" value="[% scan_timeout %]" size="2"> (s)
+	[% END %]
+	
+	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_INTERFACE" desc="PLUGIN_RAOPBRIDGE_INTERFACE_DESC" %]
+		<input type="text" class="stdedit" name="interface" id="interface" value="[% interface %]" size="20">
+	[% END %]
+	
+	<hr>
+
+	[% WRAPPER settingSection %]
+		<select class="stdedit" name="seldevice" id="seldevice" onchange="form.submit()">
+		[% FOREACH entry IN devices %]
+			<option [% IF entry.udn == seldevice %]selected[% END %] value="[% entry.udn %]">[% entry.name %]</option>
+		[% END %]
+		</select>
+		[% IF seldevice == '.common.' %]<b><font color=red>&nbsp&nbsp&nbsp[% "PLUGIN_RAOPBRIDGE_COMMONPARAMINFO" | string %]</font></b>
+		[% ELSE %]<b><font color=red>&nbsp&nbsp&nbsp[% "PLUGIN_RAOPBRIDGE_PARAMINFO" | string %]</font></b>[% END %]
+	[% END %]
+	
+	[% IF seldevice != '.common.' %]
+		[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_PLAYERINFO" desc="PLUGIN_RAOPBRIDGE_PLAYERINFO_DESC" %]
+			<th>[% "PLUGIN_RAOPBRIDGE_PLAYERNAME" | string %]</th>
+			<td><input type="text" class="stdedit" name="name" id="name" value="[% name %]" size="25"></td>
+			<th>[% "PLUGIN_RAOPBRIDGE_PLAYERMAC" | string %]</th>
+			<td><input type="text" class="stdedit" name="mac" id="mac" value="[% mac %]" size="20"></td>
+			<td><input name="deldevice" type="checkbox"></td>
+			<th>[% "PLUGIN_RAOPBRIDGE_DELETEPLAYER" | string %]</th>
+		[% END %]
+	[% END %]		
+
+	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_AUDIOPARAM" desc="PLUGIN_RAOPBRIDGE_AUDIOPARAM_DESC" %]
+		[% "PLUGIN_RAOPBRIDGE_CODECS" | string %]&nbsp<input type="text" class="stdedit" name="codecs" id="codecs" value="[% codecs %]" size="10">
+		&nbsp&nbsp[% "PLUGIN_RAOPBRIDGE_PLAYERVOLUME" | string %]
+		<input type="text" class="stdedit" name="player_volume" id="player_volume" value="[% player_volume %]" size="3">
+	[% END %]
+	
+	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_MDNSMGMT" desc="PLUGIN_RAOPBRIDGE_MDNSMGMT_DESC" %]
+		[% "PLUGIN_RAOPBRIDGE_ENABLEDEFS" | string %]
+		<select class="stdedit" name="enabled" id="enabled">
+		[% FOREACH entry IN YESNOBOX %] 
+			<option [% IF entry.1 == enabled %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+		[% END %]
+		</select>
+		[% "PLUGIN_RAOPBRIDGE_REMOVECOUNT_1" | string %]<input type="text" class="stdedit" name="remove_count" id="remove_count" value="[% remove_count %]" size="2">&nbsp[% "PLUGIN_RAOPBRIDGE_REMOVECOUNT_2" | string %]
+	[% END %]
+	
+	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_PLAYEROPTIONS" desc="PLUGIN_RAOPBRIDGE_PLAYEROPTIONS_DESC" %]
+		[% "PLUGIN_RAOPBRIDGE_READAHEAD" | string %]
+		<input type="text" class="stdedit" name="read_ahead" id="read_ahead" value="[% read_ahead %]" size="3">
+		&nbsp&nbsp[% "PLUGIN_RAOPBRIDGE_IDLETIMEOUT" | string %]
+		<input type="text" class="stdedit" name="idle_timeout" id="idle_timeout" value="[% idle_timeout %]" size="2">
+		[% "PLUGIN_RAOPBRIDGE_IDLETIMEOUT_2" | string %]
+	[% END %]
+	
+	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_SENDMETADATA" desc="PLUGIN_RAOPBRIDGE_SENDMETADATA_DESC" %]
+		<select class="stdedit" name="send_metadata" id="send_metadata">
+		[% FOREACH entry IN YESNOBOX %] 
+			<option [% IF entry.1 == send_metadata %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+		[% END %]
+		</select>
+		&nbsp&nbsp[% "PLUGIN_RAOPBRIDGE_SEND_COVERART" | string %]&nbsp
+		<select class="stdedit" name="send_coverart" id="send_coverart">
+		[% FOREACH entry IN YESNOBOX %] 
+			<option [% IF entry.1 == send_coverart %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+		[% END %]
+		</select>
+	[% END %]
+	
+	<hr>
+	<b>[% "PLUGIN_RAOPBRIDGE_PLAYERLIST" | string %]</b><br>
+	<br><table>
+	[% FOREACH entry IN devices %]
+		[% IF entry.udn != '.common.' %]
+			<tr><td><input name="enabled.[% entry.udn %]" type="checkbox" value="1" [% IF entry.enabled %] checked [% END %]></td>
+			<th>[% entry.name %]<th>[% entry.mac %]</th><th>&nbsp[% entry.udn %]</th></tr>
+		[% END %]
+	[% END %]
+	</table>
+	
+	[% END %]
+
+[% PROCESS settings/footer.html %]
