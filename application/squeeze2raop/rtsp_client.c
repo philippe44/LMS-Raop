@@ -61,6 +61,7 @@ struct rtspcl_s *rtspcl_create(char *useragent)
 	rtspcld = malloc(sizeof(rtspcl_t));
 	memset(rtspcld, 0, sizeof(rtspcl_t));
 	rtspcld->useragent = useragent;
+	rtspcld->fd = -1;
 	return rtspcld;
 }
 

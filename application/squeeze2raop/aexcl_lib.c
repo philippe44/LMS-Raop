@@ -40,7 +40,7 @@ char *_aprintf(char *fmt, ...)
 	ret = malloc(len + 1);
 	if (ret) vsprintf(ret, fmt, args);
 
-	va_end(fmt);
+	va_end(args);
 
 	return ret;
 }

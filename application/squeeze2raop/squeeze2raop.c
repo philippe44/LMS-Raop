@@ -248,8 +248,9 @@ void 		DelRaopDevice(struct sMR *Device);
 			LOG_INFO("[%p]: codec:%c, ch:%d, s:%d, r:%d", device, p->codec,
 										p->channels, p->sample_size, p->sample_rate);
 
-			 // FIXME: will have to change if at some point other codecs than PCM are supported
-			if (p->sample_size != atoi(device->RaopCap.SampleSize)) rc = false;
+			// FIXME: will have to change if at some point other codecs than PCM are supported
+			// if (p->sample_size != atoi(device->RaopCap.SampleSize)) rc = false;
+			if (p->sample_size != 16 && p->sample_size != 24) rc = false;
 			if (p->sample_rate != atoi(device->RaopCap.SampleRate)) rc = false;
 			if (p->codec == 'p' && !strchr(device->RaopCap.Codecs, '0') && !strchr(device->RaopCap.Codecs, '1')) rc = false;
 			if (p->codec == 'l' && !strchr(device->RaopCap.Codecs, '1')) rc = false;

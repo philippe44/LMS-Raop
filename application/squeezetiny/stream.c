@@ -89,6 +89,15 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 
 		LOCK_S;
 
+		/*
+		It is required to use min with buf_space as it is the full space - 1,
+		otherwise, a write to full would be authorized and the write pointer
+		would wrap to the read pointer, making impossible to know if the buffer
+		is full or empty. This as the consequence, though, that the buffer can
+		never be totally full and can only wrap once the read pointer has moved
+		so it is impossible to count on having a proper multiply of any number
+		of bytes in the buffer
+		*/
 		space = min(_buf_space(ctx->streambuf), _buf_cont_write(ctx->streambuf));
 
 		if (ctx->fd < 0 || !space || ctx->stream.state <= STREAMING_WAIT) {
@@ -298,7 +307,7 @@ void stream_thread_init(unsigned streambuf_size, struct thread_ctx_s *ctx) {
 
 	ctx->streambuf = &ctx->__s_buf;
 
-	buf_init(ctx->streambuf, streambuf_size);
+	buf_init(ctx->streambuf, ((streambuf_size / (BYTES_PER_FRAME * 3)) * BYTES_PER_FRAME * 3));
 	if (ctx->streambuf->buf == NULL) {
 		LOG_ERROR("[%p] unable to malloc buffer", ctx);
 		exit(0);

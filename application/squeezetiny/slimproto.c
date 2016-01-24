@@ -317,8 +317,14 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 				break;
 			}
 
+			format.sample_size = (strm->pcm_sample_size != '?') ? pcm_sample_size[strm->pcm_sample_size - '0'] : 0xff;
+			format.sample_rate = (strm->pcm_sample_rate != '?') ? pcm_sample_rate[strm->pcm_sample_rate - '0'] : 0xff;
+			format.channels = (strm->pcm_channels != '?') ? pcm_channels[strm->pcm_channels - '1'] : 0xff;
+			format.endianness = (strm->pcm_endianness != '?') ? strm->pcm_channels - '0' : 0xff;
+			format.codec = strm->format;
+
 			if (strm->format != '?') {
-				codec_open(strm->format, strm->pcm_sample_size, strm->pcm_sample_rate, strm->pcm_channels, strm->pcm_endianness, ctx);
+				codec_open(format.codec, format.sample_size, format.sample_rate, format.channels, format.endianness, ctx);
 			} else if (ctx->autostart >= 2) {
 				// extension to slimproto to allow server to detect codec from response header and send back in codc message
 				LOG_WARN("[%p] streaming unknown codec", ctx);
@@ -327,10 +333,6 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 				break;
 			}
 
-			format.sample_size = (strm->pcm_sample_size != '?') ? pcm_sample_size[strm->pcm_sample_size - '0'] : 0xff;
-			format.sample_rate = (strm->pcm_sample_rate != '?') ? pcm_sample_rate[strm->pcm_sample_rate - '0'] : 0xff;
-			format.channels = (strm->pcm_channels != '?') ? pcm_channels[strm->pcm_channels - '1'] : 0xff;
-			format.codec = strm->format;
 			ctx_callback(ctx, SQ_CONNECT, NULL, &format);
 
 			stream_sock(ip, port, header, header_len, strm->threshold * 1024, ctx->autostart >= 2, ctx);
@@ -383,9 +385,17 @@ static void process_cont(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 /*---------------------------------------------------------------------------*/
 static void process_codc(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	struct codc_packet *codc = (struct codc_packet *)pkt;
+	sq_format_t	format;
+
+	format.sample_size = (codc->pcm_sample_size != '?') ? pcm_sample_size[codc->pcm_sample_size - '0'] : 0xff;
+	format.sample_rate = (codc->pcm_sample_rate != '?') ? pcm_sample_rate[codc->pcm_sample_rate - '0'] : 0xff;
+	format.channels = (codc->pcm_channels != '?') ? pcm_channels[codc->pcm_channels - '1'] : 0xff;
+	format.endianness = (codc->pcm_endianness != '?') ? codc->pcm_channels - '0' : 0xff;
+	format.codec = codc->format;
+
+	codec_open(format.codec, format.sample_size, format.sample_rate, format.channels, format.endianness, ctx);
 
 	LOG_DEBUG("[%p] codc: %c", ctx, codc->format);
-	codec_open(codc->format, codc->pcm_sample_size, codc->pcm_sample_rate, codc->pcm_channels, codc->pcm_endianness, ctx);
 }
 
 /*---------------------------------------------------------------------------*/

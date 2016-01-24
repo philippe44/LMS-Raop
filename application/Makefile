@@ -1,7 +1,9 @@
 # Cross compile support - create a Makefile which defines these three variables and then includes this Makefile...
 #CC = arm-linux-gnueabi-gcc
 CFLAGS  ?= -Wall -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES)
-LDFLAGS ?= -lpthread -lssl -lcrypto -ldl -lm -lrt -L. 
+#CFLAGS  ?= -pg -Wall -fPIC -ggdb $(OPTS) $(INCLUDE) $(DEFINES)
+LDFLAGS ?= -pg -lpthread -lssl -lcrypto -ldl -lm -lrt -L. 
+#LDFLAGS ?= -lpthread -lssl -lcrypto -ldl -lm -lrt -L. 
 # for LD debug -s
 EXECUTABLE ?= squeeze2raop-x86
 EXECUTABLE_STATIC ?= squeeze2raop-x86-static

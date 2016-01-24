@@ -60,6 +60,15 @@ static void *decode_thread(struct thread_ctx_s *ctx) {
 		LOCK_S;LOCK_O;
 		bytes = _buf_used(ctx->streambuf);
 		space = min(_buf_cont_read(ctx->streambuf), _buf_cont_write(ctx->outputbuf));
+		/*
+		It is required to use min with buf_space as it is the full space - 1,
+		otherwise, a write to full would be authorized and the write pointer
+		would wrap to the read pointer, making impossible to know if the buffer
+		is full or empty. This as the consequence, though, that the buffer can
+		never be totally full and can only wrap once the read pointer has moved
+		so it is impossible to count on having a proper multiply of any number
+		of bytes in the buffer
+		*/
 		space = min(space, _buf_space(ctx->outputbuf));
 		toend = (ctx->stream.state <= DISCONNECT);
 		UNLOCK_S;UNLOCK_O;
@@ -78,11 +87,65 @@ static void *decode_thread(struct thread_ctx_s *ctx) {
 			}
 
 			LOCK_S;LOCK_O;
-			memcpy(ctx->outputbuf->writep, ctx->streambuf->readp, space);
-			_buf_inc_readp(ctx->streambuf, space);
-			_buf_inc_writep(ctx->outputbuf, space);
-			UNLOCK_S;UNLOCK_O;
+			if (ctx->decode.sample_size == 16 && ctx->decode.channels == 2) {
+				memcpy(ctx->outputbuf->writep, ctx->streambuf->readp, space);
+				_buf_inc_readp(ctx->streambuf, space);
+				_buf_inc_writep(ctx->outputbuf, space);
+			}
+			
+			/*
+			Single channel, space is not a multiple of 2 in streambuf, but it 
+			must be in output buf, so we might not be complete because of output
+			but next turn will take care of that as we'll move back to the 
+			beginning of streambuf
+			*/
+			if (ctx->decode.sample_size == 16 && ctx->decode.channels == 1) {
+				int i, count = space / 2;
+				u8_t *src = ctx->streambuf->readp;
+				u8_t *dst = ctx->outputbuf->writep;
 
+				i = count;
+				while (i--) {
+					*dst++ = *src;
+					*dst++ = *src++;
+				}
+
+				_buf_inc_readp(ctx->streambuf, count);
+				_buf_inc_writep(ctx->outputbuf, count * 2);
+			}
+
+			/* 
+			24 bits - space is not a multiple of 3 in output, but it must be in
+			streambuf, so if we are not complete because of output, next turn 
+			will finish the job as we'll move back to the begining of output
+			*/
+			if (ctx->decode.sample_size == 24) {
+				int i, count = space / 3;
+				u8_t buf[3];
+				u8_t *src;
+				u8_t *dst = ctx->outputbuf->writep;
+
+				// workaround the buffer wrap in case space = 1 or 2
+				if (!count && space && _buf_used(ctx->streambuf) >= 3 && _buf_cont_write(ctx->outputbuf) > 2) {
+					memcpy(buf, ctx->streambuf->readp, space);					
+					memcpy(buf + space, ctx->streambuf->buf, 3 - space);					
+					src = buf;
+					count = 1;
+				}
+				else src = ctx->streambuf->readp;
+
+				i = count;
+				while (i--) {
+					src++;
+					*dst++ = *src++;
+					*dst++ = *src++;
+				}
+
+				_buf_inc_readp(ctx->streambuf, count * 3);
+				_buf_inc_writep(ctx->outputbuf, count * 2);
+			}
+
+			UNLOCK_S;UNLOCK_O;
 
 			if (toend) {
 
@@ -282,7 +345,7 @@ unsigned decode_newstream(unsigned sample_rate, unsigned supported_rates[], stru
 }
 
 /*---------------------------------------------------------------------------*/
-void codec_open(u8_t format, u8_t sample_size, u8_t sample_rate, u8_t channels, u8_t endianness, struct thread_ctx_s *ctx) {
+void codec_open(u8_t format, u8_t sample_size, u32_t sample_rate, u8_t channels, u8_t endianness, struct thread_ctx_s *ctx) {
 #ifndef NO_CODEC
 	int i;
 #endif
@@ -293,6 +356,10 @@ void codec_open(u8_t format, u8_t sample_size, u8_t sample_rate, u8_t channels, 
 
 	ctx->decode.new_stream = true;
 	ctx->decode.state = DECODE_STOPPED;
+	ctx->decode.sample_rate = sample_rate;
+	ctx->decode.sample_size = sample_size;
+	ctx->decode.channels = channels;
+	ctx->decode.endianness = endianness;
 
 	MAY_PROCESS(
 		ctx->decode.direct = true; // potentially changed within codec when processing enabled

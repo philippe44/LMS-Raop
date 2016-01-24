@@ -316,6 +316,8 @@ struct decodestate {
 	decode_state state;
 	bool new_stream;
 	mutex_type mutex;
+	u8_t sample_size, channels, endianness;
+	u32_t sample_rate;
 #if PROCESS
 	bool direct;
 	bool process;
@@ -348,7 +350,7 @@ void decode_thread_init(struct thread_ctx_s *ctx);
 void decode_close(struct thread_ctx_s *ctx);
 void decode_flush(struct thread_ctx_s *ctx);
 unsigned decode_newstream(unsigned sample_rate, unsigned supported_rates[], struct thread_ctx_s *ctx);
-void codec_open(u8_t format, u8_t sample_size, u8_t sample_rate, u8_t channels, u8_t endianness, struct thread_ctx_s *ctx);
+void codec_open(u8_t format, u8_t sample_size, u32_t sample_rate, u8_t channels, u8_t endianness, struct thread_ctx_s *ctx);
 
 #if PROCESS
 // process.c

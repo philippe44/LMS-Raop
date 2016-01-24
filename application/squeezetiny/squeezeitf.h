@@ -62,6 +62,7 @@ typedef struct
 	u8_t	sample_size;
 	u32_t	sample_rate;
 	u8_t	codec;
+	u8_t 	endianness;
 } sq_format_t;
 
 

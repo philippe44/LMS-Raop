@@ -76,7 +76,7 @@ void _apply_cross(struct buffer *outputbuf, frames_t out_frames, s32_t cross_gai
 			*cross_ptr -= outputbuf->size / BYTES_PER_FRAME * 2;
 		}
 		*ptr = gain(cross_gain_out, *ptr) + gain(cross_gain_in, **cross_ptr);
-		*ptr++; (*cross_ptr)++;
+		ptr++; (*cross_ptr)++;
 	}
 }
 
