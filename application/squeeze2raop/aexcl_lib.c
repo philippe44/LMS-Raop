@@ -35,9 +35,13 @@ char *_aprintf(const char *fmt, ...)
 	int len;
 
 	va_start(args, fmt);
+#if WIN
+	len = vsnprintf(NULL, 0, fmt, cp);
+#else
 	va_copy(cp, args);
 	len = vsnprintf(NULL, 0, fmt, cp);
 	va_end(cp);
+#endif
 
 	ret = malloc(len + 1);
 

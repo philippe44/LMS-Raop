@@ -252,7 +252,6 @@ bool rtspcl_record(struct rtspcl_s *p, __u16 start_seq, __u32 start_ts, key_data
 		return false;
 	}
 
-	LOG_INFO("%u %d", (unsigned) start_seq, (int) start_seq);
 	hds[0].key 	= "Range";
 	hds[0].data = "npt=0-";
 	hds[1].key 	= "RTP-Info";
