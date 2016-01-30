@@ -28,22 +28,26 @@
 extern log_level	util_loglevel;
 static log_level	*loglevel = &util_loglevel;
 
-char *_aprintf(char *fmt, ...)
+char *_aprintf(const char *fmt, ...)
 {
 	char *ret;
-	va_list args;
+	va_list args, cp;
 	int len;
 
 	va_start(args, fmt);
+	va_copy(cp, args);
+	len = vsnprintf(NULL, 0, fmt, cp);
+	va_end(cp);
 
-	len = vsnprintf(NULL, 0, fmt, args);
 	ret = malloc(len + 1);
+
 	if (ret) vsprintf(ret, fmt, args);
 
-	va_end(args);
+	va_end(args);
 
 	return ret;
 }
+
 
 /*
  * open tcp port

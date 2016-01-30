@@ -42,7 +42,7 @@ int read_line(int fd, char *line, int maxlen, int timeout, int no_poll);
 char *kd_lookup(key_data_t *kd, char *key);
 void free_kd(key_data_t *kd);
 int remove_char_from_string(char *str, char rc);
-char *_aprintf(char *fmt, ...);
+char *_aprintf(const char *fmt, ...);
 
 
 #endif

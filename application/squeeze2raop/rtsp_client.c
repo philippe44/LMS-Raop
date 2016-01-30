@@ -129,18 +129,18 @@ bool rtspcl_add_exthds(struct rtspcl_s *p, char *key, char *data)
 
 	if (!p) return false;
 
-	while (p->exthds[i].key && i < MAX_KD) {
+	while (p->exthds[i].key && i < MAX_KD - 1) {
 		if (p->exthds[i].key[0] == 0xff) break;
 		i++;
 	}
 
-	if (i == MAX_KD - 1) return false;
+	if (i == MAX_KD - 2) return false;
 
 	if (p->exthds[i].key) {
 		free(p->exthds[i].key);
 		free(p->exthds[i].data);
 	}
-	else p->exthds[i+1].key=NULL;
+	else p->exthds[i + 1].key=NULL;
 
 	p->exthds[i].key = strdup(key);
 	p->exthds[i].data = strdup(data);
@@ -219,7 +219,7 @@ bool rtspcl_setup(struct rtspcl_s *p, struct rtp_port_s *port, key_data_t *rkd)
 
 	hds[0].key = "Transport";
 	hds[0].data = _aprintf("RTP/AVP/UDP;unicast;interleaved=0-1;mode=record;control_port=%d;timing_port=%d",
-							port->ctrl.lport, port->time.lport);
+							(unsigned) port->ctrl.lport, (unsigned) port->time.lport);
 	if (!hds[0].data) return false;
 	hds[1].key = NULL;
 
@@ -252,10 +252,11 @@ bool rtspcl_record(struct rtspcl_s *p, __u16 start_seq, __u32 start_ts, key_data
 		return false;
 	}
 
+	LOG_INFO("%u %d", (unsigned) start_seq, (int) start_seq);
 	hds[0].key 	= "Range";
 	hds[0].data = "npt=0-";
 	hds[1].key 	= "RTP-Info";
-	hds[1].data = _aprintf("seq=%d;rtptime=%d", start_seq, start_ts);
+	hds[1].data = _aprintf("seq=%u;rtptime=%u", (unsigned) start_seq, (unsigned) start_ts);
 	if (!hds[1].data) return false;
 	hds[2].key	= NULL;
 
@@ -330,7 +331,7 @@ bool rtspcl_flush(struct rtspcl_s *p, __u16 seq_number, __u32 timestamp)
 	if(!p) return false;
 
 	hds[0].key	= "RTP-Info";
-	hds[0].data	= _aprintf("seq=%u;rtptime=%u", seq_number, timestamp);
+	hds[0].data	= _aprintf("seq=%u;rtptime=%u", (unsigned) seq_number, (unsigned) timestamp);
 	if (!hds[0].data) return false;
 	hds[1].key	= NULL;
 
@@ -376,7 +377,7 @@ static bool exec_request(struct rtspcl_s *rtspcld, char *cmd, char *content_type
 	}
 
 	if (content_type && content) {
-		sprintf(buf, "Content-Type: %s\r\nContent-Length: %d\r\n", content_type, length ? length : strlen(content));
+		sprintf(buf, "Content-Type: %s\r\nContent-Length: %d\r\n", content_type, length ? length : (int) strlen(content));
 		strcat(req, buf);
 	}
 

@@ -139,7 +139,7 @@ void output_raop_thread_init(struct raopcl_s *raopcl, unsigned output_buf_size, 
 	}
 
 	ctx->output.nb_timerefs = (((u64_t) (ctx->config.read_ahead + 100) * sample_rate) / 1000) / TIMEGAPS + 1;
-	ctx->output.timerefs = malloc(sizeof (u32_t) * ctx->output.nb_timerefs);
+	ctx->output.timerefs = malloc(sizeof(ctx->output.timerefs) * ctx->output.nb_timerefs);
 	if (!ctx->output.timerefs) {
 		LOG_ERROR("[%p]: unable to malloc timerefs", ctx);
 		exit(0);
