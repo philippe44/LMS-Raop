@@ -49,7 +49,7 @@ static inline void bits_write(__u8 **p, __u8 d, int blen, int *bpos)
 
 
 /*----------------------------------------------------------------------------*/
-bool pcm_to_alac(u8_t *in, int in_size, u8_t **out, int *size, int bsize, int channels)
+bool pcm_to_alac(u8_t *in, int in_size, u8_t **out, int *size, int bsize, int channels, bool big_endian)
 {
 	int bpos = 0;
 	__u8 *bp;
@@ -70,20 +70,36 @@ bool pcm_to_alac(u8_t *in, int in_size, u8_t **out, int *size, int bsize, int ch
 	bits_write(&bp, bsize & 0xff, 8, &bpos);
 
 	if (channels == 1) {
-		for (i = 0; i < in_size; i++) {
-			bits_write(&bp, in[i*2+1], 8, &bpos);
-			bits_write(&bp, in[i*2], 8, &bpos);
-			bits_write(&bp, in[i*2+1], 8, &bpos);
-			bits_write(&bp, in[i*2], 8, &bpos);
-		}
+		if (big_endian)
+			for (i = 0; i < in_size; i++) {
+				bits_write(&bp, in[i*2], 8, &bpos);
+				bits_write(&bp, in[i*2+1], 8, &bpos);
+				bits_write(&bp, in[i*2], 8, &bpos);
+				bits_write(&bp, in[i*2+1], 8, &bpos);
+			}
+		else
+			for (i = 0; i < in_size; i++) {
+				bits_write(&bp, in[i*2+1], 8, &bpos);
+				bits_write(&bp, in[i*2], 8, &bpos);
+				bits_write(&bp, in[i*2+1], 8, &bpos);
+				bits_write(&bp, in[i*2], 8, &bpos);
+			}
 	}
 	else {
-		for (i = 0; i < in_size; i++) {
-			bits_write(&bp, in[i*4+1],8,&bpos);
-			bits_write(&bp, in[i*4],8,&bpos);
-			bits_write(&bp, in[i*4+3],8,&bpos);
-			bits_write(&bp, in[i*4+2],8,&bpos);
-		}
+		if (big_endian)
+			for (i = 0; i < in_size; i++) {
+				bits_write(&bp, in[i*4],8,&bpos);
+				bits_write(&bp, in[i*4+1],8,&bpos);
+				bits_write(&bp, in[i*4+2],8,&bpos);
+				bits_write(&bp, in[i*4+3],8,&bpos);
+			}
+		else
+			for (i = 0; i < in_size; i++) {
+				bits_write(&bp, in[i*4+1],8,&bpos);
+				bits_write(&bp, in[i*4],8,&bpos);
+				bits_write(&bp, in[i*4+3],8,&bpos);
+				bits_write(&bp, in[i*4+2],8,&bpos);
+			}
 	}
 
 	// when readable size is less than bsize, fill 0 at the bottom

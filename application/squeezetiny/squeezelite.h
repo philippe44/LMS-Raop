@@ -316,8 +316,9 @@ struct decodestate {
 	decode_state state;
 	bool new_stream;
 	mutex_type mutex;
-	u8_t sample_size, channels, endianness;
+	u8_t sample_size, channels;
 	u32_t sample_rate;
+	bool big_endian;
 #if PROCESS
 	bool direct;
 	bool process;
@@ -339,12 +340,12 @@ struct codec {
 	char *types;
 	unsigned min_read_bytes;
 	unsigned min_space;
-	void (*open)(u8_t sample_size, u8_t sample_rate, u8_t channels, u8_t endianness);
-	void (*close)(void);
-	decode_state (*decode)(void);
+	void (*open)(u8_t sample_size, u32_t sample_rate, u8_t channels, u8_t endianness, struct thread_ctx_s *ctx);
+	void (*close)(struct thread_ctx_s *ctx);
+	decode_state (*decode)(struct thread_ctx_s *ctx);
 };
 
-void decode_init(const char *include_codecs, const char *exclude_codecs, bool full);
+void decode_init(void);
 void decode_thread_init(struct thread_ctx_s *ctx);
 
 void decode_close(struct thread_ctx_s *ctx);
@@ -534,7 +535,7 @@ struct thread_ctx_s {
 extern struct thread_ctx_s thread_ctx[MAX_PLAYER];
 
 // codecs
-#define MAX_CODECS 9
+#define MAX_CODECS 1
 
 extern struct codec *codecs[MAX_CODECS];
 

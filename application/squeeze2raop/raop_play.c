@@ -26,7 +26,7 @@
 #include "alac_wrapper.h"
 #include "raop_play.h"
 
-log_level	util_loglevel = lDEBUG;
+log_level	util_loglevel = lINFO;
 log_level	raop_loglevel = lDEBUG;
 
 log_level main_log = lINFO;
@@ -90,15 +90,13 @@ int main(int argc, char *argv[])
 	int port=SERVER_PORT;
 	int rval=-1,i;
 	int size;
-	int ret;
 	int volume = 50;
 	struct hostent *host_ip;
 	struct in_addr host_addr;
-	u32_t begin;
-	bool first = true;
-	FILE *input;
+	FILE *infile;
 	u8_t *buf;
-	raop_settings_t settings = { 2, 16, 44100, RAOP_ALAC, RAOP_CLEAR };
+	int n;
+	raop_crypto_t crypto;
 
 	for(i=1;i<argc;i++){
 		if(!strcmp(argv[i],"-p")){
@@ -110,7 +108,7 @@ int main(int argc, char *argv[])
 			continue;
 		}
 		if(!strcmp(argv[i],"-e")){
-			settings.crypto = RAOP_CLEAR;
+			crypto = RAOP_CLEAR;
 			continue;
 		}
 		if(!strcmp(argv[i],"--help") || !strcmp(argv[i],"-h"))
@@ -125,39 +123,42 @@ int main(int argc, char *argv[])
 	winsock_init();
 #endif
 
-	// freopen("log.txt", "w", stderr);
-
-	if ((raopcl = raopcl_init(44100, 16, 2, 2000)) == NULL) {
-		ERRMSG( "Cannot init RAOP" );
+	//freopen("log.txt", "w", stderr);
+	if ((raopcl = raopcl_create("?", RAOP_ALAC, RAOP_CLEAR, 44100, 16, 2, 50)) == NULL) {
+		LOG_ERROR("Cannot init RAOP", 0);
 		exit(1);
 	}
 
 	host_ip = gethostbyname(host);
 	memcpy(&host_addr.s_addr, host_ip->h_addr_list[0], host_ip->h_length);
 
-	if (!raopcl_connect(raopcl, host_addr, port, RAOP_CLEAR, volume)) {
+	if (!raopcl_connect(raopcl, host_addr, port, RAOP_ALAC)) {
 		free(raopcl);
-		LOG_ERROR( "Cannot connect to AirPlay device %s", host );
+		LOG_ERROR("Cannot connect to AirPlay device %s", host);
 		exit(1);
 	}
 
-	input = fopen("test.pcm", "rb");
+	infile = fopen("test.pcm", "rb");
+	buf = malloc(2000);
 	LOG_INFO( "%s to %s\n", RAOP_CONNECTED, host );
-	raopcl_update_volume(raopcl, volume);
+	//raopcl_update_volume(raopcl, volume, true);
 
 	do {
 		u8_t *buffer;
 		u32_t timestamp;
 
-		n = fread(buf, 352*4, 1, input);
-		pcm_to_alac(buf, 352, &buffer, &size, 352, 2);
-		timestamp = raopcl_send_sample_auto(raopcl, buffer, size, 352, &begin, false);
+		n = fread(buf, 352*4, 1, infile);
+		pcm_to_alac(buf, 352, &buffer, &size, 352, 2, false);
+		// buffer = buf;
+		timestamp = raopcl_send_sample(raopcl, buffer, size, 352, false, 3000);
 		free(buffer);
 	} while (n);
 
  erexit:
 
 	raopcl_destroy(raopcl);
+
+	free(buf);
 
 #if WIN
 	winsock_close();

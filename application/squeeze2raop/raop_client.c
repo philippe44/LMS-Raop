@@ -37,7 +37,7 @@
 #include "base64.h"
 #include "aes.h"
 
-#define MAX_BACKLOG 512
+#define MAX_BACKLOG 128
 
 #define JACK_STATUS_DISCONNECTED 0
 #define JACK_STATUS_CONNECTED 1
@@ -52,6 +52,7 @@
 
 typedef struct {
 	rtp_header_t hdr;
+	__u32 dummy;
 	ntp_t ref_time;
 	ntp_t recv_time;
 	ntp_t send_time;
@@ -84,8 +85,9 @@ typedef struct {
 	struct {
 		__u16 seq_number;
 		__u32 timestamp;
+		int	size;
+		u8_t *buffer;
 	} backlog[MAX_BACKLOG];
-	__u16 backlog_index;
 	int ajstatus;
 	int ajtype;
 	int volume;
@@ -217,22 +219,10 @@ __u32 raopcl_send_sample(struct raopcl_s *p, __u8 *sample, int size, int frames,
 	rtp_audio_pkt_t *packet;
 	size_t n;
 	u32_t playtime, now;
+	bool first = false;
 
 	// don't send anything if not ready, this might confuse the player !
 	if (!p) return 0;
-
-	addr.sin_family = AF_INET;
-	addr.sin_addr = p->host_addr;
-	addr.sin_port = htons(p->rtp_ports.audio.rport);
-
-	if ((buffer = malloc(sizeof(rtp_audio_pkt_t) + size)) == NULL) {
-		LOG_ERROR("[%p]: cannot allocate sample buffer", p);
-		return 0;
-	}
-
-	packet = (rtp_audio_pkt_t *) buffer;
-	packet->hdr.proto = 0x80;
-	packet->hdr.type = 0x60;
 
 	pthread_mutex_lock(&p->mutex);
 	while (p->state == RAOP_FLUSHING) {
@@ -251,7 +241,7 @@ __u32 raopcl_send_sample(struct raopcl_s *p, __u8 *sample, int size, int frames,
 
 		if (p->flush_mode == RAOP_REBUFFER) p->rtp_ts.first = p->rtp_ts.audio;
 
-		packet->hdr.type |= 0x80;
+		first = true;
 		p->state = RAOP_STREAMING;
 		raopcl_send_sync(p, true);
 		LOG_INFO("[%p]: Send 1st packet + synchro at:%u", p, p->rtp_ts.first);
@@ -260,24 +250,10 @@ __u32 raopcl_send_sample(struct raopcl_s *p, __u8 *sample, int size, int frames,
 	p->seq_number++;
 	p->rtp_ts.audio += frames;
 
-	p->backlog[p->backlog_index].seq_number = p->seq_number;
-	p->backlog[p->backlog_index].timestamp = p->rtp_ts.audio;
-	p->backlog_index = (p->backlog_index + 1) % MAX_BACKLOG;
-
 	pthread_mutex_unlock(&p->mutex);
-
-	packet->hdr.seq[0] = (p->seq_number >> 8) & 0xff;
-	packet->hdr.seq[1] = p->seq_number & 0xff;
-	packet->hdr.timestamp = htonl(p->rtp_ts.audio);
-	packet->ssrc = htonl(p->ssrc);
 
 	playtime = p->rtp_ts.first_clock + ((__u32) (p->rtp_ts.audio - p->rtp_ts.first) * 1000LL) / p->sample_rate;
 	LOG_SDEBUG("[%p]: sending audio ts:%u (played:%u) ", p, p->rtp_ts.audio, playtime);
-
-	memcpy(buffer + sizeof(rtp_audio_pkt_t), sample, size);
-
-	// with newer airport express, please don't use encryption ( -e )
-	if (p->encrypt) encrypt(p, buffer + sizeof(rtp_audio_pkt_t), size);
 
 	// wait till we can send that frame (enough buffer consumed)
 	if (playtime > (now = gettime_ms()) + read_ahead) {
@@ -288,15 +264,54 @@ __u32 raopcl_send_sample(struct raopcl_s *p, __u8 *sample, int size, int frames,
 		usleep(sleep_time * 1000);
 	}
 
-	// really send data only if streaming, but  all the above must be done anyway
-	if (p->rtp_ports.audio.fd != -1 && p->state == RAOP_STREAMING && !skip) {
-		n = sendto(p->rtp_ports.audio.fd, buffer, sizeof(rtp_audio_pkt_t) + size, 0, (void*) &addr, sizeof(addr));
-		if (n != sizeof(rtp_audio_pkt_t) + size) {
-			LOG_ERROR("[%p]: error sending audio packet", p);
-		}
+	// really send data only if needed
+	if (p->rtp_ports.audio.fd == -1 || p->state != RAOP_STREAMING || skip || now > playtime)
+		return playtime;
+
+	addr.sin_family = AF_INET;
+	addr.sin_addr = p->host_addr;
+	addr.sin_port = htons(p->rtp_ports.audio.rport);
+
+	if ((buffer = malloc(sizeof(rtp_audio_pkt_t) + size)) == NULL) {
+		LOG_ERROR("[%p]: cannot allocate sample buffer", p);
+		return playtime;
 	}
 
-	free(buffer);
+	packet = (rtp_audio_pkt_t *) buffer;
+	packet->hdr.proto = 0x80;
+	packet->hdr.type = 0x60 | (first ? 0x80 : 0);
+	// packet->hdr.type = 0x0a | (first ? 0x80 : 0);
+	packet->hdr.seq[0] = (p->seq_number >> 8) & 0xff;
+	packet->hdr.seq[1] = p->seq_number & 0xff;
+	packet->timestamp = htonl(p->rtp_ts.audio);
+	packet->ssrc = htonl(p->ssrc);
+
+	memcpy(buffer + sizeof(rtp_audio_pkt_t), sample, size);
+
+	// with newer airport express, don't use encryption (??)
+	if (p->encrypt) encrypt(p, buffer + sizeof(rtp_audio_pkt_t), size);
+
+	pthread_mutex_lock(&p->mutex);
+	n = p->seq_number % MAX_BACKLOG;
+	p->backlog[n].seq_number = p->seq_number;
+	p->backlog[n].timestamp = p->rtp_ts.audio;
+	// will need to free before allocation
+	if (p->backlog[n].buffer) free(p->backlog[n].buffer);
+	p->backlog[n].buffer = buffer;
+	p->backlog[n].size = sizeof(rtp_audio_pkt_t) + size;
+	pthread_mutex_unlock(&p->mutex);
+
+	n = sendto(p->rtp_ports.audio.fd, buffer, sizeof(rtp_audio_pkt_t) + size, 0, (void*) &addr, sizeof(addr));
+	if (n != sizeof(rtp_audio_pkt_t) + size) {
+		LOG_ERROR("[%p]: error sending audio packet", p);
+	}
+
+	// will have to be removed
+	// free(buffer);
+
+	if (playtime % 10000 < 8) {
+		LOG_INFO("check n:%u p:%u tsa:%u", now, playtime, p->rtp_ts.audio);
+	}
 
 	return playtime;
 }
@@ -354,6 +369,8 @@ struct raopcl_s *raopcl_create(char *local, raop_codec_t codec, raop_crypto_t cr
 /*----------------------------------------------------------------------------*/
 void raopcl_terminate_rtp(struct raopcl_s *p)
 {
+	int i;
+
 	// Terminate RTP threads and close sockets
 	p->ctrl_running = false;
 	pthread_join(p->ctrl_thread, NULL);
@@ -366,6 +383,13 @@ void raopcl_terminate_rtp(struct raopcl_s *p)
 	if (p->rtp_ports.audio.fd != -1) close(p->rtp_ports.audio.fd);
 
 	p->rtp_ports.ctrl.fd = p->rtp_ports.time.fd = p->rtp_ports.audio.fd = -1;
+
+	for (i = 0; i < MAX_BACKLOG; i++) {
+		if (p->backlog[i].buffer) {
+			free(p->backlog[i].buffer);
+			p->backlog[i].buffer = NULL;
+		}
+	}
 }
 
 
@@ -405,6 +429,11 @@ static bool raopcl_set_sdp(struct raopcl_s *p, char *sdp)
 					"a=rtpmap:96 AppleLossless\r\n"
 					"a=fmtp:96 %d 0 %d 40 10 14 %d 255 0 0 %d\r\n",
 					MAX_SAMPLES_IN_CHUNK, p->sample_size, p->channels, p->sample_rate);
+			/* maybe one day I'll figure out how to send raw PCM ...
+			sprintf(buf,
+					"m=audio 0 RTP/AVP 96\r\n"
+					"a=rtpmap:96 L16/44100/2\r\n",
+			*/
 			strcat(sdp, buf);
 			break;
 		default:
@@ -723,7 +752,7 @@ void raopcl_send_sync(struct raopcl_s *raopcld, bool first)
 
 	raopcld->rtp_ts.latest = rsp.rtp_timestamp;
 
-	LOG_DEBUG( "[%p]: sync ntp:%u.%u (ts:%lu) (now:%d-ms) (el:%lu-ms)", raopcld, curr_time.seconds,
+	LOG_DEBUG( "[%p]: sync ntp:%u.%u (ts:%lu) (now:%lu-ms) (el:%lu-ms)", raopcld, curr_time.seconds,
 			  curr_time.fraction, rsp.rtp_timestamp, now, now - raopcld->rtp_ts.first_clock);
 
 	// set the NTP time and go to network order
@@ -731,7 +760,7 @@ void raopcl_send_sync(struct raopcl_s *raopcld, bool first)
 	rsp.curr_time.fraction = htonl(curr_time.fraction);
 
 	// network order
-	rsp.hdr.timestamp = htonl(rsp.rtp_timestamp - raopcld->latency);
+	rsp.rtp_timestamp_latency = htonl(rsp.rtp_timestamp - raopcld->latency);
 	rsp.rtp_timestamp = htonl(rsp.rtp_timestamp);
 
 	n = sendto(raopcld->rtp_ports.ctrl.fd, (void*) &rsp, sizeof(rsp), 0, (void*) &addr, sizeof(addr));
@@ -816,7 +845,6 @@ void *rtp_control_thread(void *args)
 	while (raopcld->ctrl_running)	{
 		struct timeval timeout = { 1, 0 };
 		fd_set rfds;
-		int n;
 
 		FD_ZERO(&rfds);
 		FD_SET(raopcld->rtp_ports.ctrl.fd, &rfds);
@@ -829,9 +857,37 @@ void *rtp_control_thread(void *args)
 
 		if (FD_ISSET(raopcld->rtp_ports.ctrl.fd, &rfds)) {
 			rtp_lost_pkt_t lost;
+			int i, n;
 
 			n = recv(raopcld->rtp_ports.ctrl.fd, (void*) &lost, sizeof(lost), 0);
-			LOG_ERROR("[%p]: lost packet sn:%d n:%d", raopcld, ntohs(lost.seq_number), ntohs(lost.n), n);
+			lost.seq_number = ntohs(lost.seq_number);
+			lost.n = ntohs(lost.n);
+			LOG_ERROR("[%p]: lost packet sn:%d n:%d", raopcld, lost.seq_number, lost.n);
+
+			for (i = 0; i < lost.n; i++) {
+				u16_t index;
+
+				index = (lost.seq_number + i) % MAX_BACKLOG;
+				if (raopcld->backlog[index].seq_number != lost.seq_number + i) {
+					LOG_ERROR("[%p]: lost packet out of backlog %u", raopcld, lost.seq_number + i);
+				}
+				else {
+					struct sockaddr_in addr;
+					rtp_audio_pkt_t *packet = (rtp_audio_pkt_t*) raopcld->backlog[index].buffer;
+
+					addr.sin_family = AF_INET;
+					addr.sin_addr = raopcld->host_addr;
+					addr.sin_port = htons(raopcld->rtp_ports.audio.rport);
+
+					packet->hdr.type = 86;
+
+					n = sendto(raopcld->rtp_ports.audio.fd, packet, raopcld->backlog[index].size, 0, (void*) &addr, sizeof(addr));
+					if (n != raopcld->backlog[index].size) {
+						LOG_ERROR("[%p]: error re-sending audio packet", raopcld);
+					}
+				}
+			}
+
 			continue;
 		}
 

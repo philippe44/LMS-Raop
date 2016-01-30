@@ -49,131 +49,8 @@ struct codec	*codecs[MAX_CODECS];
 #define MAY_PROCESS(x)
 #endif
 
+
 /*---------------------------------------------------------------------------*/
-#ifdef NO_CODEC
-static void *decode_thread(struct thread_ctx_s *ctx) {
-	while (ctx->decode_running) {
-		size_t bytes, space;
-		bool toend;
-		bool ran = false;
-
-		LOCK_S;LOCK_O;
-		bytes = _buf_used(ctx->streambuf);
-		space = min(_buf_cont_read(ctx->streambuf), _buf_cont_write(ctx->outputbuf));
-		/*
-		It is required to use min with buf_space as it is the full space - 1,
-		otherwise, a write to full would be authorized and the write pointer
-		would wrap to the read pointer, making impossible to know if the buffer
-		is full or empty. This as the consequence, though, that the buffer can
-		never be totally full and can only wrap once the read pointer has moved
-		so it is impossible to count on having a proper multiply of any number
-		of bytes in the buffer
-		*/
-		space = min(space, _buf_space(ctx->outputbuf));
-		toend = (ctx->stream.state <= DISCONNECT);
-		UNLOCK_S;UNLOCK_O;
-
-		LOCK_D;
-
-		if (ctx->decode.state == DECODE_RUNNING) {
-
-			if (ctx->decode.new_stream) {
-				LOG_INFO("[%p]: setting track_start", ctx);
-				LOCK_O;
-				ctx->output.track_start = ctx->outputbuf->writep;
-				UNLOCK_O;
-				if (ctx->output.fade_mode) _checkfade(true, ctx);
-				ctx->decode.new_stream = false;
-			}
-
-			LOCK_S;LOCK_O;
-			if (ctx->decode.sample_size == 16 && ctx->decode.channels == 2) {
-				memcpy(ctx->outputbuf->writep, ctx->streambuf->readp, space);
-				_buf_inc_readp(ctx->streambuf, space);
-				_buf_inc_writep(ctx->outputbuf, space);
-			}
-			
-			/*
-			Single channel, space is not a multiple of 2 in streambuf, but it 
-			must be in output buf, so we might not be complete because of output
-			but next turn will take care of that as we'll move back to the 
-			beginning of streambuf
-			*/
-			if (ctx->decode.sample_size == 16 && ctx->decode.channels == 1) {
-				int i, count = space / 2;
-				u8_t *src = ctx->streambuf->readp;
-				u8_t *dst = ctx->outputbuf->writep;
-
-				i = count;
-				while (i--) {
-					*dst++ = *src;
-					*dst++ = *src++;
-				}
-
-				_buf_inc_readp(ctx->streambuf, count);
-				_buf_inc_writep(ctx->outputbuf, count * 2);
-			}
-
-			/* 
-			24 bits - space is not a multiple of 3 in output, but it must be in
-			streambuf, so if we are not complete because of output, next turn 
-			will finish the job as we'll move back to the begining of output
-			*/
-			if (ctx->decode.sample_size == 24) {
-				int i, count = space / 3;
-				u8_t buf[3];
-				u8_t *src;
-				u8_t *dst = ctx->outputbuf->writep;
-
-				// workaround the buffer wrap in case space = 1 or 2
-				if (!count && space && _buf_used(ctx->streambuf) >= 3 && _buf_cont_write(ctx->outputbuf) > 2) {
-					memcpy(buf, ctx->streambuf->readp, space);					
-					memcpy(buf + space, ctx->streambuf->buf, 3 - space);					
-					src = buf;
-					count = 1;
-				}
-				else src = ctx->streambuf->readp;
-
-				i = count;
-				while (i--) {
-					src++;
-					*dst++ = *src++;
-					*dst++ = *src++;
-				}
-
-				_buf_inc_readp(ctx->streambuf, count * 3);
-				_buf_inc_writep(ctx->outputbuf, count * 2);
-			}
-
-			UNLOCK_S;UNLOCK_O;
-
-			if (toend) {
-
-				if (!bytes ) ctx->decode.state = DECODE_COMPLETE;
-
-				if (ctx->decode.state != DECODE_RUNNING) {
-
-					LOG_INFO("decode %s", ctx->decode.state == DECODE_COMPLETE ? "complete" : "error");
-
-					if (ctx->output.fade_mode) _checkfade(false, ctx);
-
-					wake_controller(ctx);
-				}
-
-				ran = true;
-			}
-		}
-
-		UNLOCK_D;
-
-		if (!ran) {
-			usleep(100000);
-		}
-	}
-
-	return 0;
-}
-#else
 static void *decode_thread(struct thread_ctx_s *ctx) {
 	while (ctx->decode_running) {
 		size_t bytes, space, min_space;
@@ -203,7 +80,7 @@ static void *decode_thread(struct thread_ctx_s *ctx) {
 
 			if (space > min_space && (bytes > ctx->codec->min_read_bytes || toend)) {
 
-				ctx->decode.state = ctx->codec->decode();
+				ctx->decode.state = ctx->codec->decode(ctx);
 
 				IF_PROCESS(
 					if (ctx->process.in_frames) {
@@ -239,27 +116,17 @@ static void *decode_thread(struct thread_ctx_s *ctx) {
 
 	return 0;
 }
-#endif
 
 
 /*---------------------------------------------------------------------------*/
-void decode_init(const char *include_codecs, const char *exclude_codecs, bool full) {
-#if DSD || FFMPEG || !defined(NO_CODEC)
+void decode_init(void) {
 	int i = 0;
-#endif
 
-	LOG_DEBUG("init decode, include codecs: %s exclude codecs: %s", include_codecs ? include_codecs : "", exclude_codecs);
-
-	// register codecs
-	// dsf,dff,alc,wma,wmap,wmal,aac,spt,ogg,ogf,flc,aif,pcm,mp3
-#if DSD
-	if (!strstr(exclude_codecs, "dsd")  && (!include_codecs || strstr(include_codecs, "dsd")))  codecs[i++] = register_dsd();
-#endif
 #if FFMPEG
 	if (!strstr(exclude_codecs, "alac") && (!include_codecs || strstr(include_codecs, "alac")))  codecs[i++] = register_ff("alc");
 	if (!strstr(exclude_codecs, "wma")  && (!include_codecs || strstr(include_codecs, "wma")))   codecs[i++] = register_ff("wma");
 #endif
-#ifndef NO_CODEC
+/*
 	if (!strstr(exclude_codecs, "aac")  && (!include_codecs || strstr(include_codecs, "aac")))  codecs[i++] = register_faad();
 	if (!strstr(exclude_codecs, "ogg")  && (!include_codecs || strstr(include_codecs, "ogg")))  codecs[i++] = register_vorbis();
 	if (!strstr(exclude_codecs, "flac") && (!include_codecs || strstr(include_codecs, "flac"))) codecs[i++] = register_flac();
@@ -270,7 +137,8 @@ void decode_init(const char *include_codecs, const char *exclude_codecs, bool fu
 		(!include_codecs || strstr(include_codecs, "mp3") || strstr(include_codecs, "mad")))	codecs[i] = register_mad();
 	if (!(strstr(exclude_codecs, "mp3") || strstr(exclude_codecs, "mpg")) && !codecs[i] &&
 		(!include_codecs || strstr(include_codecs, "mp3") || strstr(include_codecs, "mpg")))    codecs[i] = register_mpg();
-#endif
+*/
+	codecs[i++] = register_pcm();
 }
 
 /*---------------------------------------------------------------------------*/
@@ -305,7 +173,7 @@ void decode_close(struct thread_ctx_s *ctx) {
 	LOG_DEBUG("close decode", NULL);
 	LOCK_D;
 	if (ctx->codec) {
-		ctx->codec->close();
+		ctx->codec->close(ctx);
 		ctx->codec = NULL;
 	}
 	ctx->decode_running = false;
@@ -346,9 +214,7 @@ unsigned decode_newstream(unsigned sample_rate, unsigned supported_rates[], stru
 
 /*---------------------------------------------------------------------------*/
 void codec_open(u8_t format, u8_t sample_size, u32_t sample_rate, u8_t channels, u8_t endianness, struct thread_ctx_s *ctx) {
-#ifndef NO_CODEC
 	int i;
-#endif
 
 	LOG_DEBUG("codec open: '%c'", format);
 
@@ -359,16 +225,12 @@ void codec_open(u8_t format, u8_t sample_size, u32_t sample_rate, u8_t channels,
 	ctx->decode.sample_rate = sample_rate;
 	ctx->decode.sample_size = sample_size;
 	ctx->decode.channels = channels;
-	ctx->decode.endianness = endianness;
+	ctx->decode.big_endian = (endianness == 0);
 
 	MAY_PROCESS(
 		ctx->decode.direct = true; // potentially changed within codec when processing enabled
 	);
 
-#ifdef NO_CODEC
-	UNLOCK_D;
-	return;
-#else
 	// find the required codec
 	for (i = 0; i < MAX_CODECS; ++i) {
 
@@ -376,12 +238,14 @@ void codec_open(u8_t format, u8_t sample_size, u32_t sample_rate, u8_t channels,
 
 			if (ctx->codec && ctx->codec != codecs[i]) {
 				LOG_DEBUG("closing codec: '%c'", ctx->codec->id);
-				ctx->codec->close();
+				ctx->codec->close(ctx);
 			}
 
 			ctx->codec = codecs[i];
 
-			ctx->codec->open(sample_size, sample_rate, channels, endianness);
+			ctx->codec->open(sample_size, sample_rate, channels, endianness, ctx);
+
+			ctx->decode.state = DECODE_READY;
 
 			UNLOCK_D;
 			return;
@@ -391,6 +255,5 @@ void codec_open(u8_t format, u8_t sample_size, u32_t sample_rate, u8_t channels,
 	UNLOCK_D;
 
 	LOG_ERROR("codec not found", NULL);
-#endif
 }
 

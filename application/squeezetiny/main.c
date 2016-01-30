@@ -25,26 +25,6 @@
 #include <signal.h>
 #include <ctype.h>
 
-#ifndef NO_CODEC
-#define CODECS_BASE "flac,pcm,mp3,ogg,aac"
-#else
-#define CODECS_BASE "pcm,mp3"
-#endif
-
-#if FFMPEG
-#define CODECS_FF   ",wma,alac"
-#else
-#define CODECS_FF   ""
-#endif
-#if DSD
-#define CODECS_DSD  ",dsd"
-#else
-#define CODECS_DSD  ""
-#endif
-#define CODECS_MP3  " (mad,mpg for specific mp3 codec)"
-
-#define CODECS CODECS_BASE CODECS_FF CODECS_DSD CODECS_MP3
-
 #define LOCK_S   mutex_lock(ctx->streambuf->mutex)
 #define UNLOCK_S mutex_unlock(ctx->streambuf->mutex)
 #if 0
@@ -66,18 +46,10 @@ struct thread_ctx_s thread_ctx[MAX_PLAYER];
 /*----------------------------------------------------------------------------*/
 static char 			_gl_server[SERVER_NAME_LEN + 1];
 static char 			*gl_server = NULL;
-#if 0
-static unsigned 		gl_rate_delay = 0;
-#endif
+
 #if RESAMPLE
 static char 			*gl_resample = NULL;
 #endif
-#if DSD
-static bool 			gl_dop	= false;
-static unsigned 		gl_dop_delay = 0;
-#endif
-static char				gl_include_codecs[SQ_STR_LENGTH];
-static char				gl_exclude_codecs[SQ_STR_LENGTH];
 
 /*----------------------------------------------------------------------------*/
 /* locals */
@@ -490,7 +462,7 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 	winsock_init();
 #endif
 
-	decode_init(gl_include_codecs, gl_exclude_codecs, true);
+	decode_init();
 }
 
 /*---------------------------------------------------------------------------*/

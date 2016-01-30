@@ -20,6 +20,6 @@
 #ifndef __ALAC_WRAPPER_H_
 #define __ALAC_WRAPPER_H_
 
-bool pcm_to_alac(u8_t *in, int in_size, u8_t **out, int *size, int bsize, int channels);
+bool pcm_to_alac(u8_t *in, int in_size, u8_t **out, int *size, int bsize, int channels, bool big_endian);
 
 #endif

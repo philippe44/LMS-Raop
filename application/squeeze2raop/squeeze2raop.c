@@ -95,12 +95,12 @@ static u8_t LMSVolumeMap[101] = {
 sq_dev_param_t glDeviceParam = {
 					STREAMBUF_SIZE,
 					OUTPUTBUF_SIZE,
-					"pcm",
+					"aif,pcm",
 					SQ_RATE_44100,
 					16,
 					{ 0x00,0x00,0x00,0x00,0x00,0x00 },
 					false,
-					1000,
+					500,
 				} ;
 
 /*----------------------------------------------------------------------------*/
@@ -463,12 +463,12 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 
 	if (!Device->Config.Enabled) return false;
 
-	/*
+#if 0
 	if (!stristr(data->name, "jbl")) {
 		printf("ONLY JBL %s\n", data->name);
 		return false;
 	}
-	*/
+#endif
 
 	pthread_mutex_init(&Device->Mutex, 0);
 	strcpy(Device->UDN, data->name);

@@ -55,7 +55,6 @@ typedef struct {
 	__u8 proto;
 	__u8 type;
 	__u8 seq[2];
-	__u32 timestamp;
 #if WIN
 } rtp_header_t;
 #else
@@ -64,6 +63,7 @@ typedef struct {
 
 typedef struct {
 	rtp_header_t hdr;
+	__u32 	rtp_timestamp_latency;
 	ntp_t   curr_time;
 	__u32   rtp_timestamp;
 #if WIN
@@ -74,6 +74,7 @@ typedef struct {
 
 typedef struct {
 	rtp_header_t hdr;
+	__u32 timestamp;
 	__u32 ssrc;
 #if WIN
 } rtp_audio_pkt_t;
@@ -94,11 +95,5 @@ __u32	raopcl_send_sample(struct raopcl_s *p, __u8 *sample, int size, int frames,
 bool 	raopcl_set_content(raopcl_t *p, char* itemname, char* songartist, char* songalbum);
 __u32 	raopcl_get_timestamp(struct raopcl_s *p, __u32 origin_ms, __u32 count);
 u32_t 	raopcl_get_latency(struct raopcl_s *p);
-
-int raopcl_wait_songdone(raopcl_t *p, int set);
-int raopcl_pause_check(raopcl_t *p);
-int raopcl_aexbuf_time(raopcl_t *p, struct timeval *dtv);
-
-
 
 #endif

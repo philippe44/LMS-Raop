@@ -90,7 +90,7 @@ static void *output_raop_thread(struct thread_ctx_s *ctx) {
 		_output_frames(FRAME_BLOCK, ctx);
 		UNLOCK;
 
-		pcm_to_alac(ctx->output.buf, ctx->output.buf_frames, &buffer, &size, FRAME_BLOCK, 2);
+		pcm_to_alac(ctx->output.buf, ctx->output.buf_frames, &buffer, &size, FRAME_BLOCK, 2, false);
 		playtime = raopcl_send_sample(ctx->output.device, buffer, size,
 									 FRAME_BLOCK, (ctx->output.state != OUTPUT_RUNNING),
 									 (ctx->output.state == OUTPUT_RUNNING) ? ctx->config.read_ahead : 20);

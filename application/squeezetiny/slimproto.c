@@ -320,7 +320,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			format.sample_size = (strm->pcm_sample_size != '?') ? pcm_sample_size[strm->pcm_sample_size - '0'] : 0xff;
 			format.sample_rate = (strm->pcm_sample_rate != '?') ? pcm_sample_rate[strm->pcm_sample_rate - '0'] : 0xff;
 			format.channels = (strm->pcm_channels != '?') ? pcm_channels[strm->pcm_channels - '1'] : 0xff;
-			format.endianness = (strm->pcm_endianness != '?') ? strm->pcm_channels - '0' : 0xff;
+			format.endianness = (strm->pcm_endianness != '?') ? strm->pcm_endianness - '0' : 0xff;
 			format.codec = strm->format;
 
 			if (strm->format != '?') {
@@ -336,12 +336,6 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			ctx_callback(ctx, SQ_CONNECT, NULL, &format);
 
 			stream_sock(ip, port, header, header_len, strm->threshold * 1024, ctx->autostart >= 2, ctx);
-
-#ifdef NO_CODEC
-			LOCK_D;
-			ctx->decode.state = DECODE_READY;
-			UNLOCK_D;
-#endif
 
 			sendSTAT("STMc", 0, ctx);
 			ctx->sentSTMu = ctx->sentSTMo = ctx->sentSTMl = ctx->sentSTMd = false;
