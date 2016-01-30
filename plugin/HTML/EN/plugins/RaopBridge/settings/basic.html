@@ -5,7 +5,7 @@
 		
 	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_AUTORUN" desc="PLUGIN_RAOPBRIDGE_AUTORUN_DESC" %]
 		<input name="autorun" type="checkbox" [% IF autorun %] checked [% END %]> [% "PLUGIN_RAOPBRIDGE_RUNNING_$running" | string %] [% IF binary %] ([% binary %]) [% END %]
-		&nbsp&nbsp<b><a href="[% webroot %]RAOPBRIDGE-guide.htm" target="user guide">[% "PLUGIN_RAOPBRIDGE_USERGUIDELINK" | string %]</a></b>
+		&nbsp&nbsp<b><a href="[% webroot %]raopbridge-guide.htm" target="user guide">[% "PLUGIN_RAOPBRIDGE_USERGUIDELINK" | string %]</a></b>
 		[%IF running %] <b><font color="red">&nbsp&nbsp[% "PLUGIN_RAOPBRIDGE_WARNING" | string %]</font></b> [% END %]
 	[% END %]
 	
