@@ -3,6 +3,7 @@ LMS to Air Playbridge
 
 Allow AirPlay players to be used by Logitech Media Server, as a normal Logitech Hardware
 Pre-packaged versions for Windows (XP and above), Linux (x86, x64 and ARM) can be found here
+
 https://sourceforge.net/projects/lms-to-raop/ and here https://sourceforge.net/projects/lms-plugins-philippe44/
 
 =============================================
