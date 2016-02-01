@@ -61,15 +61,6 @@
 #define FFMPEG    0
 #endif
 
-#if defined(DSD)
-#undef DSD
-#define DSD       1
-#define IF_DSD(x) { x }
-#else
-#undef DSD
-#define DSD       0
-#define IF_DSD(x)
-#endif
 
 #if defined(LINKALL)
 #undef LINKALL
@@ -316,10 +307,9 @@ struct decodestate {
 	decode_state state;
 	bool new_stream;
 	mutex_type mutex;
-	u8_t sample_size, channels;
-	u32_t sample_rate;
-	bool big_endian;
+	void *handle;
 #if PROCESS
+	void *process_handle;
 	bool direct;
 	bool process;
 #endif
@@ -355,20 +345,22 @@ void codec_open(u8_t format, u8_t sample_size, u32_t sample_rate, u8_t channels,
 
 #if PROCESS
 // process.c
-void process_samples(void);
-void process_drain(void);
-void process_flush(void);
-unsigned process_newstream(bool *direct, unsigned raw_sample_rate, unsigned supported_rates[]);
-void process_init(char *opt);
+void process_samples(struct thread_ctx_s *ctx);
+void process_drain(struct thread_ctx_s *ctx);
+void process_flush(struct thread_ctx_s *ctx);
+unsigned process_newstream(bool *direct, unsigned raw_sample_rate, unsigned supported_rates[], struct thread_ctx_s *ctx);
+void process_init(char *opt, struct thread_ctx_s *ctx);
+void process_end(struct thread_ctx_s *ctx);
 #endif
 
 #if RESAMPLE
 // resample.c
-void resample_samples(struct processstate *process);
-bool resample_drain(struct processstate *process);
-bool resample_newstream(struct processstate *process, unsigned raw_sample_rate, unsigned supported_rates[]);
-void resample_flush(void);
-bool resample_init(char *opt);
+void resample_samples(struct thread_ctx_s *ctx);
+bool resample_drain(struct thread_ctx_s *ctx);
+bool resample_newstream(unsigned raw_sample_rate, unsigned supported_rates[], struct thread_ctx_s *ctx);
+void resample_flush(struct thread_ctx_s *ctx);
+bool resample_init(char *opt, struct thread_ctx_s *ctx);
+void resample_end(struct thread_ctx_s *ctx);
 #endif
 
 // output.c output_pack.c
@@ -393,6 +385,7 @@ struct outputstate {
 	detect_state start_detect;
 	unsigned current_sample_rate;
 	unsigned default_sample_rate;
+	unsigned supported_rates[2];
 	bool error_opening;
 	u32_t updated;
 	u32_t track_start_time;
@@ -493,7 +486,7 @@ struct thread_ctx_s {
 	struct outputstate 	output;
 	struct decodestate 	decode;
 #if PROCESS
-	struct processtate	process;
+	struct processstate	process;
 #endif
 	struct codec		*codec;
 	struct buffer		__s_buf;
@@ -535,7 +528,7 @@ struct thread_ctx_s {
 extern struct thread_ctx_s thread_ctx[MAX_PLAYER];
 
 // codecs
-#define MAX_CODECS 1
+#define MAX_CODECS 4
 
 extern struct codec *codecs[MAX_CODECS];
 
@@ -547,6 +540,9 @@ struct codec *register_vorbis(void);
 struct codec *register_faad(void);
 struct codec *register_dsd(void);
 struct codec *register_ff(const char *codec);
+#if RESAMPLE
+bool register_soxr(void);
+#endif
 
 
 

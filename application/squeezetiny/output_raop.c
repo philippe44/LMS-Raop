@@ -111,7 +111,7 @@ static void *output_raop_thread(struct thread_ctx_s *ctx) {
 			LOG_INFO("[%p]: track start time: %u", ctx, playtime);
 			break;
 		case DETECT_STARTED:
-			if (ctx->output.updated > ctx->output.track_start_time) {
+			if (ctx->output.updated >= ctx->output.track_start_time) {
 				ctx->output.track_started = true;
 				ctx->output.start_detect = DETECT_IDLE;
 				LOG_INFO("[%p]: track started at: %u", ctx, ctx->output.updated);
@@ -128,7 +128,7 @@ static void *output_raop_thread(struct thread_ctx_s *ctx) {
 
 /*---------------------------------------------------------------------------*/
 void output_raop_thread_init(struct raopcl_s *raopcl, unsigned output_buf_size, u32_t sample_rate, u8_t sample_size, struct thread_ctx_s *ctx) {
-	LOG_INFO("[%p]: init output stdout", ctx);
+	LOG_INFO("[%p]: init output raop", ctx);
 
 	memset(&ctx->output, 0, sizeof(ctx->output));
 

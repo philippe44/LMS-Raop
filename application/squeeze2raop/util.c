@@ -341,6 +341,10 @@ void SaveConfig(char *name, void *ref, bool full)
 		XMLAddNode(doc, common, "enabled", "%d", (int) glMRConfig.Enabled);
 		XMLAddNode(doc, common, "codecs", glDeviceParam.codecs);
 		XMLAddNode(doc, common, "sample_rate", "%d", (int) glDeviceParam.sample_rate);
+#if defined(RESAMPLE)
+		XMLAddNode(doc, common, "resample", "%d", (int) glDeviceParam.resample);
+		XMLAddNode(doc, common, "resample_options", glDeviceParam.resample_options);
+#endif
 		XMLAddNode(doc, common, "player_volume", "%d", (int) glDeviceParam.player_volume);
 		XMLAddNode(doc, common, "send_metadata", "%d", (int) glMRConfig.SendMetaData);
 		XMLAddNode(doc, common, "send_coverart", "%d", (int) glMRConfig.SendCoverArt);
@@ -407,6 +411,10 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "enabled")) Conf->Enabled = atol(val);
 	if (!strcmp(name, "codecs")) strcpy(sq_conf->codecs, val);
 	if (!strcmp(name, "sample_rate")) sq_conf->sample_rate = atol(val);
+#if defined(RESAMPLE)
+	if (!strcmp(name, "resample")) sq_conf->resample = atol(val);
+	if (!strcmp(name, "resample_options")) strcpy(sq_conf->resample_options, val);
+#endif
 	if (!strcmp(name, "remove_count"))Conf->RemoveCount = atol(val);
 	if (!strcmp(name, "player_volume")) sq_conf->player_volume = atol(val);
 	if (!strcmp(name, "auto_play")) Conf->AutoPlay = atol(val);

@@ -45,39 +45,41 @@ static log_level *loglevel = &decode_loglevel;
 
 #define MAX_DECODE_FRAMES 4096
 
+struct pcm {
+	u32_t sample_rate;
+	u8_t sample_size;
+	u8_t channels;
+	bool big_endian;
+};
+
 
 /*---------------------------------------------------------------------------*/
 decode_state pcm_decode(struct thread_ctx_s *ctx) {
-	unsigned bytes, space;
-	u8_t *iptr, *optr;
+	unsigned bytes, in, out, bytes_per_frame;
+	frames_t frames;
+	u8_t *iptr, *optr, buf[3*8];
+	struct pcm *p = ctx->decode.handle;
+	bool done = false;
 
 	LOCK_S;
 	LOCK_O_direct;
 
-	bytes = min(_buf_used(ctx->streambuf), _buf_cont_read(ctx->streambuf));
-
-	/*
-	It is required to use min with buf_space as it is the full space - 1,
-	otherwise, a write to full would be authorized and the write pointer
-	would wrap to the read pointer, making impossible to know if the buffer
-	is full or empty. This as the consequence, though, that the buffer can
-	never be totally full and can only wrap once the read pointer has moved
-	so it is impossible to count on having a proper multiply of any number
-	of bytes in the buffer
-	*/
-	space = min(_buf_cont_read(ctx->streambuf), _buf_cont_write(ctx->outputbuf));
-
-	IF_DIRECT(
-		space = min(space, _buf_space(ctx->outputbuf));
-		optr = ctx->outputbuf->writep;
-	);
-	IF_PROCESS(
-		//FIXME : to be confirmed
-		space = min(space, ctx->process.max_in_frames);
-		optr = ctx->process.inbuf;
-	);
-
 	iptr = (u8_t *)ctx->streambuf->readp;
+
+	if (ctx->decode.new_stream && p->big_endian && !(*((u64_t*) iptr)) &&
+		   (strstr(ctx->server_version, "7.7") || strstr(ctx->server_version, "7.8"))) {
+		/*
+		LMS < 7.9 does not remove 8 bytes when sending aiff files but it does
+		when it is a transcoding ... so this does not matter for 16 bits samples
+		but it is a mess for 24 bits ... so this tries to guess what we are
+		receiving
+		*/
+		_buf_inc_readp(ctx->streambuf, 8);
+		LOG_INFO("[%p]: guessing a AIFF extra header", ctx);
+	}
+
+	bytes = min(_buf_used(ctx->streambuf), _buf_cont_read(ctx->streambuf));
+	bytes_per_frame = (p->sample_size * p->channels) / 8;
 
 	if (ctx->stream.state <= DISCONNECT && bytes == 0) {
 		UNLOCK_O_direct;
@@ -85,117 +87,119 @@ decode_state pcm_decode(struct thread_ctx_s *ctx) {
 		return DECODE_COMPLETE;
 	}
 
+	in = bytes / bytes_per_frame;
+
+	IF_DIRECT(
+		out = min(_buf_space(ctx->outputbuf), _buf_cont_write(ctx->outputbuf)) / BYTES_PER_FRAME;
+		optr = ctx->outputbuf->writep;
+	);
+	IF_PROCESS(
+		out = ctx->process.max_in_frames;
+		optr = ctx->process.inbuf;
+	);
+
 	if (ctx->decode.new_stream) {
 		LOG_INFO("[%p]: setting track_start", ctx);
 
-		/*
-		LMS < 7.9 does not remove 8 bytes when sending aiff files but it does
-		when it is a transcoding ... so this does not matter for 16 bits samples
-		but it is a mess for 24 bits ... so this tries to guess what we are
-		receiving
-		*/
-		if (ctx->decode.big_endian && !(*((u64_t*) iptr)) &&
-		   (strstr(ctx->server_version, "7.7") || strstr(ctx->server_version, "7.8"))) {
-			iptr += 8;
-			space -= 8;
-			_buf_inc_readp(ctx->streambuf, 8);
-			LOG_INFO("[%p]: guessing a AIFF extra header", ctx);
-		}
-
 		LOCK_O_not_direct;
 		//FIXME: not in use for now, sample rate always same how to know starting rate when resamplign will be used
-		//output.next_sample_rate = decode_newstream(sample_rate, output.supported_rates);
+		ctx->output.current_sample_rate = decode_newstream(p->sample_rate, ctx->output.supported_rates, ctx);
 		ctx->output.track_start = ctx->outputbuf->writep;
 		if (ctx->output.fade_mode) _checkfade(true, ctx);
 		ctx->decode.new_stream = false;
 		UNLOCK_O_not_direct;
 		IF_PROCESS(
-			space = ctx->process.max_in_frames;
+			out = ctx->process.max_in_frames;
 		);
 	}
 
-	if (ctx->decode.sample_size == 16 && ctx->decode.channels == 2) {
-		if (!ctx->decode.big_endian) memcpy(optr, iptr, space);
+	if (in == 0 && bytes > 0 && _buf_used(ctx->streambuf) >= bytes_per_frame) {
+		memcpy(buf, iptr, bytes);
+		memcpy(buf + bytes, ctx->streambuf->buf, bytes_per_frame - bytes);
+		iptr = buf;
+		in = 1;
+	}
+
+	frames = min(in, out);
+	frames = min(frames, MAX_DECODE_FRAMES);
+
+	// stereo, 16 bits
+	if (p->sample_size == 16 && p->channels == 2) {
+		done = true;
+		if (!p->big_endian) memcpy(optr, iptr, frames * BYTES_PER_FRAME);
 		else {
-			int count = space / 2;
+			// 4 bytes per frames, 1/2 frame(1 channel) at each loop
+			int count = frames * 2;
 			while (count--) {
 				*optr++ = *(iptr + 1);
 				*optr++ = *iptr;
 				iptr += 2;
 			}
 		}
-
-		_buf_inc_readp(ctx->streambuf, space);
-		_buf_inc_writep(ctx->outputbuf, space);
 	}
 
-	/*
-	Single channel, this will be made in 2 turns and space is not a multiple of
-	2 in streambuf, but it must be in output buf, so we might not be complete
-	because of output but next turn will take care of that as we'll move back
-	to the beginning of streambuf
-	*/
-	if (ctx->decode.sample_size == 16 && ctx->decode.channels == 1) {
-		int i, count = space / 4;
+	// mono, 16 bits
+	if (p->sample_size == 16 && p->channels == 1) {
+		int count = frames;
 
-		i = count;
-		if (!ctx->decode.big_endian)
-			while (i--) {
+		done = true;
+		// 2 bytes per sample and mono, expand to stereo, 1 frame per loop
+		if (!p->big_endian) {
+			while (count--) {
 				*optr++ = *iptr;
 				*optr++ = *(iptr + 1);
 				*optr++ = *iptr++;
 				*optr++ = *iptr++;
 			}
-		else
-			while (i--) {
-				*optr++ = *(iptr + 1);
-				*optr++ = *iptr;
-				*optr++ = *(iptr + 1);
-				*optr++ = *iptr++;
-				iptr++;
-			}
-
-		_buf_inc_readp(ctx->streambuf, count);
-		_buf_inc_writep(ctx->outputbuf, count * 2);
-	}
-
-	/*
-	24 bits - space is not a multiple of 3 in output, but it must be in
-	streambuf, so if we are not complete because of output, next turn
-	will finish the job as we'll move back to the begining of output
-	*/
-	if (ctx->decode.sample_size == 24) {
-		int i, count = space / 3;
-		u8_t buf[3];
-
-		// workaround the buffer wrap in case space = 1 or 2
-		if (!count && space && _buf_used(ctx->streambuf) >= 3 && _buf_cont_write(ctx->outputbuf) >= 2) {
-			memcpy(buf, ctx->streambuf->readp, space);
-			memcpy(buf + space, ctx->streambuf->buf, 3 - space);
-			iptr = buf;
-			count = 1;
 		}
+		else {
+			while (count--) {
+				*optr++ = *(iptr + 1);
+				*optr++ = *iptr;
+				*optr++ = *(iptr + 1);
+				*optr++ = *iptr++;
+				iptr++;
+			}
+		}
+	}
 
-		i = count;
-		if (!ctx->decode.big_endian)
-			while (i--) {
+	// 24 bits, the tricky one
+	if (p->sample_size == 24 && p->channels == 2) {
+		int count = frames * 2;
+
+		done = true;
+		// 3 bytes per sample, shrink to 2 and do 1/2 frame (1 channel) per loop
+		if (!p->big_endian) {
+			while (count--) {
 				iptr++;
 				*optr++ = *iptr++;
 				*optr++ = *iptr++;
 			}
-		else
-			while (i--) {
+		}
+		else {
+			while (count--) {
 				*optr++ = *(iptr + 1);
 				*optr++ = *iptr;
 				iptr += 3;
 			}
-
-		_buf_inc_readp(ctx->streambuf, count * 3);
-		_buf_inc_writep(ctx->outputbuf, count * 2);
+		}
 	}
+
+	_buf_inc_readp(ctx->streambuf, frames * bytes_per_frame);
+
+	IF_DIRECT(
+		_buf_inc_writep(ctx->outputbuf, frames * BYTES_PER_FRAME);
+	);
+	IF_PROCESS(
+		ctx->process.in_frames = frames;
+	);
 
 	UNLOCK_O_direct;
 	UNLOCK_S;
+
+	if (!done && frames) {
+        LOG_ERROR("[%p]: unhandled channel*bytes %d %d", p->sample_size, p->channels);
+	}
 
 	return DECODE_RUNNING;
 }
@@ -203,12 +207,25 @@ decode_state pcm_decode(struct thread_ctx_s *ctx) {
 
 /*---------------------------------------------------------------------------*/
 static void pcm_open(u8_t sample_size, u32_t sample_rate, u8_t channels, u8_t endianness, struct thread_ctx_s *ctx) {
+	struct pcm *p = ctx->decode.handle;
+
+	if (!p)	p = ctx->decode.handle = malloc(sizeof(struct pcm));
+
+	if (!p) return;
+
+	p->sample_size = sample_size;
+	p->sample_rate = sample_rate,
+	p->channels = channels;
+	p->big_endian = (endianness == 0);
+
 	LOG_INFO("pcm size: %u rate: %u chan: %u bigendian: %u", sample_size, sample_rate, channels, endianness);
 }
 
 
 /*---------------------------------------------------------------------------*/
 static void pcm_close(struct thread_ctx_s *ctx) {
+	if (ctx->decode.handle) free(ctx->decode.handle);
+	ctx->decode.handle = NULL;
 }
 
 
@@ -228,128 +245,4 @@ struct codec *register_pcm(void) {
 	return &ret;
 }
 
-/*---------------------------------------------------------------------------*/
-#if 0
-static void *decode_thread(struct thread_ctx_s *ctx) {
-	while (ctx->decode_running) {
-		size_t bytes, space;
-		bool toend;
-		bool ran = false;
 
-		LOCK_S;LOCK_O;
-		bytes = _buf_used(ctx->streambuf);
-		space = min(_buf_cont_read(ctx->streambuf), _buf_cont_write(ctx->outputbuf));
-		/*
-		It is required to use min with buf_space as it is the full space - 1,
-		otherwise, a write to full would be authorized and the write pointer
-		would wrap to the read pointer, making impossible to know if the buffer
-		is full or empty. This as the consequence, though, that the buffer can
-		never be totally full and can only wrap once the read pointer has moved
-		so it is impossible to count on having a proper multiply of any number
-		of bytes in the buffer
-		*/
-		space = min(space, _buf_space(ctx->outputbuf));
-		toend = (ctx->stream.state <= DISCONNECT);
-		UNLOCK_S;UNLOCK_O;
-
-		LOCK_D;
-
-		if (ctx->decode.state == DECODE_RUNNING) {
-
-			if (ctx->decode.new_stream) {
-				LOG_INFO("[%p]: setting track_start", ctx);
-				LOCK_O;
-				ctx->output.track_start = ctx->outputbuf->writep;
-				UNLOCK_O;
-				if (ctx->output.fade_mode) _checkfade(true, ctx);
-				ctx->decode.new_stream = false;
-			}
-
-			LOCK_S;LOCK_O;
-			if (ctx->decode.sample_size == 16 && ctx->decode.channels == 2) {
-				memcpy(ctx->outputbuf->writep, ctx->streambuf->readp, space);
-				_buf_inc_readp(ctx->streambuf, space);
-				_buf_inc_writep(ctx->outputbuf, space);
-			}
-
-			/*
-			Single channel, space is not a multiple of 2 in streambuf, but it
-			must be in output buf, so we might not be complete because of output
-			but next turn will take care of that as we'll move back to the
-			beginning of streambuf
-			*/
-			if (ctx->decode.sample_size == 16 && ctx->decode.channels == 1) {
-				int i, count = space / 2;
-				u8_t *src = ctx->streambuf->readp;
-				u8_t *dst = ctx->outputbuf->writep;
-
-				i = count;
-				while (i--) {
-					*dst++ = *src;
-					*dst++ = *src++;
-				}
-
-				_buf_inc_readp(ctx->streambuf, count);
-				_buf_inc_writep(ctx->outputbuf, count * 2);
-			}
-
-			/*
-			24 bits - space is not a multiple of 3 in output, but it must be in
-			streambuf, so if we are not complete because of output, next turn
-			will finish the job as we'll move back to the begining of output
-			*/
-			if (ctx->decode.sample_size == 24) {
-				int i, count = space / 3;
-				u8_t buf[3];
-				u8_t *src;
-				u8_t *dst = ctx->outputbuf->writep;
-
-				// workaround the buffer wrap in case space = 1 or 2
-				if (!count && space && _buf_used(ctx->streambuf) >= 3 && _buf_cont_write(ctx->outputbuf) > 2) {
-					memcpy(buf, ctx->streambuf->readp, space);
-					memcpy(buf + space, ctx->streambuf->buf, 3 - space);
-					src = buf;
-					count = 1;
-				}
-				else src = ctx->streambuf->readp;
-
-				i = count;
-				while (i--) {
-					src++;
-					*dst++ = *src++;
-					*dst++ = *src++;
-				}
-
-				_buf_inc_readp(ctx->streambuf, count * 3);
-				_buf_inc_writep(ctx->outputbuf, count * 2);
-			}
-
-			UNLOCK_S;UNLOCK_O;
-
-			if (toend) {
-
-				if (!bytes ) ctx->decode.state = DECODE_COMPLETE;
-
-				if (ctx->decode.state != DECODE_RUNNING) {
-
-					LOG_INFO("decode %s", ctx->decode.state == DECODE_COMPLETE ? "complete" : "error");
-
-					if (ctx->output.fade_mode) _checkfade(false, ctx);
-
-					wake_controller(ctx);
-				}
-
-				ran = true;
-			}
-		}
-
-		UNLOCK_D;
-
-		if (!ran) {
-			usleep(100000);
-		}
-	}
-
-	return 0;
-}
-#endif

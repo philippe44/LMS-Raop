@@ -76,7 +76,7 @@ tMRConfig			glMRConfig = {
 							true,
 							3,
 							false,
-							30,
+							60,
 					};
 
 static u8_t LMSVolumeMap[101] = {
@@ -95,12 +95,19 @@ static u8_t LMSVolumeMap[101] = {
 sq_dev_param_t glDeviceParam = {
 					STREAMBUF_SIZE,
 					OUTPUTBUF_SIZE,
-					"aif,pcm",
+					"flc,aif,pcm,aac,mp3",
+#if defined(RESAMPLE)
 					SQ_RATE_44100,
-					16,
+#else
+					SQ_RATE_96000,
+#endif
 					{ 0x00,0x00,0x00,0x00,0x00,0x00 },
 					false,
 					500,
+#if defined(RESAMPLE)
+					true,
+					"",
+#endif
 				} ;
 
 /*----------------------------------------------------------------------------*/
@@ -248,23 +255,9 @@ void 		DelRaopDevice(struct sMR *Device);
 			LOG_INFO("[%p]: codec:%c, ch:%d, s:%d, r:%d", device, p->codec,
 										p->channels, p->sample_size, p->sample_rate);
 
-			// FIXME: will have to change if at some point other codecs than PCM are supported
-			// if (p->sample_size != atoi(device->RaopCap.SampleSize)) rc = false;
-			if (p->sample_size != 16 && p->sample_size != 24) rc = false;
-			if (p->sample_rate != atoi(device->RaopCap.SampleRate)) rc = false;
-			if (p->codec == 'p' && !strchr(device->RaopCap.Codecs, '0') && !strchr(device->RaopCap.Codecs, '1')) rc = false;
-			if (p->codec == 'l' && !strchr(device->RaopCap.Codecs, '1')) rc = false;
-			if (p->codec == 'a' && !strchr(device->RaopCap.Codecs, '2') && !strchr(device->RaopCap.Codecs, '3')) rc = false;
-
-			// this is where we can device to flush & re-start the RTSP connection
-			if (rc) {
-				//sq_get_metadata(device->SqueezeHandle, &device->MetaData, false);
-				//sq_free_metadata(&device->MetaData);
-				rc = RaopConnect(device->RaopCtx, RAOP_ALAC, &device->MetaData);
-			}
-			else {
-				LOG_ERROR("[%p]: invalid codec settings", device);
-			}
+			//sq_get_metadata(device->SqueezeHandle, &device->MetaData, false);
+			//sq_free_metadata(&device->MetaData);
+			rc = RaopConnect(device->RaopCtx, RAOP_ALAC, &device->MetaData);
 			break;
 		}
 		default:
@@ -341,13 +334,12 @@ static void *UpdateMRThread(void *args)
 
 			if (AddRaopDevice(Device, p) && !glSaveConfigFile) {
 				// create a new slimdevice
-				Device->sq_config.sample_rate = atoi(Device->RaopCap.SampleRate);
-				Device->sq_config.sample_size = atoi(Device->RaopCap.SampleSize);
 				Device->SqueezeHandle = sq_reserve_device(Device, &sq_callback);
 				if (!Device->SqueezeHandle || !sq_run_device(Device->SqueezeHandle,
 					GetRaopcl(Device->RaopCtx),
 					*(Device->Config.Name) ? Device->Config.Name : Device->FriendlyName,
-					&Device->sq_config)) {
+					&Device->sq_config,
+					atoi(Device->RaopCap.SampleRate), atoi(Device->RaopCap.SampleSize))) {
 					sq_release_device(Device->SqueezeHandle);
 					Device->SqueezeHandle = 0;
 					LOG_ERROR("[%p]: cannot create squeezelite instance (%s)", Device, Device->FriendlyName);
@@ -643,11 +635,8 @@ bool ParseArgs(int argc, char **argv) {
 			optarg = argv[optind + 1];
 			optind += 2;
 		} else if (strstr("tzZIk"
-#if RESAMPLE
+#if defined(RESAMPLE)
 						  "uR"
-#endif
-#if DSD
-						  "D"
 #endif
 		  , opt)) {
 			optarg = NULL;
@@ -662,13 +651,15 @@ bool ParseArgs(int argc, char **argv) {
 		case 's':
 			strcpy(glSQServer, optarg);
 			break;
-#if RESAMPLE
+#if defined(RESAMPLE)
 		case 'u':
 		case 'R':
 			if (optind < argc && argv[optind] && argv[optind][0] != '-') {
-				gl_resample = argv[optind++];
+				strcpy(glDeviceParam.resample_options, argv[optind++]);
+				glDeviceParam.resample = true;
 			} else {
-				gl_resample = "";
+				strcpy(glDeviceParam.resample_options, "");
+				glDeviceParam.resample = false;
 			}
 			break;
 #endif
@@ -694,14 +685,6 @@ bool ParseArgs(int argc, char **argv) {
 #if LINUX || FREEBSD
 		case 'z':
 			glDaemonize = true;
-			break;
-#endif
-#if DSD
-		case 'D':
-			gl_dop = true;
-			if (optind < argc && argv[optind] && argv[optind][0] != '-') {
-				gl_dop_delay = atoi(argv[optind++]);
-			}
 			break;
 #endif
 		case 'd':

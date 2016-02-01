@@ -47,10 +47,6 @@ struct thread_ctx_s thread_ctx[MAX_PLAYER];
 static char 			_gl_server[SERVER_NAME_LEN + 1];
 static char 			*gl_server = NULL;
 
-#if RESAMPLE
-static char 			*gl_resample = NULL;
-#endif
-
 /*----------------------------------------------------------------------------*/
 /* locals */
 /*----------------------------------------------------------------------------*/
@@ -80,6 +76,9 @@ void sq_wipe_device(struct thread_ctx_s *ctx) {
 
 	slimproto_close(ctx);
 	output_close(ctx);
+#if RESAMPLE
+	process_end(ctx);
+#endif
 	decode_close(ctx);
 	stream_close(ctx);
 }
@@ -447,17 +446,6 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 	}
 	else gl_server = NULL;
 
-#if 0
-	if (gl_resample) {
-		unsigned scale = 8;
-
-		scale = gl_rate[0] / 44100;
-		if (scale > 8) scale = 8;
-		if (scale < 1) scale = 1;
-		gl_output_buf_size *= scale;
-	 }
-#endif
-
 #if WIN
 	winsock_init();
 #endif
@@ -500,7 +488,7 @@ sq_dev_handle_t sq_reserve_device(void *MR, sq_callback_t callback)
 
 
 /*---------------------------------------------------------------------------*/
-bool sq_run_device(sq_dev_handle_t handle, struct raopcl_s *raopcl, char *name, sq_dev_param_t *param)
+bool sq_run_device(sq_dev_handle_t handle, struct raopcl_s *raopcl, char *name, sq_dev_param_t *param, u32_t sample_rate, u8_t sample_size)
 {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
 
@@ -511,12 +499,12 @@ bool sq_run_device(sq_dev_handle_t handle, struct raopcl_s *raopcl, char *name, 
 										  ctx->config.mac[3], ctx->config.mac[4], ctx->config.mac[5]);
 
 	stream_thread_init(ctx->config.stream_buf_size, ctx);
-	output_raop_thread_init(raopcl, ctx->config.output_buf_size, ctx->config.sample_rate, ctx->config.sample_size, ctx);
+	output_raop_thread_init(raopcl, ctx->config.output_buf_size, sample_rate, sample_size, ctx);
 	decode_thread_init(ctx);
 
 #if RESAMPLE
-	if (gl_resample) {
-		process_init(resample);
+	if (param->resample) {
+		process_init(param->resample_options, ctx);
 	}
 #endif
 

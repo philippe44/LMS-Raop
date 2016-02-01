@@ -39,9 +39,8 @@ struct codec	*codecs[MAX_CODECS];
 #define UNLOCK_D mutex_unlock(ctx->decode.mutex);
 
 #if PROCESS
-#error 1
-#define IF_DIRECT(x)    if (decode.direct) { x }
-#define IF_PROCESS(x)   if (!decode.direct) { x }
+#define IF_DIRECT(x)    if (ctx->decode.direct) { x }
+#define IF_PROCESS(x)   if (!ctx->decode.direct) { x }
 #define MAY_PROCESS(x)  { x }
 #else
 #define IF_DIRECT(x)    { x }
@@ -84,11 +83,11 @@ static void *decode_thread(struct thread_ctx_s *ctx) {
 
 				IF_PROCESS(
 					if (ctx->process.in_frames) {
-						ctx->process_samples();
+						process_samples(ctx);
 					}
 
 					if (ctx->decode.state == DECODE_COMPLETE) {
-						ctx->process_drain();
+						process_drain(ctx);
 					}
 				);
 
@@ -126,19 +125,15 @@ void decode_init(void) {
 	if (!strstr(exclude_codecs, "alac") && (!include_codecs || strstr(include_codecs, "alac")))  codecs[i++] = register_ff("alc");
 	if (!strstr(exclude_codecs, "wma")  && (!include_codecs || strstr(include_codecs, "wma")))   codecs[i++] = register_ff("wma");
 #endif
-/*
-	if (!strstr(exclude_codecs, "aac")  && (!include_codecs || strstr(include_codecs, "aac")))  codecs[i++] = register_faad();
-	if (!strstr(exclude_codecs, "ogg")  && (!include_codecs || strstr(include_codecs, "ogg")))  codecs[i++] = register_vorbis();
-	if (!strstr(exclude_codecs, "flac") && (!include_codecs || strstr(include_codecs, "flac"))) codecs[i++] = register_flac();
-	if (!strstr(exclude_codecs, "pcm")  && (!include_codecs || strstr(include_codecs, "pcm")))  codecs[i++] = register_pcm();
-
-	// try mad then mpg for mp3 unless command line option passed
-	if (!(strstr(exclude_codecs, "mp3") || strstr(exclude_codecs, "mad")) &&
-		(!include_codecs || strstr(include_codecs, "mp3") || strstr(include_codecs, "mad")))	codecs[i] = register_mad();
-	if (!(strstr(exclude_codecs, "mp3") || strstr(exclude_codecs, "mpg")) && !codecs[i] &&
-		(!include_codecs || strstr(include_codecs, "mp3") || strstr(include_codecs, "mpg")))    codecs[i] = register_mpg();
-*/
 	codecs[i++] = register_pcm();
+	if ((codecs[i] = register_mad()) == NULL) codecs[i] = register_mpg();
+	i++;
+	codecs[i++] = register_mad();
+	codecs[i++] = register_flac();
+	codecs[i++] = register_faad();
+#if RESAMPLE
+	register_soxr();
+#endif
 }
 
 /*---------------------------------------------------------------------------*/
@@ -149,6 +144,10 @@ void decode_thread_init(struct thread_ctx_s *ctx) {
 	ctx->decode_running = true;
 	ctx->decode.new_stream = true;
 	ctx->decode.state = DECODE_STOPPED;
+	ctx->decode.handle = NULL;
+#if PROCESS
+	ctx->decode.process_handle = NULL;
+#endif
 
 	MAY_PROCESS(
 		ctx->decode.direct = true;
@@ -191,7 +190,7 @@ void decode_flush(struct thread_ctx_s *ctx) {
 	LOCK_D;
 	ctx->decode.state = DECODE_STOPPED;
 	IF_PROCESS(
-		process_flush();
+		process_flush(ctx);
 	);
 	UNLOCK_D;
 }
@@ -204,7 +203,7 @@ unsigned decode_newstream(unsigned sample_rate, unsigned supported_rates[], stru
 	MAY_PROCESS(
 		if (ctx->decode.process) {
 			UNLOCK_O;
-			sample_rate = ctx->process_newstream(&ctx->decode.direct, sample_rate, supported_rates);
+			sample_rate = process_newstream(&ctx->decode.direct, sample_rate, supported_rates, ctx);
 			LOCK_O;
 		}
 	);
@@ -222,10 +221,6 @@ void codec_open(u8_t format, u8_t sample_size, u32_t sample_rate, u8_t channels,
 
 	ctx->decode.new_stream = true;
 	ctx->decode.state = DECODE_STOPPED;
-	ctx->decode.sample_rate = sample_rate;
-	ctx->decode.sample_size = sample_size;
-	ctx->decode.channels = channels;
-	ctx->decode.big_endian = (endianness == 0);
 
 	MAY_PROCESS(
 		ctx->decode.direct = true; // potentially changed within codec when processing enabled

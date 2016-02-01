@@ -13,33 +13,42 @@ squeezeraop_dir = squeeze2raop
 
 build_dir	= ./bin
 
+#LIBRARY = libixml.a libfaad.a
 LIBRARY = libixml.a 
 
-DEFINES = -DHAVE_STDINT_H
-#-D_LARGE_FILE_SOURCE
+DEFINES = -DHAVE_STDINT_H -D RESAMPLE
 
 INCLUDE = -I../../libupnp/1.6.19/ixml/inc\
           -I../../libupnp/1.6.19/upnp/inc\
 		  -I../../mdnssd\
+		  -I../../mpg123/src/libmpg123\
+		  -I../../flac/include\
+		  -I../../faad2/include\
+		  -I../../soxr/src\
+		  -I../../libmad\
 		  -I.\
 		  -I$(squeezetiny_dir)\
 		  -I$(squeezeraop_dir)\
           -I$(squeezeraop_dir)/inc
+			    
 
 SOURCES = \
-		$(squeezetiny_dir)/slimproto.c $(squeezetiny_dir)/buffer.c \
-        $(squeezetiny_dir)/stream.c $(squeezetiny_dir)/utils.c \
-        $(squeezetiny_dir)/pcm.c \
-		$(squeezetiny_dir)/output.c $(squeezetiny_dir)/decode.c \
-		$(squeezetiny_dir)/output_pack.c $(squeezetiny_dir)/output_raop.c \
-        $(squeezetiny_dir)/main.c $(squeezetiny_dir)/util_common.c \
-		$(squeezeraop_dir)/raop_util.c $(squeezeraop_dir)/raop_core.c \
-		$(squeezeraop_dir)/raop_client.c $(squeezeraop_dir)/rtsp_client.c \
-		$(squeezeraop_dir)/aes.c $(squeezeraop_dir)/aexcl_lib.c \
-		$(squeezeraop_dir)/base64.c $(squeezeraop_dir)/alac_wrapper.c \
+	$(squeezetiny_dir)/slimproto.c $(squeezetiny_dir)/buffer.c \
+    $(squeezetiny_dir)/stream.c $(squeezetiny_dir)/utils.c \
+    $(squeezetiny_dir)/pcm.c $(squeezetiny_dir)/mpg.c \
+    $(squeezetiny_dir)/flac.c $(squeezetiny_dir)/mad.c \
+    $(squeezetiny_dir)/faad.c \
+	$(squeezetiny_dir)/process.c $(squeezetiny_dir)/resample.c \
+	$(squeezetiny_dir)/output.c $(squeezetiny_dir)/decode.c \
+	$(squeezetiny_dir)/output_pack.c $(squeezetiny_dir)/output_raop.c \
+    $(squeezetiny_dir)/main.c $(squeezetiny_dir)/util_common.c \
+	$(squeezeraop_dir)/raop_util.c $(squeezeraop_dir)/raop_core.c \
+	$(squeezeraop_dir)/raop_client.c $(squeezeraop_dir)/rtsp_client.c \
+	$(squeezeraop_dir)/aes.c $(squeezeraop_dir)/aexcl_lib.c \
+	$(squeezeraop_dir)/base64.c $(squeezeraop_dir)/alac_wrapper.c \
       	$(squeezeraop_dir)/util.c  \
 	    $(squeezeraop_dir)/squeeze2raop.c\
-		../../mdnssd/mdnssd-min.c	
+		../../mdnssd/mdnssd-min.c 
 
 DEPS             = $(squeezetiny_dir)/squeezelite.h $(squeezetiny_dir)/slimproto.h\
                    $(squeezetiny_dir)/squeezedefs.h $(squeezetiny_dir)/squeezeitf.h\

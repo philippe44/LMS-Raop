@@ -49,10 +49,13 @@ typedef	struct sq_dev_param_s {
 	unsigned 	output_buf_size;
 	char		codecs[SQ_STR_LENGTH];
 	u32_t		sample_rate;
-	u8_t		sample_size;
 	u8_t		mac[6];
 	u8_t		player_volume;
 	u16_t		read_ahead;
+#if defined(RESAMPLE)
+	bool		resample;
+	char		resample_options[SQ_STR_LENGTH];
+#endif
 } sq_dev_param_t;
 
 
@@ -75,7 +78,9 @@ void				sq_init(char *server);
 void				sq_stop(void);
 
 // only name cannot be NULL
-bool			 	sq_run_device(sq_dev_handle_t handle, struct raopcl_s *raopcl, char *name, sq_dev_param_t *param);
+bool			 	sq_run_device(sq_dev_handle_t handle, struct raopcl_s *raopcl,
+								  char *name, sq_dev_param_t *param,
+								  u32_t sample_rate, u8_t sample_size);
 void				sq_delete_device(sq_dev_handle_t);
 sq_dev_handle_t		sq_reserve_device(void *caller_id, sq_callback_t callback);
 void				sq_release_device(sq_dev_handle_t);

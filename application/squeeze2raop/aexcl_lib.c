@@ -36,7 +36,7 @@ char *_aprintf(const char *fmt, ...)
 
 	va_start(args, fmt);
 #if WIN
-	len = vsnprintf(NULL, 0, fmt, cp);
+	len = vsnprintf(NULL, 0, fmt, args);
 #else
 	va_copy(cp, args);
 	len = vsnprintf(NULL, 0, fmt, cp);

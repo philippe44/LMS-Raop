@@ -28,13 +28,14 @@
 
 //mpg123_handle *h;
 
-static struct {
-	//bool use16bit;
 #if !LINKALL
+static struct {
 	// mpg symbols to be dynamically loaded
 	int (* mpg123_init)(void);
 	int (* mpg123_feature)(const enum mpg123_feature_set);
 	void (* mpg123_rates)(const long **, size_t *);
+	int (*  mpg123_param)(mpg123_handle *, enum mpg123_parms type, long value, double fvalue);
+	int (*  mpg123_getparam)(mpg123_handle *, enum mpg123_parms type, long *value, double *fvalue);
 	int (* mpg123_format_none)(mpg123_handle *);
 	int (* mpg123_format)(mpg123_handle *, long, int, int);
 	mpg123_handle *(* mpg123_new)(const char*, int *);
@@ -43,21 +44,11 @@ static struct {
 	int (* mpg123_decode)(mpg123_handle *, const unsigned char *, size_t, unsigned char *, size_t, size_t *);
 	int (* mpg123_getformat)(mpg123_handle *, long *, int *, int *);
 	const char* (* mpg123_plain_strerror)(int);
-#endif
 } m;
-
+#endif
 
 extern log_level decode_loglevel;
-static log_level loglevel = &decode_loglevel;
-
-/*
-extern struct buffer *streambuf;
-extern struct buffer *outputbuf;
-extern struct streamstate stream;
-extern struct outputstate output;
-extern struct decodestate decode;
-extern struct processstate process;
-*/
+static log_level *loglevel = &decode_loglevel;
 
 #define LOCK_S   mutex_lock(ctx->streambuf->mutex)
 #define UNLOCK_S mutex_unlock(ctx->streambuf->mutex)
@@ -85,11 +76,10 @@ extern struct processstate process;
 #define MPG123(h, fn, ...) (h)->mpg123_##fn(__VA_ARGS__)
 #endif
 
-static decode_state mpg_decode(struct thread_ctx_s ctx) {
+static decode_state mpg_decode(struct thread_ctx_s *ctx) {
 	size_t bytes, space, size;
 	int ret;
 	u8_t *write_buf;
-	struct mpg *m = ctx->deoode.ctx;
 
 	LOCK_S;
 	LOCK_O_direct;
@@ -107,42 +97,31 @@ static decode_state mpg_decode(struct thread_ctx_s ctx) {
 	bytes = min(bytes, READ_SIZE);
 	space = min(space, WRITE_SIZE);
 
-	/*
-	//FIXME : this is enforced
-	if (m->use16bit) {
-		space = (space / BYTES_PER_FRAME) * 4;
-	}
-	*/
-	
 	// only get the new stream information on first call so we can reset decode.direct appropriately
 	if (ctx->decode.new_stream) {
 		space = 0;
 	}
 
-	ret = MPG123(&m, ctx->decode, ctx->decode.handle, ctx->streambuf->readp, bytes, write_buf, space, &size);
+	ret = MPG123(&m, decode, ctx->decode.handle, ctx->streambuf->readp, bytes, write_buf, space, &size);
 
 	if (ret == MPG123_NEW_FORMAT) {
 
 		if (ctx->decode.new_stream) {
 			long rate;
 			int channels, enc;
-			
+
 			MPG123(&m, getformat, ctx->decode.handle, &rate, &channels, &enc);
-			
-			LOG_INFO("setting track_start");
+
+			LOG_INFO("[%p]: setting track_start", ctx);
 			LOCK_O_not_direct;
-			//FIXME : rate has to be fixed at 44.1
-			ctx->output.next_sample_rate = decode_newstream(rate, ctx->output.supported_rates);
-			if (ctx->output.next_sample_rate != 44100) {
-				LOG_ERROR("[%p]: only 44.1KHz supported (%d)", ctx, rate);
-			}
+			ctx->output.current_sample_rate = decode_newstream(rate, ctx->output.supported_rates, ctx);
 			ctx->output.track_start = ctx->outputbuf->writep;
-			if (ctx->output.fade_mode) _checkfade(true);
+			if (ctx->output.fade_mode) _checkfade(true, ctx);
 			ctx->decode.new_stream = false;
 			UNLOCK_O_not_direct;
 
 		} else {
-			LOG_WARN("format change mid stream - not supported");
+			LOG_WARN("[%p]: format change mid stream - not supported", ctx);
 		}
 	}
 
@@ -157,18 +136,18 @@ static decode_state mpg_decode(struct thread_ctx_s ctx) {
 
 	UNLOCK_O_direct;
 
-	LOG_SDEBUG("write %u frames", size / BYTES_PER_FRAME);
+	LOG_SDEBUG("[%p]: write %u frames", size / BYTES_PER_FRAME, ctx);
 
 	if (ret == MPG123_DONE || (bytes == 0 && size == 0 && ctx->stream.state <= DISCONNECT)) {
 		UNLOCK_S;
-		LOG_INFO("stream complete");
+		LOG_INFO("[%p]: stream complete", ctx);
 		return DECODE_COMPLETE;
 	}
 
 	UNLOCK_S;
 
 	if (ret == MPG123_ERR) {
-		LOG_WARN("Error");
+		LOG_WARN("[%p]: Error", ctx);
 		return DECODE_COMPLETE;
 	}
 
@@ -176,11 +155,9 @@ static decode_state mpg_decode(struct thread_ctx_s ctx) {
 	return DECODE_RUNNING;
 }
 
-static void mpg_open(u8_t size, u8_t rate, u8_t chan, u8_t endianness, struct thread_ctx_s *ctx) {
+static void mpg_open(u8_t sample_size, u32_t sample_rate, u8_t channels, u8_t endianness, struct thread_ctx_s *ctx) {
 	int err;
-	const long *list;
-	size_t count, i;
-	
+
 	if (ctx->decode.handle) {
 		MPG123(&m, delete, ctx->decode.handle);
 	}
@@ -188,22 +165,28 @@ static void mpg_open(u8_t size, u8_t rate, u8_t chan, u8_t endianness, struct th
 	ctx->decode.handle = MPG123(&m, new, NULL, &err);
 
 	if (ctx->decode.handle == NULL) {
-		LOG_WARN("new error: %s", MPG123(&m, plain_strerror, err));
+		LOG_WARN("[%p]: new error: %s", ctx, MPG123(&m, plain_strerror, err));
 	}
 
-	// restrict output to 32bit or 16bit signed 2 channel based on library capability
-	MPG123(&m, rates, &list, &count);
+
+	//MPG123(&m, rates, &list, &count);
 	MPG123(&m, format_none, ctx->decode.handle);
-	//FIXME : where do I set 16 bits ?
+	// this decoder has a problem with re-sync of live streams
+	//MPG123(&m, param, ctx->decode.handle, MPG123_FORCE_RATE, 44100, 0);
+	//MPG123(&m, param, ctx->decode.handle, MPG123_REMOVE_FLAGS, MPG123_GAPLESS, 0);
+
+	// restrict output to 44100, 16bits signed 2 channel based on library capability
+	MPG123(&m, format, ctx->decode.handle, 44100, 2, MPG123_ENC_SIGNED_16);
+	/*
 	for (i = 0; i < count; i++) {
-		//MPG123(&m, format, ctx->decode.handle, list[i], 2, m.use16bit ? MPG123_ENC_SIGNED_16 : MPG123_ENC_SIGNED_32);
 		MPG123(&m, format, ctx->decode.handle, list[i], 2, MPG123_ENC_SIGNED_16);
 	}
+	*/
 
 	err = MPG123(&m, open_feed, ctx->decode.handle);
 
 	if (err) {
-		LOG_WARN("open feed error: %s", MPG123(&m, plain_strerror, err));
+		LOG_WARN("[%p]: open feed error: %s", ctx, MPG123(&m, plain_strerror, err));
 	}
 }
 
@@ -212,7 +195,7 @@ static void mpg_close(struct thread_ctx_s *ctx) {
 	ctx->decode.handle = NULL;
 }
 
-static bool load_mpg() {
+static bool load_mpg(void) {
 #if !LINKALL
 	void *handle = dlopen(LIBMPG, RTLD_NOW);
 	char *err;
@@ -227,6 +210,8 @@ static bool load_mpg() {
 	m.mpg123_rates = dlsym(handle, "mpg123_rates");
 	m.mpg123_format_none = dlsym(handle, "mpg123_format_none");
 	m.mpg123_format = dlsym(handle, "mpg123_format");
+	m.mpg123_param = dlsym(handle, "mpg123_param");
+	m.mpg123_getparam = dlsym(handle, "mpg123_getparam");
 	m.mpg123_new = dlsym(handle, "mpg123_new");
 	m.mpg123_delete = dlsym(handle, "mpg123_delete");
 	m.mpg123_open_feed = dlsym(handle, "mpg123_open_feed");
@@ -239,7 +224,7 @@ static bool load_mpg() {
 		return false;
 	}
 
-	LOG_INFO("loaded "LIBMPG);
+	LOG_INFO("loaded "LIBMPG, NULL);
 #endif
 
 	return true;
@@ -256,17 +241,12 @@ struct codec *register_mpg(void) {
 		mpg_decode,   // decode
 	};
 
-	//FIXME: but be done at decode_init
-	//ctx->decode.h = NULL;
-
 	if (!load_mpg()) {
 		return NULL;
 	}
 
 	MPG123(&m, init);
 
-	//m->use16bit = MPG123(m, feature, MPG123_FEATURE_OUTPUT_32BIT);
-
-	LOG_INFO("using mpg to decode mp3");
+	LOG_INFO("using mpg to decode mp3", NULL);
 	return &ret;
 }

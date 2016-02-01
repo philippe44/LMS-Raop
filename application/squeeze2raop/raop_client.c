@@ -421,9 +421,10 @@ static bool raopcl_set_sdp(struct raopcl_s *p, char *sdp)
 
    // codec
 	switch (p->codec) {
-		char buf[256];
 
-		case RAOP_ALAC:
+		case RAOP_ALAC: {
+			char buf[256];
+
 			sprintf(buf,
 					"m=audio 0 RTP/AVP 96\r\n"
 					"a=rtpmap:96 AppleLossless\r\n"
@@ -436,6 +437,7 @@ static bool raopcl_set_sdp(struct raopcl_s *p, char *sdp)
 			*/
 			strcat(sdp, buf);
 			break;
+		}
 		default:
 			rc = false;
 			LOG_ERROR("[%p]: unsupported codec: %d", p, p->codec);
@@ -444,10 +446,8 @@ static bool raopcl_set_sdp(struct raopcl_s *p, char *sdp)
 
 	// add encryption if required - only RSA
 	switch (p->crypto ) {
-		char buf[256];
-
 		case RAOP_RSA: {
-			char *key = NULL, *iv = NULL;
+			char *key = NULL, *iv = NULL, *buf;
 			__u8 rsakey[512];
 			int i;
 
@@ -456,13 +456,14 @@ static bool raopcl_set_sdp(struct raopcl_s *p, char *sdp)
 			remove_char_from_string(key, '=');
 			base64_encode(p->iv, 16, &iv);
 			remove_char_from_string(iv, '=');
-			sprintf(buf,
-				"a=rsaaeskey:%s\r\n"
-				"a=aesiv:%s\r\n",
-				key, iv);
+			buf = malloc(strlen(key) + strlen(iv) + 128);
+			sprintf(buf, "a=rsaaeskey:%s\r\n"
+						"a=aesiv:%s\r\n",
+						key, iv);
 			strcat(sdp, buf);
 			free(key);
 			free(iv);
+            free(buf);
 		}
 		case RAOP_CLEAR:
 			break;

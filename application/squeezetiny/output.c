@@ -322,6 +322,8 @@ void output_init_common(void *device, unsigned outputbuf_size, u32_t sample_rate
 	ctx->output.error_opening = false;
 
 	ctx->output.current_sample_rate = ctx->output.default_sample_rate = sample_rate;
+	ctx->output.supported_rates[0] = sample_rate;
+	ctx->output.supported_rates[1] = 0;
 }
 
 
