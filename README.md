@@ -1,7 +1,7 @@
 # LMS-to-Raop
 LMS to Air Playbridge
 
-Allow AirPlay players to be used by Logitech Media Server, as a normal Logitech Hardware
+Allow AirPlay players to be used by Logitech Media Server, as a normal Logitech Hardware. It provides synchronisation, replaygain, gapless,fade in/out/cross and all other LMS goodies
 Pre-packaged versions for Windows (XP and above), Linux (x86, x64 and ARM) can be found here
 
 https://sourceforge.net/projects/lms-to-raop/ and here https://sourceforge.net/projects/lms-plugins-philippe44/
@@ -12,4 +12,4 @@ https://github.com/philippe44/mDNS-SD
 
 https://sourceforge.net/projects/pupnp (you just need the libixml part of libupnp)
 
-You also need to find libFLACthe header files of libmad, libmpg123, libfaad2 and libosxr (only if you want resample)
+You also need to find the header files of libFLAC, libmad, libmpg123, libfaad2 and libosxr (only if you want resample)
