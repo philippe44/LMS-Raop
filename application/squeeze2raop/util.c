@@ -404,6 +404,8 @@ void SaveConfig(char *name, void *ref, bool full)
 /*----------------------------------------------------------------------------*/
 static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name, char *val)
 {
+	if (!val)return;
+
 	if (!strcmp(name, "streambuf_size")) sq_conf->stream_buf_size = atol(val);
 	if (!strcmp(name, "output_size")) sq_conf->output_buf_size = atol(val);
 	if (!strcmp(name, "player_volume")) sq_conf->player_volume = atol(val);
