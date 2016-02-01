@@ -54,6 +54,9 @@ PLUGIN_RAOPBRIDGE_DEBUG
 PLUGIN_RAOPBRIDGE_DEBUG_DESC
 	EN	Specify debugging level for writing to the log file.
 
+PLUGIN_RAOPBRIDGE_
+	EN	none
+	
 PLUGIN_RAOPBRIDGE_ALL
 	EN	All items below
 	
