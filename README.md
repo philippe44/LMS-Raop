@@ -8,5 +8,5 @@ https://sourceforge.net/projects/lms-to-raop/ and here https://sourceforge.net/p
 =============================================
 To re-compile, use makefile (Linux only, need some mods for OSX and Windows) using:
 https://github.com/philippe44/mDNS-SD
-
 https://sourceforge.net/projects/pupnp (you just need the libixml part of libupnp)
+You also need to find libFLACthe header files of libmad, libmpg123, libfaad2 and libosxr (only if you want resample)
