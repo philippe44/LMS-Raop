@@ -27,7 +27,7 @@
 	[% END %]
 	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_DEBUG" desc="PLUGIN_RAOPBRIDGE_DEBUG_DESC" %]
 		<select class="stdedit" name="debugs" id="debugs">
-		[% FOREACH entry IN [ '', 'all', 'output', 'stream', 'slimproto', 'decode', 'slimmain', 'raop', 'util', 'web', 'main'] %]
+		[% FOREACH entry IN [ '', 'all', 'output', 'stream', 'slimproto', 'decode', 'slimmain', 'raop', 'util', 'main'] %]
 			<option [% IF entry == debugs %]selected[% END %] value="[% entry %]">[% "PLUGIN_RAOPBRIDGE_$entry" | string %]</option>
 		[% END %]
 		</select>

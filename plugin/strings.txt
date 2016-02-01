@@ -53,6 +53,9 @@ PLUGIN_RAOPBRIDGE_DEBUG
 
 PLUGIN_RAOPBRIDGE_DEBUG_DESC
 	EN	Specify debugging level for writing to the log file.
+
+PLUGIN_RAOPBRIDGE_ALL
+	EN	All items below
 	
 PLUGIN_RAOPBRIDGE_OUTPUT
 	EN	Output device debugging
@@ -66,14 +69,14 @@ PLUGIN_RAOPBRIDGE_SLIMPROTO
 PLUGIN_RAOPBRIDGE_DECODE
 	EN	Decode debugging
 
-PLUGIN_RAOPBRIDGE_CAST
+PLUGIN_RAOPBRIDGE_RAOP
 	EN	Raop debugging
 
 PLUGIN_RAOPBRIDGE_UTIL
 	EN	Utilities debugging
 
 PLUGIN_RAOPBRIDGE_SLIMMAIN
-	EN	Slim Main function debugging
+	EN	Main slimdevice debugging
 
 PLUGIN_RAOPBRIDGE_MAIN
 	EN	Main application debugging
