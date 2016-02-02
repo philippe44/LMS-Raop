@@ -18,7 +18,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111, USA.
  *****************************************************************************/
 
-#ifndef __RTSP_CLIENT_H_
+#ifndef __RTSP_CLIENT_H
 #define __RTSP_CLIENT_H
 
 struct rtspcl_s;

@@ -95,11 +95,11 @@ static u8_t LMSVolumeMap[101] = {
 sq_dev_param_t glDeviceParam = {
 					STREAMBUF_SIZE,
 					OUTPUTBUF_SIZE,
-					"flc,aif,pcm,aac,mp3",
+					"mp3,aac,flc,pcm,aif",
 #if defined(RESAMPLE)
-					SQ_RATE_44100,
-#else
 					SQ_RATE_96000,
+#else
+					SQ_RATE_44100,
 #endif
 					{ 0x00,0x00,0x00,0x00,0x00,0x00 },
 					false,

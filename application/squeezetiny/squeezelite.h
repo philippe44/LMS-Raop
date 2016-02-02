@@ -528,7 +528,7 @@ struct thread_ctx_s {
 extern struct thread_ctx_s thread_ctx[MAX_PLAYER];
 
 // codecs
-#define MAX_CODECS 4
+#define MAX_CODECS 5
 
 extern struct codec *codecs[MAX_CODECS];
 

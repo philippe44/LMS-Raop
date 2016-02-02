@@ -32,12 +32,8 @@ sub binaries {
 			return qw(squeeze2raop-armv6hf squeeze2raop-armv5 squeeze2raop-armv5-static);
 		}
 		
-		if ($os->{'binArch'} =~ /powerpc/) {
-			return qw(squeeze2raop-ppc squeeze2raop-ppc-static);
-		}
-
 		# fallback to offering all linux options for case when architecture detection does not work
-		return qw(squeeze2raop-x86-64 squeeze2raop-x86 squeeze2raop-x86-static squeeze2raop-armv6hf squeeze2raop-armv5 squeeze2raop-armv5-static squeeze2raop-ppc squeeze2raop-ppc-static);
+		return qw(squeeze2raop-x86-64 squeeze2raop-x86 squeeze2raop-x86-static squeeze2raop-armv6hf squeeze2raop-armv5 squeeze2raop-armv5-static);
 	}
 	
 	if ($os->{'os'} eq 'Darwin') {

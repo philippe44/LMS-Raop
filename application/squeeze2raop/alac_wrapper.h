@@ -21,5 +21,6 @@
 #define __ALAC_WRAPPER_H_
 
 bool pcm_to_alac(u8_t *in, int in_size, u8_t **out, int *size, int bsize, int channels, bool big_endian);
+bool pcm_to_alac_fast(__u32 *in, int in_size, __u8 **out, int *size, int bsize);
 
 #endif

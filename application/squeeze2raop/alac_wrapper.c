@@ -116,4 +116,59 @@ bool pcm_to_alac(u8_t *in, int in_size, u8_t **out, int *size, int bsize, int ch
 	return true;
 }
 
+/*----------------------------------------------------------------------------*/
+// assumes stereo and little endian
+bool pcm_to_alac_fast(__u32 *in, int in_size, __u8 **out, int *size, int bsize)
+{
+	__u8 *p ;
+	int count;
+
+	*out = malloc(bsize * 4 + 16);
+	p = *out;
+
+	*p++ = (1 << 5);
+	*p++ = 0;
+	*p++ = (1 << 4) | (1 << 1) | ((bsize & 0x80000000) >> 31); // b31
+	*p++ = ((bsize & 0x7f800000) << 1) >> 24;	// b30--b23
+	*p++ = ((bsize & 0x007f8000) << 1) >> 16;	// b22--b15
+	*p++ = ((bsize & 0x00007f80) << 1) >> 8;	// b14--b7
+	*p =   ((bsize & 0x0000007f) << 1);       	// b6--b0
+	*p++ |= (*in &  0x00008000) >> 15;			// LB1 b7
+
+	count = in_size - 1;
+	while (count--) {
+		// LB1 b6--b0 + LB0 b7
+		*p++ = ((*in & 0x00007f80) >> 7);
+		// LB0 b6--b0 + RB1 b7
+		*p++ = ((*in & 0x0000007f) << 1) | ((*in & 0x80000000) >> 31);
+		// RB1 b6--b0 + RB0 b7
+		*p++ = ((*in & 0x7f800000) >> 23);
+		// RB0 b6--b0 + next LB1 b7
+		*p++ = ((*in & 0x007f0000) >> 15) | ((*(in + 1) & 0x00008000) >> 15);
+
+		in++;
+	}
+
+	// last sample
+	// LB1 b6--b0 + LB0 b7
+	*p++ = ((*in & 0x00007f80) >> 7);
+	// LB0 b6--b0 + RB1 b7
+	*p++ = ((*in & 0x0000007f) << 1) | ((*in & 0x80000000) >> 31);
+	// RB1 b6--b0 + RB0 b7
+	*p++ = ((*in & 0x7f800000) >> 23);
+	// RB0 b6--b0 + next LB1 b7
+	*p++ = ((*in & 0x007f0000) >> 15);
+
+	// when readable size is less than bsize, fill 0 at the bottom
+	count = (bsize - in_size) * 4;
+	while (count--)	*p++ = 0;
+
+	// frame footer ??
+	*(p-1) |= 1;
+	*p = (7 >> 1) << 6;
+
+	*size = p - *out + 1;
+
+	return true;
+}
 

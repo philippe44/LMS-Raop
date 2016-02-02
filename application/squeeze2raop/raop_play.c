@@ -144,14 +144,22 @@ int main(int argc, char *argv[])
 	//raopcl_update_volume(raopcl, volume, true);
 
 	do {
-		u8_t *buffer;
+		u8_t *buffer, *buf2;
 		u32_t timestamp;
+		int i;
 
 		n = fread(buf, 352*4, 1, infile);
 		pcm_to_alac(buf, 352, &buffer, &size, 352, 2, false);
+		pcm_to_alac_fast(buf, 352, &buf2, &size, 352);
+		for (i = 0; i < size; i++) {
+			if (buf2[i] != buffer[i]) {
+				printf("error");
+			}
+		}
 		// buffer = buf;
 		timestamp = raopcl_send_sample(raopcl, buffer, size, 352, false, 3000);
 		free(buffer);
+		free(buf2);
 	} while (n);
 
  erexit:
