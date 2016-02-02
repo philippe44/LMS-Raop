@@ -77,6 +77,7 @@ tMRConfig			glMRConfig = {
 							3,
 							false,
 							60,
+							false,
 					};
 
 static u8_t LMSVolumeMap[101] = {
@@ -498,18 +499,18 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 		return false;
 	}
 
-#if 1
-	if (strchr(Device->RaopCap.Crypto, '1')) Crypto = RAOP_RSA;
-	else Crypto = RAOP_CLEAR;
-#else
-	Crypto = RAOP_RSA;
-#endif
+	if ((Device->Config.Encryption && strchr(Device->RaopCap.Crypto, '1')) ||
+		(!strchr(Device->RaopCap.Crypto, '0') && strchr(Device->RaopCap.Crypto, '1')))
+		Crypto = RAOP_RSA;
+	else
+		Crypto = RAOP_CLEAR;
 
 	Device->RaopCtx = CreateRaopDevice(p, glInterface, Device->ip, data->port,
 									  RAOP_ALAC, Crypto,
 									  Device->Config.IdleTimeout * 1000,
-									  atoi(Device->RaopCap.SampleRate),
-									  atoi(Device->RaopCap.SampleSize),atoi(Device->RaopCap.Channels),
+									  Device->RaopCap.SampleRate ? atoi(Device->RaopCap.SampleRate) : 44100,
+									  Device->RaopCap.SampleSize ? atoi(Device->RaopCap.SampleSize) : 16,
+									  Device->RaopCap.Channels ? atoi(Device->RaopCap.Channels) : 2,
 									  Device->sq_config.player_volume);
 
 	if (!Device->RaopCtx) {

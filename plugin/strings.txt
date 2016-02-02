@@ -218,9 +218,10 @@ PLUGIN_RAOPBRIDGE_PLAYEROPTIONS_DESC
 	EN	<b>Release</b>: The bridge takes exclusive ownership of the device when playing. Establishing such connection can take a
 	EN	a few seconds hence it is not released when the player is stopped/pause, so that restart can be quick. But a release must happen for
 	EN	other AirPlay controller to connect. So after the timeout, the connection is released
-	EN	<br><b>Buffer</b>: Sets the number of milliseconds of audio buffer in the player. This is important to absorb network througput jitter
+	EN	<br><b>Buffer</b>: Sets the number of milliseconds of audio buffer in the player. This is important to absorb network throughput jitter
 	EN	Note that the resume after pause will be skipping that amount of time and volume changes will be delayed by the same amount, when
 	EN	using digital volume
+	EN <br><b>Encryption</b>: Use encryption if available (not recommended)
 
 PLUGIN_RAOPBRIDGE_READAHEAD
 	EN	Networking buffer (ms)	 
@@ -230,6 +231,9 @@ PLUGIN_RAOPBRIDGE_IDLETIMEOUT
 
 PLUGIN_RAOPBRIDGE_IDLETIMEOUT_2
 	EN	(s) after Stop or Pause  
+
+PLUGIN_RAOPBRIDGE_ENCRYPTION
+	EN	Use encryption
 	
 PLUGIN_RAOPBRIDGE_PLAYERLIST
 	EN	List of players currently in configuration file - Note that more devices might have been discovered

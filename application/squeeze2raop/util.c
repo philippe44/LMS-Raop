@@ -351,6 +351,8 @@ void SaveConfig(char *name, void *ref, bool full)
 		XMLAddNode(doc, common, "remove_count", "%d", (u32_t) glMRConfig.RemoveCount);
 		XMLAddNode(doc, common, "auto_play", "%d", (int) glMRConfig.AutoPlay);
 		XMLAddNode(doc, common, "idle_timeout", "%d", (int) glMRConfig.IdleTimeout);
+
+		XMLAddNode(doc, common, "encryption", "%d", (int) glMRConfig.Encryption);
 		XMLAddNode(doc, common, "read_ahead", "%d", (int) glDeviceParam.read_ahead);
 	}
 
@@ -421,6 +423,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "player_volume")) sq_conf->player_volume = atol(val);
 	if (!strcmp(name, "auto_play")) Conf->AutoPlay = atol(val);
 	if (!strcmp(name, "idle_timeout")) Conf->IdleTimeout = atol(val);
+	if (!strcmp(name, "encryption")) Conf->Encryption = atol(val);
 	if (!strcmp(name, "read_ahead")) sq_conf->read_ahead = atol(val);
 	if (!strcmp(name, "send_metadata")) Conf->SendMetaData = atol(val);
 	if (!strcmp(name, "send_coverart")) Conf->SendCoverArt = atol(val);

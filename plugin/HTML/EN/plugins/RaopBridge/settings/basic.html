@@ -110,6 +110,12 @@
 	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_PLAYEROPTIONS" desc="PLUGIN_RAOPBRIDGE_PLAYEROPTIONS_DESC" %]
 		[% "PLUGIN_RAOPBRIDGE_READAHEAD" | string %]
 		<input type="text" class="stdedit" name="read_ahead" id="read_ahead" value="[% read_ahead %]" size="3">
+		&nbsp&nbsp[% "PLUGIN_RAOPBRIDGE_ENCRYPTION" | string %]
+		<select class="stdedit" name="encryption" id="encryption">
+		[% FOREACH entry IN YESNOBOX %] 
+			<option [% IF entry.1 == encryption %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+		[% END %]
+		</select>
 		&nbsp&nbsp[% "PLUGIN_RAOPBRIDGE_IDLETIMEOUT" | string %]
 		<input type="text" class="stdedit" name="idle_timeout" id="idle_timeout" value="[% idle_timeout %]" size="2">
 		[% "PLUGIN_RAOPBRIDGE_IDLETIMEOUT_2" | string %]

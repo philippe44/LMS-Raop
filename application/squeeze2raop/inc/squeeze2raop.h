@@ -55,6 +55,7 @@ typedef struct sMRConfig
 	int			RemoveCount;
 	bool		AutoPlay;
 	int			IdleTimeout;
+	bool		Encryption;
 } tMRConfig;
 
 
