@@ -340,7 +340,8 @@ static void *UpdateMRThread(void *args)
 					GetRaopcl(Device->RaopCtx),
 					*(Device->Config.Name) ? Device->Config.Name : Device->FriendlyName,
 					&Device->sq_config,
-					atoi(Device->RaopCap.SampleRate), atoi(Device->RaopCap.SampleSize))) {
+					Device->RaopCap.SampleRate ? atoi(Device->RaopCap.SampleRate) : 44100,
+					Device->RaopCap.SampleSize ? atoi(Device->RaopCap.SampleSize) : 16)) {
 					sq_release_device(Device->SqueezeHandle);
 					Device->SqueezeHandle = 0;
 					LOG_ERROR("[%p]: cannot create squeezelite instance (%s)", Device, Device->FriendlyName);
