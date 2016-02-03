@@ -49,7 +49,7 @@ frames_t _output_frames(frames_t avail, struct thread_ctx_s *ctx) {
 	// start when threshold met
 	if (ctx->output.state == OUTPUT_BUFFER && frames > ctx->output.threshold * ctx->output.current_sample_rate / 100 && frames > ctx->output.start_frames) {
 		ctx->output.state = OUTPUT_RUNNING;
-		LOG_INFO("start buffer frames: %u", frames);
+		LOG_INFO("[%p]: start buffer frames: %u", ctx, frames);
 		wake_controller(ctx);
 	}
 
@@ -57,7 +57,7 @@ frames_t _output_frames(frames_t avail, struct thread_ctx_s *ctx) {
 	if (ctx->output.state == OUTPUT_SKIP_FRAMES) {
 		if (frames > 0) {
 			frames_t skip = min(frames, ctx->output.skip_frames);
-			LOG_INFO("skip %u of %u frames", skip, ctx->output.skip_frames);
+			LOG_INFO("[%p]: skip %u of %u frames", ctx, skip, ctx->output.skip_frames);
 			frames -= skip;
 			ctx->output.frames_played += skip;
 			while (skip > 0) {
@@ -71,7 +71,7 @@ frames_t _output_frames(frames_t avail, struct thread_ctx_s *ctx) {
 
 	// pause frames - play silence for required frames
 	if (ctx->output.state == OUTPUT_PAUSE_FRAMES) {
-		LOG_INFO("pause %u frames", ctx->output.pause_frames);
+		LOG_INFO("[%p]: pause %u frames", ctx, ctx->output.pause_frames);
 		if (ctx->output.pause_frames == 0) {
 			ctx->output.state = OUTPUT_RUNNING;
 		} else {
@@ -102,7 +102,7 @@ frames_t _output_frames(frames_t avail, struct thread_ctx_s *ctx) {
 		frames = min(avail, MAX_SILENCE_FRAMES);
 	}
 
-	LOG_SDEBUG("avail: %d frames: %d silence: %d", avail, frames, silence);
+	LOG_SDEBUG("[%p]: avail: %d frames: %d silence: %d", ctx, avail, frames, silence);
 	frames = min(frames, avail);
 	size = frames;
 
@@ -226,7 +226,7 @@ frames_t _output_frames(frames_t avail, struct thread_ctx_s *ctx) {
 		}
 	}
 
-	LOG_SDEBUG("wrote %u frames", frames);
+	LOG_SDEBUG("[%p]: wrote %u frames", ctx, frames);
 
 	return frames;
 }

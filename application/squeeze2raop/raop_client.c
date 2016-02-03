@@ -72,8 +72,7 @@ typedef struct {
 } __attribute__ ((packed)) rtp_lost_pkt_t;
 #endif
 
-
-typedef struct raopcl_s {
+typedef struct raopcl_s {
 	struct rtspcl_s *rtspcl;
 	raop_state_t state;
 	bool sane;
@@ -268,18 +267,19 @@ __u32 raopcl_send_sample(struct raopcl_s *p, __u8 *sample, int size, int frames,
 	addr.sin_addr = p->host_addr;
 	addr.sin_port = htons(p->rtp_ports.audio.rport);
 
-	if ((buffer = malloc(sizeof(rtp_audio_pkt_t) + size)) == NULL) {
+	// add an extra header for repeat, one less alloc to be done
+	if ((buffer = malloc(sizeof(rtp_header_t) + sizeof(rtp_audio_pkt_t) + size)) == NULL) {
 		LOG_ERROR("[%p]: cannot allocate sample buffer", p);
 		return playtime;
 	}
 
-	// only increment if we reallt send
+	// only increment if we really send
 	pthread_mutex_lock(&p->mutex);
 	p->seq_number++;
 	pthread_mutex_unlock(&p->mutex);
 
-
-	packet = (rtp_audio_pkt_t *) buffer;
+	// packet is after re-transmit header
+	packet = (rtp_audio_pkt_t *) (buffer + sizeof(rtp_header_t));
 	packet->hdr.proto = 0x80;
 	packet->hdr.type = 0x60 | (first ? 0x80 : 0);
 	// packet->hdr.type = 0x0a | (first ? 0x80 : 0);
@@ -288,28 +288,24 @@ __u32 raopcl_send_sample(struct raopcl_s *p, __u8 *sample, int size, int frames,
 	packet->timestamp = htonl(p->rtp_ts.audio);
 	packet->ssrc = htonl(p->ssrc);
 
-	memcpy(buffer + sizeof(rtp_audio_pkt_t), sample, size);
+	memcpy((u8_t*) packet + sizeof(rtp_audio_pkt_t), sample, size);
 
 	// with newer airport express, don't use encryption (??)
-	if (p->encrypt) raopcl_encrypt(p, buffer + sizeof(rtp_audio_pkt_t), size);
+	if (p->encrypt) raopcl_encrypt(p, (u8_t*) packet + sizeof(rtp_audio_pkt_t), size);
 
 	pthread_mutex_lock(&p->mutex);
 	n = p->seq_number % MAX_BACKLOG;
 	p->backlog[n].seq_number = p->seq_number;
 	p->backlog[n].timestamp = p->rtp_ts.audio;
-	// will need to free before allocation
 	if (p->backlog[n].buffer) free(p->backlog[n].buffer);
 	p->backlog[n].buffer = buffer;
 	p->backlog[n].size = sizeof(rtp_audio_pkt_t) + size;
 	pthread_mutex_unlock(&p->mutex);
 
-	n = sendto(p->rtp_ports.audio.fd, buffer, sizeof(rtp_audio_pkt_t) + size, 0, (void*) &addr, sizeof(addr));
+	n = sendto(p->rtp_ports.audio.fd, (void*) packet, sizeof(rtp_audio_pkt_t) + size, 0, (void*) &addr, sizeof(addr));
 	if (n != sizeof(rtp_audio_pkt_t) + size) {
 		LOG_ERROR("[%p]: error sending audio packet", p);
 	}
-
-	// will have to be removed
-	// free(buffer);
 
 	if (playtime % 10000 < 8) {
 		LOG_INFO("check n:%u p:%u tsa:%u sn:%u", now, playtime, p->rtp_ts.audio, p->seq_number);
@@ -869,38 +865,44 @@ void *rtp_control_thread(void *args)
 
 		if (FD_ISSET(raopcld->rtp_ports.ctrl.fd, &rfds)) {
 			rtp_lost_pkt_t lost;
-			int i, n, error, missed;
+			bool error = false;
+			int i, n, missed;
 
 			n = recv(raopcld->rtp_ports.ctrl.fd, (void*) &lost, sizeof(lost), 0);
 			lost.seq_number = ntohs(lost.seq_number);
 			lost.n = ntohs(lost.n);
 
 			if (n != sizeof(lost)) {
-				LOG_WARN("[%p]: error in re-send packet sn:%d n:%d (recv:%d)",
+				LOG_ERROR("[%p]: error in received request sn:%d n:%d (recv:%d)",
 						  raopcld, lost.seq_number, lost.n, n);
-				continue;
+				lost.n = 0;
+				lost.seq_number = 0;
+				error = true;
 			}
 
-			for (error = missed = 0, i = 0; i < lost.n; i++) {
+			for (missed = 0, i = 0; i < lost.n; i++) {
 				u16_t index = (lost.seq_number + i) % MAX_BACKLOG;
 
 				if (raopcld->backlog[index].seq_number == lost.seq_number + i) {
 					struct sockaddr_in addr;
-					rtp_audio_pkt_t *packet;
+					rtp_header_t *hdr = (rtp_header_t*) raopcld->backlog[index].buffer;
 
-					packet = (rtp_audio_pkt_t*) raopcld->backlog[index].buffer;
-					packet->hdr.type = 86;
+					hdr->proto = 0x80;
+					hdr->type = 0x56 | 0x80;
+					hdr->seq[0] = 0;
+					hdr->seq[1] = 1;
 
 					addr.sin_family = AF_INET;
 					addr.sin_addr = raopcld->host_addr;
-					addr.sin_port = htons(raopcld->rtp_ports.audio.rport);
+					addr.sin_port = htons(raopcld->rtp_ports.ctrl.rport);
 
-					n = sendto(raopcld->rtp_ports.audio.fd, (void*) packet,
-							   raopcld->backlog[index].size, 0, (void*) &addr, sizeof(addr));
+					n = sendto(raopcld->rtp_ports.ctrl.fd, (void*) hdr,
+							   sizeof(rtp_header_t) + raopcld->backlog[index].size,
+							   0, (void*) &addr, sizeof(addr));
 
 					if (n == -1) {
-						error++;
-						LOG_DEBUG("[%p]: error re-sending lost packet sn:%u (n:%d)",
+						error = true;
+						LOG_DEBUG("[%p]: error resending lost packet sn:%u (n:%d)",
 								   raopcld, lost.seq_number + i, n);
 					}
 				}
@@ -910,10 +912,10 @@ void *rtp_control_thread(void *args)
 				}
 			}
 
-			LOG_ERROR("[%p]: lost packet sn:%d n:%d (missing:%d) (error:%d)",
+			LOG_ERROR("[%p]: retransmit packet sn:%d nb:%d (mis:%d) (err:%d)",
 					  raopcld, lost.seq_number, lost.n, missed, error);
 
-			if (error > 10 || missed > 100) {
+			if (error || missed > 100) {
 				LOG_ERROR("[%p]: attempting link reset", raopcld);
 				raopcld->sane = false;
 			}
