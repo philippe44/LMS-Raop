@@ -76,6 +76,7 @@ typedef struct {
 typedef struct raopcl_s {
 	struct rtspcl_s *rtspcl;
 	raop_state_t state;
+	bool sane;
 	__u8 iv[16]; // initialization vector for aes-cbc
 	__u8 nv[16]; // next vector for aes-cbc
 	__u8 key[16]; // key for aes-cbc
@@ -131,6 +132,13 @@ raop_state_t raopcl_get_state(struct raopcl_s *p)
 
 
 /*----------------------------------------------------------------------------*/
+bool raopcl_is_sane(struct raopcl_s *p)
+{
+	return p->sane;
+}
+
+
+/*----------------------------------------------------------------------------*/
 u32_t raopcl_get_latency(struct raopcl_s *p)
 {
 	if (!p) return 0;
@@ -138,22 +146,6 @@ u32_t raopcl_get_latency(struct raopcl_s *p)
 	return p->latency;
 }
 
-
-/*----------------------------------------------------------------------------*/
-/*
-__u32 raopcl_get_timestamp(struct raopcl_s *p, __u32 origin_ms, __u32 count)
-{
-	__s64 timestamp;
-
-	// must be done in steps to deal with 32 bits overflow
-	// FIXME : it does not handle time rollover ...
-	timestamp = (__s32) (origin_ms - p->start_first_timestamp);
-	timestamp = (timestamp * p->settings.sample_rate) / 1000L;
-	timestamp += p->start_rtp_timestamp + count;
-
-	return (u32_t) timestamp;
-}
-*/
 
 /*----------------------------------------------------------------------------*/
 static int rsa_encrypt(__u8 *text, int len, __u8 *res)
@@ -226,9 +218,13 @@ __u32 raopcl_send_sample(struct raopcl_s *p, __u8 *sample, int size, int frames,
 	if (!p) return 0;
 
 	pthread_mutex_lock(&p->mutex);
+
+	// wait for async flush to be executed
+	if (p->state == RAOP_FLUSHING) {
+		LOG_INFO("[%p]: waiting for flushing to end", p);
+	}
 	while (p->state == RAOP_FLUSHING) {
 		pthread_mutex_unlock(&p->mutex);
-		LOG_INFO("[%p]: waiting for flushing to end", p);
 		usleep(10000);
 		pthread_mutex_lock(&p->mutex);
 	}
@@ -334,6 +330,7 @@ struct raopcl_s *raopcl_create(char *local, raop_codec_t codec, raop_crypto_t cr
 	memset(raopcld, 0, sizeof(raopcl_data_t));
 
 	raopcld->state = RAOP_DOWN_FULL;
+	raopcld->sane = true;
 	raopcld->sample_rate = sample_rate;
 	raopcld->sample_size = sample_size;
 	raopcld->channels = channels;
@@ -534,6 +531,12 @@ static bool raopcl_analyse_setup(struct raopcl_s *p, key_data_t *setup_kd)
 
 
 /*----------------------------------------------------------------------------*/
+bool raopcl_reconnect(struct raopcl_s *p) {
+   return raopcl_connect(p, p->host_addr, p->rtsp_port, p->codec);
+}
+
+
+/*----------------------------------------------------------------------------*/
 bool raopcl_connect(struct raopcl_s *p, struct in_addr host, __u16 destport, raop_codec_t codec)
 {
 	__u8 seed[4+8+16];
@@ -548,12 +551,14 @@ bool raopcl_connect(struct raopcl_s *p, struct in_addr host, __u16 destport, rao
 
 	if (p->state >= RAOP_FLUSHING) return true;
 
-	p->host_addr.s_addr = host.s_addr;
+	if (host.s_addr != INADDR_ANY) p->host_addr.s_addr = host.s_addr;
+	if (codec != RAOP_NOPARAM) p->codec = codec;
+	if (destport != 0) p->rtsp_port = destport;
+
 	p->ssrc = _random(0xffffffff);
-	p->rtsp_port = destport;
 	p->latency = 0;
-	p->codec = (codec != RAOP_NOPARAM) ? codec : p->codec;
 	p->encrypt = (p->crypto != RAOP_CLEAR);
+	p->sane = true;
 
 	RAND_bytes(seed, sizeof(seed));
 	sprintf(sid, "%d%hu", 3420, *((__u16*) seed));
@@ -864,38 +869,54 @@ void *rtp_control_thread(void *args)
 
 		if (FD_ISSET(raopcld->rtp_ports.ctrl.fd, &rfds)) {
 			rtp_lost_pkt_t lost;
-			int i, n, missed = 0;;
+			int i, n, error, missed;
 
 			n = recv(raopcld->rtp_ports.ctrl.fd, (void*) &lost, sizeof(lost), 0);
 			lost.seq_number = ntohs(lost.seq_number);
 			lost.n = ntohs(lost.n);
 
-			for (i = 0; i < lost.n; i++) {
-				struct sockaddr_in addr;
-				rtp_audio_pkt_t *packet;
-				u16_t index;
+			if (n != sizeof(lost)) {
+				LOG_WARN("[%p]: error in re-send packet sn:%d n:%d (recv:%d)",
+						  raopcld, lost.seq_number, lost.n, n);
+				continue;
+			}
 
-				addr.sin_family = AF_INET;
-				addr.sin_addr = raopcld->host_addr;
-				addr.sin_port = htons(raopcld->rtp_ports.audio.rport);
+			for (error = missed = 0, i = 0; i < lost.n; i++) {
+				u16_t index = (lost.seq_number + i) % MAX_BACKLOG;
+
+				if (raopcld->backlog[index].seq_number == lost.seq_number + i) {
+					struct sockaddr_in addr;
+					rtp_audio_pkt_t *packet;
+
+					packet = (rtp_audio_pkt_t*) raopcld->backlog[index].buffer;
+					packet->hdr.type = 86;
+
+					addr.sin_family = AF_INET;
+					addr.sin_addr = raopcld->host_addr;
+					addr.sin_port = htons(raopcld->rtp_ports.audio.rport);
 
-				index = (lost.seq_number + i) % MAX_BACKLOG;
-				if (raopcld->backlog[index].seq_number != lost.seq_number + i) {
+					n = sendto(raopcld->rtp_ports.audio.fd, (void*) packet,
+							   raopcld->backlog[index].size, 0, (void*) &addr, sizeof(addr));
+
+					if (n == -1) {
+						error++;
+						LOG_DEBUG("[%p]: error re-sending lost packet sn:%u (n:%d)",
+								   raopcld, lost.seq_number + i, n);
+					}
+				}
+				else {
 					missed++;
 					LOG_DEBUG("[%p]: lost packet out of backlog %u", raopcld, lost.seq_number + i);
 				}
-				else {
-					packet = (rtp_audio_pkt_t*) raopcld->backlog[index].buffer;
-					packet->hdr.type = 86;
-					n = sendto(raopcld->rtp_ports.audio.fd, (void*) packet, raopcld->backlog[index].size, 0, (void*) &addr, sizeof(addr));
-				}
-
-				if (n != raopcld->backlog[index].size) {
-					LOG_ERROR("[%p]: error re-sending audio packet", raopcld);
-				}
 			}
 
-			LOG_WARN("[%p]: lost packet sn:%d n:%d (missing:%d)", raopcld, lost.seq_number, lost.n, missed);
+			LOG_ERROR("[%p]: lost packet sn:%d n:%d (missing:%d) (error:%d)",
+					  raopcld, lost.seq_number, lost.n, missed, error);
+
+			if (error > 10 || missed > 100) {
+				LOG_ERROR("[%p]: attempting link reset", raopcld);
+				raopcld->sane = false;
+			}
 
 			continue;
 		}

@@ -37,11 +37,6 @@
 #include "raop_util.h"
 #include "mdnssd-itf.h"
 
-/*
-TODO :
-- for no pause, the solution will be to send the elapsed time to LMS through CLI so that it does take care of the seek
-- samplerate management will have to be reviewed when decode will be used
-*/
 
 /*----------------------------------------------------------------------------*/
 /* globals initialized */

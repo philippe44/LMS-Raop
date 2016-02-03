@@ -85,6 +85,7 @@ typedef struct {
 struct raopcl_s *raopcl_create(char *local, raop_codec_t codec, raop_crypto_t crypto, int sample_rate, int sample_size, int channels, int volume);
 bool	raopcl_destroy(struct raopcl_s *p);
 bool	raopcl_connect(struct raopcl_s *p, struct in_addr host, __u16 destport, raop_codec_t codec);
+bool 	raopcl_reconnect(struct raopcl_s *p);
 bool    raopcl_flush_stream(struct raopcl_s *p, raop_flush_t mode);
 bool 	raopcl_start_stream(struct raopcl_s *p);
 bool 	raopcl_disconnect(struct raopcl_s *p);
@@ -95,5 +96,6 @@ __u32	raopcl_send_sample(struct raopcl_s *p, __u8 *sample, int size, int frames,
 bool 	raopcl_set_content(raopcl_t *p, char* itemname, char* songartist, char* songalbum);
 __u32 	raopcl_get_timestamp(struct raopcl_s *p, __u32 origin_ms, __u32 count);
 u32_t 	raopcl_get_latency(struct raopcl_s *p);
+bool 	raopcl_is_sane(struct raopcl_s *p);
 
 #endif

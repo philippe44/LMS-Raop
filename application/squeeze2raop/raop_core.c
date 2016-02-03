@@ -136,6 +136,12 @@ static void *RaopThread(void *args)
 				raopcl_disconnect(Ctx->raopcl);
 				Ctx->TearDownWait = false;
 			}
+
+			if (!raopcl_is_sane(Ctx->raopcl)) {
+				LOG_ERROR("[%p]: dead connection, attempting reset", Ctx->raopcl);
+				raopcl_disconnect(Ctx->raopcl);
+				raopcl_reconnect(Ctx->raopcl);
+			}
 			continue;
 		}
 
