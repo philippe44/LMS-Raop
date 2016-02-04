@@ -1,17 +1,20 @@
 #ifndef __SQUEEZEDEFS_H
 #define __SQUEEZEDEFS_H
 
-#define VERSION "v0.2.0.0-dev-2"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.1.0.0-dev-7"" ("__DATE__" @ "__TIME__")"
 
 #include "platform.h"
 
 #if LINUX || OSX || FREEBSD
+
 #define STREAM_THREAD_STACK_SIZE  64 * 1024
-#define DECODE_THREAD_STACK_SIZE 128 * 1024
+#define DECODE_THREAD_STACK_SIZE 32 * 1024
 #define OUTPUT_THREAD_STACK_SIZE  64 * 1024
 #define SLIMPROTO_THREAD_STACK_SIZE  64 * 1024
 #define thread_t pthread_t;
 #define closesocket(s) close(s)
+#define last_error() errno
+#define ERROR_WOULDBLOCK EWOULDBLOCK
 
 #define mutex_type pthread_mutex_t
 #define mutex_create(m) pthread_mutex_init(&m, NULL)
@@ -22,14 +25,25 @@
 #define thread_type pthread_t
 #define mutex_timedlock(m, t) _mutex_timedlock(&m, t)
 int _mutex_timedlock(mutex_type *m, u32_t wait);
+
 #endif
 
 #if WIN
+
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <iphlpapi.h>
+#include <io.h>
+#include <stdbool.h>
+#include <sys/timeb.h>
+#include "pthread.h"
 
 #define STREAM_THREAD_STACK_SIZE (1024 * 64)
 #define DECODE_THREAD_STACK_SIZE (1024 * 128)
 #define OUTPUT_THREAD_STACK_SIZE (1024 * 64)
 #define SLIMPROTO_THREAD_STACK_SIZE  (1024 * 64)
+
+#define inline __inline
 
 #define mutex_type HANDLE
 #define mutex_create(m) m = CreateMutex(NULL, FALSE, NULL)
@@ -40,12 +54,6 @@ int _mutex_timedlock(mutex_type *m, u32_t wait);
 #define mutex_unlock(m) ReleaseMutex(m)
 #define mutex_destroy(m) CloseHandle(m)
 #define thread_type HANDLE
-
-#define in_addr_t u32_t
-#define socklen_t int
-#define ssize_t int
-
-#define RTLD_NOW 0
 
 #endif
 

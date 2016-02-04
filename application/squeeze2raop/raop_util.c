@@ -73,7 +73,7 @@ void RaopPause(struct sRaopCtx *Ctx)
 void RaopUnPause(struct sRaopCtx *Ctx)
 {
 	LOG_INFO("[%p]: un-pause request", Ctx->owner);
-	RaopConnect(Ctx, RAOP_NOPARAM, NULL);
+	RaopConnect(Ctx, RAOP_NOCODEC, NULL);
 }
 
 

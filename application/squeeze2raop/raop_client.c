@@ -100,7 +100,7 @@ typedef struct raopcl_s {
 		__u32	audio;
 	} rtp_ts;
 	__u16   seq_number;
-	bool flush_mode;
+	raop_flush_t flush_mode;
 	unsigned long ssrc;
 	int latency;
 	pthread_t time_thread, ctrl_thread;
@@ -548,7 +548,7 @@ bool raopcl_connect(struct raopcl_s *p, struct in_addr host, __u16 destport, rao
 	if (p->state >= RAOP_FLUSHING) return true;
 
 	if (host.s_addr != INADDR_ANY) p->host_addr.s_addr = host.s_addr;
-	if (codec != RAOP_NOPARAM) p->codec = codec;
+	if (codec != RAOP_NOCODEC) p->codec = codec;
 	if (destport != 0) p->rtsp_port = destport;
 
 	p->ssrc = _random(0xffffffff);
@@ -858,8 +858,10 @@ void *rtp_control_thread(void *args)
 		FD_SET(raopcld->rtp_ports.ctrl.fd, &rfds);
 
 		if (select(raopcld->rtp_ports.ctrl.fd + 1, &rfds, NULL, NULL, &timeout) == -1) {
-			LOG_ERROR("[%p]: control socket closed", raopcld);
-			sleep(1);
+			if (raopcld->ctrl_running) {
+				LOG_ERROR("[%p]: control socket closed", raopcld);
+				sleep(1);
+        	}
 			continue;
 		}
 

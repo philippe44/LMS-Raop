@@ -29,9 +29,7 @@ typedef struct raopcl_t {__u32 dummy;} raopcl_t;
 
 struct raopcl_s;
 
-#define RAOP_NOPARAM (-1)
-
-typedef enum raop_codec_s { RAOP_PCM = 0, RAOP_ALAC, RAOP_AAC,
+typedef enum raop_codec_s { RAOP_NOCODEC = -1, RAOP_PCM = 0, RAOP_ALAC, RAOP_AAC,
 							RAOP_AAL_ELC } raop_codec_t;
 
 typedef enum raop_cypto_s { RAOP_CLEAR = 0, RAOP_RSA, RAOP_FAIRPLAY, RAOP_MFISAP,

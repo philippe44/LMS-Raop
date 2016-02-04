@@ -130,7 +130,7 @@ bool rtspcl_add_exthds(struct rtspcl_s *p, char *key, char *data)
 	if (!p) return false;
 
 	while (p->exthds[i].key && i < MAX_KD - 1) {
-		if (p->exthds[i].key[0] == 0xff) break;
+		if ((unsigned char) p->exthds[i].key[0] == 0xff) break;
 		i++;
 	}
 
@@ -387,7 +387,7 @@ static bool exec_request(struct rtspcl_s *rtspcld, char *cmd, char *content_type
 	strcat(req, buf);
 
 	for (i = 0; rtspcld->exthds && rtspcld->exthds[i].key; i++) {
-		if (rtspcld->exthds[i].key[0] == 0xff) continue;
+		if ((unsigned char) rtspcld->exthds[i].key[0] == 0xff) continue;
 		sprintf(buf,"%s: %s\r\n", rtspcld->exthds[i].key, rtspcld->exthds[i].data);
 		strcat(req, buf);
 	}

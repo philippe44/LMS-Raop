@@ -59,8 +59,8 @@ typedef int64_t   s64_t;
 
 int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], u32_t *size);
 #define fresize(f,s) ftruncate(fileno(f), s)
-#define _random(x) random()
 char *strlwr(char *str);
+#define _random(x) random()
 char *GetTempPath(u16_t size, char *path);
 
 #endif
