@@ -26,25 +26,25 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "squeeze2raop.h"
 #include "pthread.h"
-#include "util_common.h"
+#include "ixml.h"
+#include "platform.h"
 
 typedef struct sQueue {
 	struct sQueue *next;
 	void *item;
 } tQueue;
 
+void		*GetRequest(tQueue *Queue, pthread_mutex_t *Mutex, pthread_cond_t *Cond, u32_t timeout);
 void 		QueueInit(tQueue *queue);
 void 		QueueInsert(tQueue *queue, void *item);
 void 		*QueueExtract(tQueue *queue);
 void 		QueueFlush(tQueue *queue);
+int			pthread_cond_reltimedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, u32_t msWait);
 
-int			pthread_cond_reltimedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, u32_t msWait);
-
-void	  	SaveConfig(char *name, void *ref, bool full);
-void	   	*LoadConfig(char *name, tMRConfig *Conf, sq_dev_param_t *sq_conf);
-void	  	*FindMRConfig(void *ref, char *UDN);
-void 	  	*LoadMRConfig(void *ref, char *UDN, tMRConfig *Conf, sq_dev_param_t *sq_conf);
+char 		*XMLGetFirstDocumentItem(IXML_Document *doc, const char *item);
+char 		*XMLGetFirstElementItem(IXML_Element *element, const char *item);
+IXML_Node   *XMLAddNode(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...);
+int 		XMLAddAttribute(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...);
 
 #endif

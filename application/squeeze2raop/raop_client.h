@@ -92,8 +92,10 @@ bool 	raopcl_close(struct raopcl_s *p);
 bool 	raopcl_update_volume(struct raopcl_s *p, int vol, bool force);
 __u32	raopcl_send_sample(struct raopcl_s *p, __u8 *sample, int size, int frames, bool skip, int read_ahead);
 bool 	raopcl_set_content(raopcl_t *p, char* itemname, char* songartist, char* songalbum);
-__u32 	raopcl_get_timestamp(struct raopcl_s *p, __u32 origin_ms, __u32 count);
-u32_t 	raopcl_get_latency(struct raopcl_s *p);
+__u32 	raopcl_get_latency(struct raopcl_s *p);
 bool 	raopcl_is_sane(struct raopcl_s *p);
+__u32 	raopcl_get_timestamp(struct raopcl_s *p);
+bool 	raopcl_progress(struct raopcl_s *p, __u32 start, __u32 end);
+bool 	raopcl_set_daap(struct raopcl_s *p, int count, ...);
 
 #endif

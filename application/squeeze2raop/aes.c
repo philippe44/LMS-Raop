@@ -22,7 +22,7 @@
 
 /* uncomment the following line to run the test suite */
 
-/* #define TEST */
+//#define TEST
 
 /* uncomment the following line to use pre-computed tables */
 /* otherwise the tables will be generated at the first run */
@@ -454,7 +454,7 @@ int aes_set_key( aes_context *ctx, uint8 *key, int nbits )
         default : return( 1 );
     }
 
-    RK = ctx->erk;
+	RK = ctx->erk;
 
     for( i = 0; i < (nbits >> 5); i++ )
     {

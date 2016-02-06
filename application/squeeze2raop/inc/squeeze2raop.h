@@ -19,8 +19,8 @@
  *
  */
 
-#ifndef __SQUEEZE2CAST_H
-#define __SQUEEZE2CAST_H
+#ifndef __SQUEEZE2RAOP_H
+#define __SQUEEZE2RAOP_H
 
 #include <signal.h>
 #include <stdarg.h>
@@ -30,6 +30,7 @@
 #include "squeezedefs.h"
 #include "squeezeitf.h"
 #include "raop_client.h"
+#include "util.h"
 
 /*----------------------------------------------------------------------------*/
 /* typedefs */
@@ -37,14 +38,19 @@
 
 #define MAX_PROTO		128
 #define MAX_RENDERERS	32
-#define	AV_TRANSPORT 	"urn:schemas-upnp-org:service:AVTransport:1"
-#define	RENDERING_CTRL 	"urn:schemas-upnp-org:service:RenderingControl:1"
-#define	CONNECTION_MGR 	"urn:schemas-upnp-org:service:ConnectionManager:1"
 #define MAGIC			0xAABBCCDD
 #define RESOURCE_LENGTH	250
 #define	SCAN_TIMEOUT 	15
 #define SCAN_INTERVAL	30
 
+typedef struct sRaopReq {
+	char Type[20];
+	union {
+		u8_t Volume;
+		raop_codec_t Codec;
+		raop_flush_t FlushMode;
+	} Data;
+} tRaopReq;
 
 typedef struct sMRConfig
 {
@@ -67,44 +73,34 @@ struct sMR {
 	bool on;
 	char UDN			[RESOURCE_LENGTH];
 	char FriendlyName	[RESOURCE_LENGTH];
-	struct in_addr 		ip;
-	char			*CurrentURI;
-	char			*NextURI;
 	char			ContentType[SQ_STR_LENGTH];		// a bit patchy ... to buffer next URI
-	sq_metadata_t	MetaData;
 	bool			TimeOut;
 	int	 			SqueezeHandle;
-	pthread_mutex_t Mutex;
-	pthread_t 		Thread;
 	u8_t			Volume;
 	u32_t			VolumeStamp;
 	int				MissingCount;
 	bool			Running;
-	struct sRaopCtx *RaopCtx;
-	struct {
-		char *SampleSize;
-		char *SampleRate;
-		char *Channels;
-		char *Codecs;
-		char *Crypto;
-   } RaopCap;
+	struct raopcl_s	*Raop;
+	struct in_addr 	PlayerIP;
+	u16_t			PlayerPort;
+	pthread_t		Thread;
+	pthread_mutex_t Mutex;
+	pthread_cond_t	Cond;
+	tQueue			Queue;
+	u32_t 			LastFlush;
+	bool			TearDownWait;
+	u32_t			TearDownTO;
+	u32_t			TrackStartTime;
+	u32_t			TrackDuration;
+	char *SampleSize;
+	char *SampleRate;
+	char *Channels;
+	char *Codecs;
+	char *Crypto;
 };
 
-struct sAction	{
-	sq_dev_handle_t Handle;
-	struct sMR		*Caller;
-	sq_action_t 	Action;
-	u8_t 			*Cookie;
-	union {
-		u32_t	Volume;
-		u32_t	Time;
-	} 				Param;
-	struct sAction	*Next;
-	bool			Ordered;
-};
 
 extern char 				glInterface[];
-extern u8_t		   			glMac[6];
 extern s32_t				glLogLimit;
 extern tMRConfig			glMRConfig;
 extern sq_dev_param_t		glDeviceParam;

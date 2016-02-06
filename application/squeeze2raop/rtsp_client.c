@@ -276,20 +276,39 @@ bool rtspcl_set_parameter(struct rtspcl_s *p, char *param)
 
 
 /*----------------------------------------------------------------------------*/
-bool rtspcl_set_daap(struct rtspcl_s *p, char *param, unsigned long timestamp, int count)
+bool rtspcl_set_daap(struct rtspcl_s *p, __u32 timestamp, int count, va_list args)
 {
 	key_data_t hds[2];
 	char rtptime[20];
+	char *q, *str;
+	bool rc;
 
 	if (!p) return false;
 
-	sprintf(rtptime, "rtptime=%ld", timestamp);
+	str = q = malloc(1024);
+	if (!str) return false;
+
+	sprintf(rtptime, "rtptime=%u", timestamp);
 
 	hds[0].key	= "RTP-Info";
 	hds[0].data	= rtptime;
 	hds[1].key	= NULL;
 
-	return exec_request(p, "SET_PARAMETER", "application/x-dmap-tagged", param, count, 2, hds, NULL, NULL);
+	while (count-- && (q-str) < 1024) {
+		char *fmt, *data;
+		int i, size;
+
+		fmt = va_arg(args, char*);
+		data = va_arg(args, char*);
+		q = (__u8*) memcpy(q, fmt, 4) + 4;
+		size = strlen(data);
+		for (i = 0; i < 4; i++) *q++ = size >> (24-8*i);
+		q = (__u8*) memcpy(q, data, size) + size;
+	}
+
+	rc = exec_request(p, "SET_PARAMETER", "application/x-dmap-tagged", str, q-str, 2, hds, NULL, NULL);
+	free(str);
+	return rc;
 }
 
 
@@ -402,7 +421,8 @@ static bool exec_request(struct rtspcl_s *rtspcld, char *cmd, char *content_type
 
 	if (content_type && content) {
 		len += (length ? length : strlen(content));
-		strncat(req, content, length ? length : strlen(content));
+		//strncat(req, content, length ? length : strlen(content));
+		memcpy(req + strlen(req), content, length ? length : strlen(content));
 		req[len] = '\0';
 	}
 

@@ -246,3 +246,8 @@ struct codec *register_pcm(void) {
 }
 
 
+void deregister_pcm(void) {
+}
+
+
+

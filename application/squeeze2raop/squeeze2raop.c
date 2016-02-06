@@ -31,10 +31,10 @@
 #include "ixml.h"
 #include "squeezedefs.h"
 #include "squeeze2raop.h"
+#include "conf_util.h"
 #include "util_common.h"
 #include "util.h"
-#include "raop_itf.h"
-#include "raop_util.h"
+
 #include "mdnssd-itf.h"
 
 
@@ -120,11 +120,11 @@ u32_t				glScanTimeout = SCAN_TIMEOUT;
 struct sMR			glMRDevices[MAX_RENDERERS];
 
 /*----------------------------------------------------------------------------*/
-/* consts or pseudo-const*/
+/* local types */
 /*----------------------------------------------------------------------------*/
 
 /*----------------------------------------------------------------------------*/
-/* locals */
+/* locals variables */
 /*----------------------------------------------------------------------------*/
 extern log_level	main_loglevel;
 static log_level 	*loglevel = &main_loglevel;
@@ -212,7 +212,16 @@ void 		DelRaopDevice(struct sMR *Device);
 		if (device->on && device->Config.AutoPlay)
 			sq_notify(device->SqueezeHandle, device, SQ_PLAY, NULL, &device->on);
 
-		if (!device->on) RaopDisconnect(device->RaopCtx);
+		if (!device->on) {
+			tRaopReq *Req = malloc(sizeof(tRaopReq));
+
+			pthread_mutex_lock(&device->Mutex);
+			QueueFlush(&device->Queue);
+			strcpy(Req->Type, "OFF");
+			QueueInsert(&device->Queue, Req);
+			pthread_cond_signal(&device->Cond);
+			pthread_mutex_unlock(&device->Mutex);
+		}
 
 		LOG_DEBUG("[%p]: device set on/off %d", caller, device->on);
 	}
@@ -227,33 +236,63 @@ void 		DelRaopDevice(struct sMR *Device);
 
 	switch (action) {
 		case SQ_STOP:
-			RaopStop(device->RaopCtx);
+			device->TrackDuration = 0;
+		case SQ_PAUSE: {
+			tRaopReq *Req = malloc(sizeof(tRaopReq));
+
+			strcpy(Req->Type, "FLUSH");
+			Req->Data.FlushMode = (action == SQ_STOP) ? RAOP_RECLOCK : RAOP_REBUFFER;
+			QueueInsert(&device->Queue, Req);
+			pthread_cond_signal(&device->Cond);
 			break;
-		case SQ_PAUSE:
-			RaopPause(device->RaopCtx);
+		}
+		case SQ_UNPAUSE: {
+			tRaopReq *Req = malloc(sizeof(tRaopReq));
+
+			Req->Data.Codec = RAOP_NOCODEC;
+			strcpy(Req->Type, "CONNECT");
+			QueueInsert(&device->Queue, Req);
+			pthread_cond_signal(&device->Cond);
 			break;
-		case SQ_UNPAUSE:
-			RaopUnPause(device->RaopCtx);
-			break;
+		}
 		case SQ_VOLUME: {
 			u32_t Volume = *(u16_t*)p;
+			tRaopReq *Req = malloc(sizeof(tRaopReq));
 			int i;
 
 			for (i = 100; Volume < LMSVolumeMap[i] && i; i--);
 			device->Volume = i;
-			RaopSetVolume(device->RaopCtx, device->Volume);
+			if (Volume > 100) Volume = 100;
+
+			Req->Data.Volume = Volume;
+			strcpy(Req->Type, "VOLUME");
+			QueueInsert(&device->Queue, Req);
+			pthread_cond_signal(&device->Cond);
 
 			break;
 		}
 		case SQ_CONNECT: {
 			sq_format_t *p = (sq_format_t*) param;
+			tRaopReq *Req = malloc(sizeof(tRaopReq));
+
+			Req->Data.Codec = RAOP_ALAC;
+			strcpy(Req->Type, "CONNECT");
+			QueueInsert(&device->Queue, Req);
+			pthread_cond_signal(&device->Cond);
 
 			LOG_INFO("[%p]: codec:%c, ch:%d, s:%d, r:%d", device, p->codec,
 										p->channels, p->sample_size, p->sample_rate);
+			break;
+		}
+		case SQ_STARTED: {
+			device->TrackStartTime = *((u32_t*) param);
+			if (device->Config.SendMetaData) {
+				tRaopReq *Req = malloc(sizeof(tRaopReq));
 
-			//sq_get_metadata(device->SqueezeHandle, &device->MetaData, false);
-			//sq_free_metadata(&device->MetaData);
-			rc = RaopConnect(device->RaopCtx, RAOP_ALAC, &device->MetaData);
+				strcpy(Req->Type, "STARTED");
+				QueueInsert(&device->Queue, Req);
+				pthread_cond_signal(&device->Cond);
+			}
 			break;
 		}
 		default:
@@ -262,6 +301,88 @@ void 		DelRaopDevice(struct sMR *Device);
 
 	pthread_mutex_unlock(&device->Mutex);
 	return rc;
+}
+
+
+/*----------------------------------------------------------------------------*/
+static void *PlayerThread(void *args)
+{
+	struct sMR *Device = (struct sMR*) args;
+
+	Device->Running = true;
+
+	while (Device->Running) {
+		tRaopReq *req = GetRequest(&Device->Queue, &Device->Mutex, &Device->Cond, 1000);
+
+		// empty means timeout every sec
+		if (!req) {
+			u32_t now = gettime_ms();
+
+			LOG_DEBUG("[%p]: tick %u", Device, now);
+			if (Device->TearDownWait && now > Device->LastFlush + Device->Config.IdleTimeout * 1000) {
+				LOG_INFO("[%p]: Tear down connection %u", Device, now);
+				raopcl_disconnect(Device->Raop);
+				Device->TearDownWait = false;
+			}
+
+			if (!raopcl_is_sane(Device->Raop)) {
+				LOG_ERROR("[%p]: dead connection, attempting reset", Device);
+				raopcl_disconnect(Device->Raop);
+				raopcl_reconnect(Device->Raop);
+			}
+
+			if (Device->Config.SendMetaData && Device->TrackDuration) {
+				raopcl_progress(Device->Raop, Device->TrackStartTime, Device->TrackDuration);
+			}
+
+			continue;
+		}
+
+		if (!strcasecmp(req->Type, "CONNECT")) {
+			LOG_INFO("[%p]: raop connecting ...", Device);
+			if (raopcl_connect(Device->Raop, Device->PlayerIP, Device->PlayerPort, req->Data.Codec)) {
+				Device->TearDownWait = false;
+				LOG_INFO("[%p]: raop connected", Device);
+			}
+			else {
+				LOG_ERROR("[%p]: raop failed to connect", Device);
+			}
+		}
+
+		if (!strcasecmp(req->Type, "FLUSH")) {
+			LOG_INFO("[%p]: flushing ... (%d)", Device, req->Data.FlushMode);
+			Device->LastFlush = gettime_ms();
+			Device->TearDownWait = true;
+			raopcl_flush_stream(Device->Raop, req->Data.FlushMode);
+		}
+
+		if (!strcasecmp(req->Type, "OFF")) {
+			LOG_INFO("[%p]: processing off", Device);
+			raopcl_disconnect(Device->Raop);
+		}
+
+		if (!strcasecmp(req->Type, "VOLUME")) {
+			LOG_INFO("[%p]: processing volume", Device);
+			raopcl_update_volume(Device->Raop, req->Data.Volume, false);
+		}
+
+		if (!strcasecmp(req->Type, "STARTED")) {
+			sq_metadata_t metadata;
+			LOG_INFO("[%p]: getting metadata", Device);
+			sq_get_metadata(Device->SqueezeHandle, &metadata, false);
+			Device->TrackDuration = metadata.duration;
+			raopcl_set_daap(Device->Raop, 3, "minm", metadata.title,
+											 "asar", metadata.artist,
+											 "asal", metadata.album);
+			sq_free_metadata(&metadata);
+
+		}
+
+		free(req);
+
+	}
+
+	return NULL;
 }
 
 
@@ -304,12 +425,12 @@ static void *UpdateMRThread(void *args)
 	LOG_DEBUG("Begin Cast devices update", NULL);
 	TimeStamp = gettime_ms();
 
+	query_mDNS(gl_mDNSId, "_raop._tcp.local", &DiscDevices, glScanTimeout);
+
 	if (!glMainRunning) {
 		LOG_DEBUG("Aborting ...", NULL);
 		return NULL;
 	}
-
-	query_mDNS(gl_mDNSId, "_raop._tcp.local", &DiscDevices, glScanTimeout);
 
 	for (i = 0; i < DiscDevices.count; i++) {
 		int j;
@@ -332,11 +453,11 @@ static void *UpdateMRThread(void *args)
 				// create a new slimdevice
 				Device->SqueezeHandle = sq_reserve_device(Device, &sq_callback);
 				if (!Device->SqueezeHandle || !sq_run_device(Device->SqueezeHandle,
-					GetRaopcl(Device->RaopCtx),
+					Device->Raop,
 					*(Device->Config.Name) ? Device->Config.Name : Device->FriendlyName,
 					&Device->sq_config,
-					Device->RaopCap.SampleRate ? atoi(Device->RaopCap.SampleRate) : 44100,
-					Device->RaopCap.SampleSize ? atoi(Device->RaopCap.SampleSize) : 16)) {
+					Device->SampleRate ? atoi(Device->SampleRate) : 44100,
+					Device->SampleSize ? atoi(Device->SampleSize) : 16)) {
 					sq_release_device(Device->SqueezeHandle);
 					Device->SqueezeHandle = 0;
 					LOG_ERROR("[%p]: cannot create squeezelite instance (%s)", Device, Device->FriendlyName);
@@ -347,7 +468,10 @@ static void *UpdateMRThread(void *args)
 		else {
 			for (j = 0; j < MAX_RENDERERS; j++) {
 				if (glMRDevices[j].InUse && !strcmp(glMRDevices[j].UDN, p->name)) {
-					UpdateRaopPort(glMRDevices[j].RaopCtx, p->port);
+					if (p->port != glMRDevices[j].PlayerPort) {
+						LOG_INFO("[%p]: updating port %d", &glMRDevices[j], p->port);
+						glMRDevices[j].PlayerPort = p->port;
+					}
 					break;
 				}
 			}
@@ -459,8 +583,7 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	}
 #endif
 
-	pthread_mutex_init(&Device->Mutex, 0);
-	strcpy(Device->UDN, data->name);
+	strcpy(Device->UDN, data->name);
 	Device->Magic = MAGIC;
 	Device->TimeOut = false;
 	Device->MissingCount = Device->Config.RemoveCount;
@@ -469,7 +592,9 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	Device->Running = true;
 	Device->InUse = true;
 	Device->VolumeStamp = 0;
-	Device->ip = data->addr;
+	Device->PlayerIP = data->addr;
+	Device->PlayerPort = data->port;
+	Device->TearDownWait = false;
 	strcpy(Device->FriendlyName, data->hostname);
 	p = stristr(Device->FriendlyName, ".local");
 	if (p) *p = '\0';
@@ -484,36 +609,44 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	}
 
 	// gather RAOP device capabilities, to be macthed mater
-	Device->RaopCap.SampleSize = GetmDNSAttribute(data, "ss");
-	Device->RaopCap.SampleRate = GetmDNSAttribute(data, "sr");
-	Device->RaopCap.Channels = GetmDNSAttribute(data, "ch");
-	Device->RaopCap.Codecs = GetmDNSAttribute(data, "cn");
-	Device->RaopCap.Crypto = GetmDNSAttribute(data, "et");
+	Device->SampleSize = GetmDNSAttribute(data, "ss");
+	Device->SampleRate = GetmDNSAttribute(data, "sr");
+	Device->Channels = GetmDNSAttribute(data, "ch");
+	Device->Codecs = GetmDNSAttribute(data, "cn");
+	Device->Crypto = GetmDNSAttribute(data, "et");
 
-	if (!strchr(Device->RaopCap.Codecs, '0')) {
-		LOG_ERROR("[%p]: incompatible codec", Device->RaopCap.Codecs);
+	if (!strchr(Device->Codecs, '0')) {
+		LOG_ERROR("[%p]: incompatible codec", Device->Codecs);
 		return false;
 	}
 
-	if ((Device->Config.Encryption && strchr(Device->RaopCap.Crypto, '1')) ||
-		(!strchr(Device->RaopCap.Crypto, '0') && strchr(Device->RaopCap.Crypto, '1')))
+	if ((Device->Config.Encryption && strchr(Device->Crypto, '1')) ||
+		(!strchr(Device->Crypto, '0') && strchr(Device->Crypto, '1')))
 		Crypto = RAOP_RSA;
 	else
 		Crypto = RAOP_CLEAR;
 
-	Device->RaopCtx = CreateRaopDevice(p, glInterface, Device->ip, data->port,
-									  RAOP_ALAC, Crypto,
-									  Device->Config.IdleTimeout * 1000,
-									  Device->RaopCap.SampleRate ? atoi(Device->RaopCap.SampleRate) : 44100,
-									  Device->RaopCap.SampleSize ? atoi(Device->RaopCap.SampleSize) : 16,
-									  Device->RaopCap.Channels ? atoi(Device->RaopCap.Channels) : 2,
-									  Device->sq_config.player_volume);
+	Device->Raop = raopcl_create(glInterface, RAOP_ALAC, Crypto,
+								 Device->SampleRate ? atoi(Device->SampleRate) : 44100,
+								 Device->SampleSize ? atoi(Device->SampleSize) : 16,
+								 Device->Channels ? atoi(Device->Channels) : 2,
+								 Device->sq_config.player_volume);
 
-	if (!Device->RaopCtx) {
+	if (!Device->Raop) {
 		LOG_ERROR("[%p]: cannot create raop device", Device);
+		NFREE(Device->SampleSize);
+		NFREE(Device->SampleRate);
+		NFREE(Device->Channels);
+		NFREE(Device->Codecs);
+		NFREE(Device->Crypto);
 		return false;
 	}
 
+	pthread_mutex_init(&Device->Mutex, 0);
+	pthread_cond_init(&Device->Cond, 0);
+	QueueInit(&Device->Queue);
+
+	pthread_create(&Device->Thread, NULL, &PlayerThread, Device);
 	return true;
 }
 
@@ -536,19 +669,24 @@ void DelRaopDevice(struct sMR *Device)
 	pthread_mutex_lock(&Device->Mutex);
 	Device->Running = false;
 	Device->InUse = false;
+	pthread_cond_signal(&Device->Cond);
 	pthread_mutex_unlock(&Device->Mutex);
+
 	pthread_join(Device->Thread, NULL);
 
-	DestroyRaopDevice(Device->RaopCtx);
-	NFREE(Device->CurrentURI);
-	NFREE(Device->NextURI);
-	NFREE(Device->RaopCap.SampleSize);
-	NFREE(Device->RaopCap.SampleRate);
-	NFREE(Device->RaopCap.Channels);
-	NFREE(Device->RaopCap.Codecs);
-	NFREE(Device->RaopCap.Crypto);
-
+	pthread_cond_destroy(&Device->Cond);
 	pthread_mutex_destroy(&Device->Mutex);
+
+	raopcl_destroy(Device->Raop);
+
+	LOG_INFO("[%p]: Raop device stopped", Device);
+
+	NFREE(Device->SampleSize);
+	NFREE(Device->SampleRate);
+	NFREE(Device->Channels);
+	NFREE(Device->Codecs);
+	NFREE(Device->Crypto);
+
 	memset(Device, 0, sizeof(struct sMR));
 }
 
@@ -593,20 +731,14 @@ static bool Stop(void)
 
 /*---------------------------------------------------------------------------*/
 static void sighandler(int signum) {
-	int i;
-
 	glMainRunning = false;
 
 	if (!glGracefullShutdown) {
-		for (i = 0; i < MAX_RENDERERS; i++) {
-			struct sMR *p = &glMRDevices[i];
-			if (p->InUse) RaopStop(p->RaopCtx);
-		}
 		LOG_INFO("forced exit", NULL);
 		exit(EXIT_SUCCESS);
 	}
 
-	sq_stop();
+	sq_end();
 	Stop();
 	exit(EXIT_SUCCESS);
 }
@@ -865,7 +997,7 @@ int main(int argc, char *argv[])
 	if (glConfigID) ixmlDocument_free(glConfigID);
 	glMainRunning = false;
 	LOG_INFO("stopping squeelite devices ...", NULL);
-	sq_stop();
+	sq_end();
 	LOG_INFO("stopping Raop devices ...", NULL);
 	Stop();
 	LOG_INFO("all done", NULL);

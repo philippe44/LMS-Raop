@@ -657,6 +657,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 				_sendSTMs = true;
 				ctx->output.track_started = false;
 				ctx->status.stream_start = ctx->output.track_start_time;
+				ctx_callback(ctx, SQ_STARTED, NULL, &ctx->output.track_start_time);
 			}
 
 			if (ctx->output.state == OUTPUT_RUNNING && !ctx->sentSTMu && ctx->status.output_full == 0 && ctx->status.stream_state <= DISCONNECT) {

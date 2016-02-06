@@ -228,6 +228,7 @@ void set_nosigpipe(sockfd s);
 void winsock_init(void);
 void winsock_close(void);
 void *dlopen(const char *filename, int flag);
+void dlclose(void *handle);
 void *dlsym(void *handle, const char *symbol);
 char *dlerror(void);
 int poll(struct pollfd *fds, unsigned long numfds, int timeout);
@@ -336,6 +337,7 @@ struct codec {
 };
 
 void decode_init(void);
+void decode_end(void);
 void decode_thread_init(struct thread_ctx_s *ctx);
 
 void decode_close(struct thread_ctx_s *ctx);
@@ -532,16 +534,20 @@ extern struct thread_ctx_s thread_ctx[MAX_PLAYER];
 
 extern struct codec *codecs[MAX_CODECS];
 
-struct codec *register_flac(void);
-struct codec *register_pcm(void);
-struct codec *register_mad(void);
-struct codec *register_mpg(void);
-struct codec *register_vorbis(void);
-struct codec *register_faad(void);
-struct codec *register_dsd(void);
-struct codec *register_ff(const char *codec);
+struct codec*	register_flac(void);
+void		 	deregister_flac(void);
+struct codec*	register_pcm(void);
+void 		 	deregister_pcm(void);
+struct codec*	register_mad(void);
+void 			deregister_mad(void);
+struct codec*	register_mpg(void);
+void			deregister_mpg(void);
+struct codec*	register_faad(void);
+void 			deregister_faad(void);
+
 #if RESAMPLE
 bool register_soxr(void);
+void deregister_soxr(void);
 #endif
 
 

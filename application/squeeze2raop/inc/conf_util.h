@@ -1,8 +1,8 @@
 /*
- *  Squeeze2raop - LMS to RAOP gateway
+ *  Squeeze2upnp - LMS to uPNP gateway
  *
  *  Squeezelite : (c) Adrian Smith 2012-2014, triode1@btinternet.com
- *  Additions & gateway : (c) Philippe 2016, philippe_44@outlook.com
+ *  Additions & gateway : (c) Philippe 2014, philippe_44@outlook.com
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,41 +19,19 @@
  *
  */
 
-#ifndef __RAOPCORE_H
-#define __RAOPCORE_H
+#ifndef __CONF_UTIL_H
+#define __CONF_UTIL_H
 
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
-#include "squeezedefs.h"
+#include "ixml.h"
 #include "squeeze2raop.h"
-#include "util_common.h"
-#include "raop_client.h"
 
-typedef struct sRaopCtx {
-	bool			running;
-	void			*owner;
-	struct raopcl_s	*raopcl;
-	struct in_addr	host;
-	u16_t			port;
-	pthread_t 		Thread;
-	tQueue			reqQueue;
-	pthread_mutex_t	reqMutex;
-	pthread_cond_t	reqCond;
-	u32_t 			LastFlush;
-	bool			TearDownWait;
-	u32_t			TearDownTO;
-} tRaopCtx;
-
-typedef struct sRaopReq {
-	char Type[20];
-	union {
-		u8_t Volume;
-		raop_codec_t Codec;
-		raop_flush_t FlushMode;
-	} Data;
-} tRaopReq;
-
+void	  	SaveConfig(char *name, void *ref, bool full);
+void	   	*LoadConfig(char *name, tMRConfig *Conf, sq_dev_param_t *sq_conf);
+void	  	*FindMRConfig(void *ref, char *UDN);
+void 	  	*LoadMRConfig(void *ref, char *UDN, tMRConfig *Conf, sq_dev_param_t *sq_conf);
 
 #endif

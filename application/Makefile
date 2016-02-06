@@ -27,6 +27,8 @@ INCLUDE = -I../../libupnp/1.6.19/ixml/inc\
 		  -I../../soxr/src\
 		  -I../../libmad\
 		  -I.\
+		  -I../../valgrind/memcheck\
+		  -I../../valgrind/include\
 		  -I$(squeezetiny_dir)\
 		  -I$(squeezeraop_dir)\
           -I$(squeezeraop_dir)/inc
@@ -42,13 +44,12 @@ SOURCES = \
 	$(squeezetiny_dir)/output.c $(squeezetiny_dir)/decode.c \
 	$(squeezetiny_dir)/output_pack.c $(squeezetiny_dir)/output_raop.c \
     $(squeezetiny_dir)/main.c $(squeezetiny_dir)/util_common.c \
-	$(squeezeraop_dir)/raop_util.c $(squeezeraop_dir)/raop_core.c \
 	$(squeezeraop_dir)/raop_client.c $(squeezeraop_dir)/rtsp_client.c \
 	$(squeezeraop_dir)/aes.c $(squeezeraop_dir)/aexcl_lib.c \
 	$(squeezeraop_dir)/base64.c $(squeezeraop_dir)/alac_wrapper.c \
-      	$(squeezeraop_dir)/util.c  \
-	    $(squeezeraop_dir)/squeeze2raop.c\
-		../../mdnssd/mdnssd-min.c 
+    $(squeezeraop_dir)/util.c $(squeezeraop_dir)/conf_util.c \
+	$(squeezeraop_dir)/squeeze2raop.c\
+	../../mdnssd/mdnssd-min.c 
 
 DEPS             = $(squeezetiny_dir)/squeezelite.h $(squeezetiny_dir)/slimproto.h\
                    $(squeezetiny_dir)/squeezedefs.h $(squeezetiny_dir)/squeezeitf.h\

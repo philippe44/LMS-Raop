@@ -30,6 +30,7 @@
 
 #if !LINKALL
 static struct {
+	void *handle;
 	// mpg symbols to be dynamically loaded
 	int (* mpg123_init)(void);
 	int (* mpg123_feature)(const enum mpg123_feature_set);
@@ -44,7 +45,7 @@ static struct {
 	int (* mpg123_decode)(mpg123_handle *, const unsigned char *, size_t, unsigned char *, size_t, size_t *);
 	int (* mpg123_getformat)(mpg123_handle *, long *, int *, int *);
 	const char* (* mpg123_plain_strerror)(int);
-} m;
+} gm;
 #endif
 
 extern log_level decode_loglevel;
@@ -102,7 +103,7 @@ static decode_state mpg_decode(struct thread_ctx_s *ctx) {
 		space = 0;
 	}
 
-	ret = MPG123(&m, decode, ctx->decode.handle, ctx->streambuf->readp, bytes, write_buf, space, &size);
+	ret = MPG123(&gm, decode, ctx->decode.handle, ctx->streambuf->readp, bytes, write_buf, space, &size);
 
 	if (ret == MPG123_NEW_FORMAT) {
 
@@ -110,7 +111,7 @@ static decode_state mpg_decode(struct thread_ctx_s *ctx) {
 			long rate;
 			int channels, enc;
 
-			MPG123(&m, getformat, ctx->decode.handle, &rate, &channels, &enc);
+			MPG123(&gm, getformat, ctx->decode.handle, &rate, &channels, &enc);
 
 			LOG_INFO("[%p]: setting track_start", ctx);
 			LOCK_O_not_direct;
@@ -159,65 +160,66 @@ static void mpg_open(u8_t sample_size, u32_t sample_rate, u8_t channels, u8_t en
 	int err;
 
 	if (ctx->decode.handle) {
-		MPG123(&m, delete, ctx->decode.handle);
+		MPG123(&gm, delete, ctx->decode.handle);
 	}
 
-	ctx->decode.handle = MPG123(&m, new, NULL, &err);
+	ctx->decode.handle = MPG123(&gm, new, NULL, &err);
 
 	if (ctx->decode.handle == NULL) {
-		LOG_WARN("[%p]: new error: %s", ctx, MPG123(&m, plain_strerror, err));
+		LOG_WARN("[%p]: new error: %s", ctx, MPG123(&gm, plain_strerror, err));
 	}
 
 
 	//MPG123(&m, rates, &list, &count);
-	MPG123(&m, format_none, ctx->decode.handle);
+	MPG123(&gm, format_none, ctx->decode.handle);
 	// this decoder has a problem with re-sync of live streams
 	//MPG123(&m, param, ctx->decode.handle, MPG123_FORCE_RATE, 44100, 0);
 	//MPG123(&m, param, ctx->decode.handle, MPG123_REMOVE_FLAGS, MPG123_GAPLESS, 0);
 
 	// restrict output to 44100, 16bits signed 2 channel based on library capability
-	MPG123(&m, format, ctx->decode.handle, 44100, 2, MPG123_ENC_SIGNED_16);
+	MPG123(&gm, format, ctx->decode.handle, 44100, 2, MPG123_ENC_SIGNED_16);
 	/*
 	for (i = 0; i < count; i++) {
 		MPG123(&m, format, ctx->decode.handle, list[i], 2, MPG123_ENC_SIGNED_16);
 	}
 	*/
 
-	err = MPG123(&m, open_feed, ctx->decode.handle);
+	err = MPG123(&gm, open_feed, ctx->decode.handle);
 
 	if (err) {
-		LOG_WARN("[%p]: open feed error: %s", ctx, MPG123(&m, plain_strerror, err));
+		LOG_WARN("[%p]: open feed error: %s", ctx, MPG123(&gm, plain_strerror, err));
 	}
 }
 
 static void mpg_close(struct thread_ctx_s *ctx) {
-	MPG123(&m, delete, ctx->decode.handle);
+	MPG123(&gm, delete, ctx->decode.handle);
 	ctx->decode.handle = NULL;
 }
 
 static bool load_mpg(void) {
 #if !LINKALL
-	void *handle = dlopen(LIBMPG, RTLD_NOW);
 	char *err;
 
-	if (!handle) {
+	gm.handle = dlopen(LIBMPG, RTLD_NOW);
+
+	if (!gm.handle) {
 		LOG_INFO("dlerror: %s", dlerror());
 		return false;
 	}
 	
-	m.mpg123_init = dlsym(handle, "mpg123_init");
-	m.mpg123_feature = dlsym(handle, "mpg123_feature");
-	m.mpg123_rates = dlsym(handle, "mpg123_rates");
-	m.mpg123_format_none = dlsym(handle, "mpg123_format_none");
-	m.mpg123_format = dlsym(handle, "mpg123_format");
-	m.mpg123_param = dlsym(handle, "mpg123_param");
-	m.mpg123_getparam = dlsym(handle, "mpg123_getparam");
-	m.mpg123_new = dlsym(handle, "mpg123_new");
-	m.mpg123_delete = dlsym(handle, "mpg123_delete");
-	m.mpg123_open_feed = dlsym(handle, "mpg123_open_feed");
-	m.mpg123_decode = dlsym(handle, "mpg123_decode");
-	m.mpg123_getformat = dlsym(handle, "mpg123_getformat");
-	m.mpg123_plain_strerror = dlsym(handle, "mpg123_plain_strerror");
+	gm.mpg123_init = dlsym(gm.handle, "mpg123_init");
+	gm.mpg123_feature = dlsym(gm.handle, "mpg123_feature");
+	gm.mpg123_rates = dlsym(gm.handle, "mpg123_rates");
+	gm.mpg123_format_none = dlsym(gm.handle, "mpg123_format_none");
+	gm.mpg123_format = dlsym(gm.handle, "mpg123_format");
+	gm.mpg123_param = dlsym(gm.handle, "mpg123_param");
+	gm.mpg123_getparam = dlsym(gm.handle, "mpg123_getparam");
+	gm.mpg123_new = dlsym(gm.handle, "mpg123_new");
+	gm.mpg123_delete = dlsym(gm.handle, "mpg123_delete");
+	gm.mpg123_open_feed = dlsym(gm.handle, "mpg123_open_feed");
+	gm.mpg123_decode = dlsym(gm.handle, "mpg123_decode");
+	gm.mpg123_getformat = dlsym(gm.handle, "mpg123_getformat");
+	gm.mpg123_plain_strerror = dlsym(gm.handle, "mpg123_plain_strerror");
 
 	if ((err = dlerror()) != NULL) {
 		LOG_INFO("dlerror: %s", err);		
@@ -245,8 +247,14 @@ struct codec *register_mpg(void) {
 		return NULL;
 	}
 
-	MPG123(&m, init);
+	MPG123(&gm, init);
 
 	LOG_INFO("using mpg to decode mp3", NULL);
 	return &ret;
 }
+
+
+void deregister_mpg(void) {
+	if (gm.handle) dlclose(gm.handle);
+}
+

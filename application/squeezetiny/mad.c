@@ -28,6 +28,7 @@
 
 #if !LINKALL
 static struct {
+	void *handle;
 	// mad symbols to be dynamically loaded
 	void (* mad_stream_init)(struct mad_stream *);
 	void (* mad_frame_init)(struct mad_frame *);
@@ -366,23 +367,24 @@ static void mad_close(struct thread_ctx_s *ctx) {
 
 static bool load_mad(void) {
 #if !LINKALL
-	void *handle = dlopen(LIBMAD, RTLD_NOW);
 	char *err;
 
-	if (!handle) {
+	gm.handle = dlopen(LIBMAD, RTLD_NOW);
+
+	if (!gm.handle) {
 		LOG_INFO("dlerror: %s", dlerror());
 		return false;
 	}
 
-	gm.mad_stream_init = dlsym(handle, "mad_stream_init");
-	gm.mad_frame_init = dlsym(handle, "mad_frame_init");
-	gm.mad_synth_init = dlsym(handle, "mad_synth_init");
-	gm.mad_frame_finish = dlsym(handle, "mad_frame_finish");
-	gm.mad_stream_finish = dlsym(handle, "mad_stream_finish");
-	gm.mad_stream_buffer = dlsym(handle, "mad_stream_buffer");
-	gm.mad_frame_decode = dlsym(handle, "mad_frame_decode");
-	gm.mad_synth_frame = dlsym(handle, "mad_synth_frame");
-	gm.mad_stream_errorstr = dlsym(handle, "mad_stream_errorstr");
+	gm.mad_stream_init = dlsym(gm.handle, "mad_stream_init");
+	gm.mad_frame_init = dlsym(gm.handle, "mad_frame_init");
+	gm.mad_synth_init = dlsym(gm.handle, "mad_synth_init");
+	gm.mad_frame_finish = dlsym(gm.handle, "mad_frame_finish");
+	gm.mad_stream_finish = dlsym(gm.handle, "mad_stream_finish");
+	gm.mad_stream_buffer = dlsym(gm.handle, "mad_stream_buffer");
+	gm.mad_frame_decode = dlsym(gm.handle, "mad_frame_decode");
+	gm.mad_synth_frame = dlsym(gm.handle, "mad_synth_frame");
+	gm.mad_stream_errorstr = dlsym(gm.handle, "mad_stream_errorstr");
 
 	if ((err = dlerror()) != NULL) {
 		LOG_INFO("dlerror: %s", err);
@@ -394,6 +396,7 @@ static bool load_mad(void) {
 
 	return true;
 }
+
 
 struct codec *register_mad(void) {
 	static struct codec ret = {
@@ -413,3 +416,9 @@ struct codec *register_mad(void) {
 	LOG_INFO("using mad to decode mp3", NULL);
 	return &ret;
 }
+
+
+void deregister_mad(void) {
+	if (gm.handle) dlclose(gm.handle);
+}
+

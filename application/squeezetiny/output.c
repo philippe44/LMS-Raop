@@ -303,6 +303,7 @@ void output_init_common(void *device, unsigned outputbuf_size, u32_t sample_rate
 
 	ctx->outputbuf = &ctx->__o_buf;
 
+	LOG_ERROR("allocating %d", outputbuf_size);
 	buf_init(ctx->outputbuf, outputbuf_size);
 	if (!ctx->outputbuf->buf) {
 		LOG_ERROR("[%p]: unable to malloc output buffer", ctx);

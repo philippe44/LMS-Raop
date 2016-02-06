@@ -1,4 +1,4 @@
-/* 
+/*
  *  Squeezelite - lightweight headless squeezebox emulator
  *
  *  (c) Adrian Smith 2012-2015, triode1@btinternet.com
@@ -193,6 +193,8 @@ void process_end(struct thread_ctx_s *ctx) {
 
 	LOCK_D;
 	ctx->decode.process = false;
+	if (ctx->process.inbuf) free(ctx->process.inbuf);
+	if (ctx->process.outbuf) free(ctx->process.outbuf);
 	UNLOCK_D;
 }
 

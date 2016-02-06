@@ -42,6 +42,7 @@
 #include <dlfcn.h>
 #include <pthread.h>
 #include <errno.h>
+#include <memcheck.h>
 
 #define min(a,b) (((a) < (b)) ? (a) : (b))
 #define max(a,b) (((a) > (b)) ? (a) : (b))
@@ -95,6 +96,7 @@ int gettimeofday(struct timeval *tv, struct timezone *tz);
 #define fresize(f, s) chsize(fileno(f), s)
 #define strcasecmp stricmp
 #define _random(x) random(x)
+#define VALGRIND_MAKE_MEM_DEFINED(x,y)
 
 #define in_addr_t u32_t
 #define socklen_t int

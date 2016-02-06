@@ -136,6 +136,20 @@ void decode_init(void) {
 #endif
 }
 
+
+/*---------------------------------------------------------------------------*/
+void decode_end(void) {
+	deregister_pcm();
+	deregister_mpg();
+	deregister_mad();
+	deregister_flac();
+	deregister_faad();
+#if RESAMPLE
+	deregister_soxr();
+#endif
+}
+
+
 /*---------------------------------------------------------------------------*/
 void decode_thread_init(struct thread_ctx_s *ctx) {
 	LOG_DEBUG("[%p]: init decode", ctx);

@@ -30,10 +30,10 @@
 extern log_level 	decode_loglevel;
 static log_level 	*loglevel = &decode_loglevel;
 
-static bool registered = false;
 
 #if !LINKALL
 struct  {
+	void *handle;
 	// soxr symbols to be dynamically loaded
 	soxr_io_spec_t (* soxr_io_spec)(soxr_datatype_t itype, soxr_datatype_t otype);
 	soxr_quality_spec_t (* soxr_quality_spec)(unsigned long recipe, unsigned long flags);
@@ -251,37 +251,6 @@ void resample_flush(struct thread_ctx_s *ctx) {
 	}
 }
 
-static bool load_soxr(void) {
-#if !LINKALL
-	void *handle = dlopen(LIBSOXR, RTLD_NOW);
-	char *err;
-
-	if (!handle) {
-		LOG_INFO("dlerror: %s", dlerror());
-		return false;
-	}
-
-	gr.soxr_io_spec = dlsym(handle, "soxr_io_spec");
-	gr.soxr_quality_spec = dlsym(handle, "soxr_quality_spec");
-	gr.soxr_create = dlsym(handle, "soxr_create");
-	gr.soxr_delete = dlsym(handle, "soxr_delete");
-	gr.soxr_process = dlsym(handle, "soxr_process");
-	gr.soxr_num_clips = dlsym(handle, "soxr_num_clips");
-#if RESAMPLE_MP
-	gr.soxr_runtime_spec = dlsym(handle, "soxr_runtime_spec");
-#endif
-
-	if ((err = dlerror()) != NULL) {
-		LOG_INFO("dlerror: %s", err);
-		return false;
-	}
-
-	LOG_INFO("loaded "LIBSOXR, NULL);
-#endif
-
-	return true;
-}
-
 
 bool resample_init(char *opt, struct thread_ctx_s *ctx) {
 	struct soxr *r;
@@ -289,7 +258,7 @@ bool resample_init(char *opt, struct thread_ctx_s *ctx) {
 	char *atten = NULL;
 	char *precision = NULL, *passband_end = NULL, *stopband_begin = NULL, *phase_response = NULL;
 
-	if (!registered) return false;
+	if (!gr.handle) return false;
 
 	r = ctx->decode.process_handle = malloc(sizeof(struct soxr));
 	if (!r) {
@@ -375,6 +344,38 @@ void resample_end(struct thread_ctx_s *ctx) {
 }
 
 
+static bool load_soxr(void) {
+#if !LINKALL
+	char *err;
+
+	gr.handle = dlopen(LIBSOXR, RTLD_NOW);
+	if (!gr.handle) {
+		LOG_INFO("dlerror: %s", dlerror());
+		return false;
+	}
+
+	gr.soxr_io_spec = dlsym(gr.handle, "soxr_io_spec");
+	gr.soxr_quality_spec = dlsym(gr.handle, "soxr_quality_spec");
+	gr.soxr_create = dlsym(gr.handle, "soxr_create");
+	gr.soxr_delete = dlsym(gr.handle, "soxr_delete");
+	gr.soxr_process = dlsym(gr.handle, "soxr_process");
+	gr.soxr_num_clips = dlsym(gr.handle, "soxr_num_clips");
+#if RESAMPLE_MP
+	gr.soxr_runtime_spec = dlsym(gr.handle, "soxr_runtime_spec");
+#endif
+
+	if ((err = dlerror()) != NULL) {
+		LOG_INFO("dlerror: %s", err);
+		return false;
+	}
+
+	LOG_INFO("loaded "LIBSOXR, NULL);
+#endif
+
+	return true;
+}
+
+
 bool register_soxr(void) {
 	if (!load_soxr()) {
 		LOG_WARN("resampling disabled", NULL);
@@ -382,10 +383,11 @@ bool register_soxr(void) {
 	}
 
 	LOG_INFO("using soxr for resampling", NULL);
-	registered = true;
-
 	return true;
 }
 
+void deregister_soxr(void) {
+	dlclose(gr.handle);
+}
 
-#endif // #if RESAMPLE
+#endif // #if RESAMPLE

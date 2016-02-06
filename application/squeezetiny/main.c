@@ -56,14 +56,17 @@ extern log_level	slimmain_loglevel;
 static log_level	*loglevel = &slimmain_loglevel;
 
 /*---------------------------------------------------------------------------*/
-void sq_stop() {
+void sq_end() {
 	int i;
 
 	for (i = 0; i < MAX_PLAYER; i++) {
 		if (thread_ctx[i].in_use) {
+			LOG_INFO("[%p]: removing player %d", &thread_ctx[i], i);
 			sq_wipe_device(&thread_ctx[i]);
 		}
 	}
+
+	decode_end();
 #if WIN
 	winsock_close();
 #endif

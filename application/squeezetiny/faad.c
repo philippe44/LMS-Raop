@@ -30,6 +30,7 @@ struct chunk_table {
 
 #if !LINKALL
 struct {
+	void *handle;
 	NeAACDecConfigurationPtr (* NeAACDecGetCurrentConfiguration)(NeAACDecHandle);
 	unsigned char (* NeAACDecSetConfiguration)(NeAACDecHandle, NeAACDecConfigurationPtr);
 	NeAACDecHandle (* NeAACDecOpen)(void);
@@ -587,22 +588,23 @@ static void faad_close(struct thread_ctx_s *ctx) {
 
 static bool load_faad(void) {
 #if !LINKALL
-	void *handle = dlopen(LIBFAAD, RTLD_NOW);
 	char *err;
 
-	if (!handle) {
+	ga.handle = dlopen(LIBFAAD, RTLD_NOW);
+
+	if (!ga.handle) {
 		LOG_INFO("dlerror: %s", dlerror());
 		return false;
 	}
 
-	ga.NeAACDecGetCurrentConfiguration = dlsym(handle, "NeAACDecGetCurrentConfiguration");
-	ga.NeAACDecSetConfiguration = dlsym(handle, "NeAACDecSetConfiguration");
-	ga.NeAACDecOpen = dlsym(handle, "NeAACDecOpen");
-	ga.NeAACDecClose = dlsym(handle, "NeAACDecClose");
-	ga.NeAACDecInit = dlsym(handle, "NeAACDecInit");
-	ga.NeAACDecInit2 = dlsym(handle, "NeAACDecInit2");
-	ga.NeAACDecDecode = dlsym(handle, "NeAACDecDecode");
-	ga.NeAACDecGetErrorMessage = dlsym(handle, "NeAACDecGetErrorMessage");
+	ga.NeAACDecGetCurrentConfiguration = dlsym(ga.handle, "NeAACDecGetCurrentConfiguration");
+	ga.NeAACDecSetConfiguration = dlsym(ga.handle, "NeAACDecSetConfiguration");
+	ga.NeAACDecOpen = dlsym(ga.handle, "NeAACDecOpen");
+	ga.NeAACDecClose = dlsym(ga.handle, "NeAACDecClose");
+	ga.NeAACDecInit = dlsym(ga.handle, "NeAACDecInit");
+	ga.NeAACDecInit2 = dlsym(ga.handle, "NeAACDecInit2");
+	ga.NeAACDecDecode = dlsym(ga.handle, "NeAACDecDecode");
+	ga.NeAACDecGetErrorMessage = dlsym(ga.handle, "NeAACDecGetErrorMessage");
 
 	if ((err = dlerror()) != NULL) {
 		LOG_INFO("dlerror: %s", err);
@@ -633,3 +635,9 @@ struct codec *register_faad(void) {
 	LOG_INFO("using faad to decode aac", NULL);
 	return &ret;
 }
+
+
+void deregister_faad(void) {
+	if (ga.handle) dlclose(ga.handle);
+}
+

@@ -107,6 +107,7 @@ typedef struct raopcl_s {
 	pthread_mutex_t mutex;
 	bool time_running, ctrl_running;
 	int sample_rate, sample_size, channels;
+	int playtime;
 	raop_codec_t codec;
 	raop_crypto_t crypto;
 } raopcl_data_t;
@@ -311,6 +312,8 @@ __u32 raopcl_send_sample(struct raopcl_s *p, __u8 *sample, int size, int frames,
 		LOG_INFO("check n:%u p:%u tsa:%u sn:%u", now, playtime, p->rtp_ts.audio, p->seq_number);
 	}
 
+	p->playtime = playtime - read_ahead;
+
 	return playtime;
 }
 
@@ -350,15 +353,12 @@ struct raopcl_s *raopcl_create(char *local, raop_codec_t codec, raop_crypto_t cr
 
 	pthread_mutex_init(&raopcld->mutex, NULL);
 
-	// get an init vector
-	if (!RAND_bytes(raopcld->iv, sizeof(raopcld->iv)) || !RAND_bytes(raopcld->key, sizeof(raopcld->key))) {
-		LOG_ERROR("[%p]: RAND_bytes error code=%ld", raopcld, ERR_get_error());
-		rtspcl_destroy(raopcld->rtspcl);
-		free(raopcld);
-		return NULL;
-	}
+	RAND_bytes(raopcld->iv, sizeof(raopcld->iv));
+	VALGRIND_MAKE_MEM_DEFINED(raopcld->iv, sizeof(raopcld->iv));
+	RAND_bytes(raopcld->key, sizeof(raopcld->key));
+	VALGRIND_MAKE_MEM_DEFINED(raopcld->key, sizeof(raopcld->key));
 
-	memcpy(raopcld->nv,raopcld->iv,sizeof(raopcld->nv));
+	memcpy(raopcld->nv, raopcld->iv, sizeof(raopcld->nv));
 	aes_set_key(&raopcld->ctx, raopcld->key, 128);
 
 	return raopcld;
@@ -411,6 +411,39 @@ bool raopcl_update_volume(struct raopcl_s *p, int vol, bool force)
 
 	return rtspcl_set_parameter(p->rtspcl, a);
 }
+
+
+/*----------------------------------------------------------------------------*/
+bool raopcl_progress(struct raopcl_s *p, __u32 start, __u32 duration)
+{
+	char a[128];
+
+	if (!p || !p->rtspcl || p->state < RAOP_FLUSHED) return false;
+
+	/*
+	This is very hacky: it works only because the RTP counter is derived from
+	the main clock in ms
+	*/
+	sprintf(a, "progress: %u/%u/%u\r\n", (__u32) (((__u64) (start - p->rtp_ts.first_clock) * p->sample_rate) / 1000 + p->rtp_ts.first),
+										 p->rtp_ts.audio,
+										 (__u32) (((__u64) (start + duration - p->rtp_ts.first_clock) * p->sample_rate) / 1000 + p->rtp_ts.first));
+
+	return rtspcl_set_parameter(p->rtspcl, a);
+}
+
+
+/*----------------------------------------------------------------------------*/
+bool raopcl_set_daap(struct raopcl_s *p, int count, ...)
+{
+	va_list args;
+
+	if (!p) return false;
+
+	va_start(args, count);
+
+	return rtspcl_set_daap(p->rtspcl, p->rtp_ts.audio, count, args);
+}
+
 
 
 /*----------------------------------------------------------------------------*/
@@ -535,8 +568,12 @@ bool raopcl_reconnect(struct raopcl_s *p) {
 /*----------------------------------------------------------------------------*/
 bool raopcl_connect(struct raopcl_s *p, struct in_addr host, __u16 destport, raop_codec_t codec)
 {
-	__u8 seed[4+8+16];
-	char sid[16], sci[24];
+	struct {
+		__u32 sid;
+		__u64 sci;
+		__u8 sac[16];
+	} seed;
+	char sid[10+1], sci[16+1];
 	char *sac = NULL;
 	char sdp[1024];
 	bool rc = false;
@@ -556,9 +593,10 @@ bool raopcl_connect(struct raopcl_s *p, struct in_addr host, __u16 destport, rao
 	p->encrypt = (p->crypto != RAOP_CLEAR);
 	p->sane = true;
 
-	RAND_bytes(seed, sizeof(seed));
-	sprintf(sid, "%d%hu", 3420, *((__u16*) seed));
-	sprintf(sci, "%08x%08x",*((__u32*)(seed + 4)),*((__u32*)(seed + 8)));
+	RAND_bytes((__u8*) &seed, sizeof(seed));
+	VALGRIND_MAKE_MEM_DEFINED(&seed, sizeof(seed));
+	sprintf(sid, "%10lu", (long unsigned int) seed.sid);
+	sprintf(sci, "%016Lx", (long long int) seed.sci);
 
 	// RTSP misc setup
 	if (!rtspcl_add_exthds(p->rtspcl,"Client-Instance", sci)) goto erexit;
@@ -590,7 +628,7 @@ bool raopcl_connect(struct raopcl_s *p, struct in_addr host, __u16 destport, rao
 	if (!raopcl_set_sdp(p, sdp)) goto erexit;
 
 	// RTSP ANNOUNCE
-	base64_encode(seed + 12, 16, &sac);
+	base64_encode(&seed.sac, 16, &sac);
 	remove_char_from_string(sac, '=');
 	if (!rtspcl_add_exthds(p->rtspcl, "Apple-Challenge", sac)) goto erexit;
 	if (!rtspcl_announce_sdp(p->rtspcl, sdp)) goto erexit;
@@ -790,7 +828,7 @@ void *rtp_timing_thread(void *args)
 
 	while (raopcld->time_running)
 	{
-		rtp_time_pkt_t req, rsp;
+		rtp_time_pkt_t req;
 		struct timeval timeout = { 1, 0 };
 		fd_set rfds;
 		int n;
@@ -809,10 +847,13 @@ void *rtp_timing_thread(void *args)
 		n = recv(raopcld->rtp_ports.time.fd, (void*) &req, sizeof(req), 0);
 
 		if( n > 0) 	{
+			rtp_time_pkt_t rsp;
+
 			rsp.hdr = req.hdr;
 			rsp.hdr.type = 0x53 | 0x80;
 			// just copy the request header or set seq=7 and timestamp=0
 			rsp.ref_time = req.send_time;
+			VALGRIND_MAKE_MEM_DEFINED(&rsp, sizeof(rsp));
 
 			// transform timeval into NTP and set network order
 			get_ntp(&rsp.send_time);
@@ -871,6 +912,9 @@ void *rtp_control_thread(void *args)
 			int i, n, missed;
 
 			n = recv(raopcld->rtp_ports.ctrl.fd, (void*) &lost, sizeof(lost), 0);
+
+			if (n < 0) continue;
+
 			lost.seq_number = ntohs(lost.seq_number);
 			lost.n = ntohs(lost.n);
 
