@@ -2,6 +2,7 @@
  *  Squeezelite - lightweight headless squeezebox emulator
  *
  *  (c) Adrian Smith 2012-2015, triode1@btinternet.com
+ *  (c) Philippe, philippe_44@outlook.com for raop/multi-instance modifications
  *  
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,6 +28,10 @@
 struct chunk_table {
 	u32_t sample, offset;
 };
+
+#if OSX
+#define LINKALL 1
+#endif
 
 #if !LINKALL
 struct {
@@ -392,7 +397,6 @@ static decode_state faad_decode(struct thread_ctx_s *ctx) {
 	}
 
 	if (bytes_wrap < WRAPBUF_LEN && bytes_total > WRAPBUF_LEN) {
-
 		// make a local copy of frames which may have wrapped round the end of streambuf
 		u8_t buf[WRAPBUF_LEN];
 		memcpy(buf, ctx->streambuf->readp, bytes_wrap);
@@ -638,6 +642,8 @@ struct codec *register_faad(void) {
 
 
 void deregister_faad(void) {
+#if !LINKALL
 	if (ga.handle) dlclose(ga.handle);
+#endif
 }
 

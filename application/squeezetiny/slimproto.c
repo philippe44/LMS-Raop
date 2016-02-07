@@ -643,6 +643,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 				memcpy(ctx->slim_run.header, ctx->stream.header, header_len);
 				_sendMETA = true;
 				ctx->stream.meta_send = false;
+				ctx_callback(ctx, SQ_METASEND, NULL, NULL);
 			}
 			UNLOCK_S;
 

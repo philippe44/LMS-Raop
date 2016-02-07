@@ -1,8 +1,7 @@
 /*
  *  Squeeze2raop - LMS to RAOP gateway
  *
- *  Squeezelite : (c) Adrian Smith 2012-2014, triode1@btinternet.com
- *  Additions & gateway : (c) Philippe 2014, philippe_44@outlook.com
+ *  (c) Philippe, philippe_44@outlook.com
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,8 +66,8 @@ log_level	raop_loglevel = lINFO;
 tMRConfig			glMRConfig = {
 							true,
 							"",
-							true,
-							true,
+							false,
+							false,
 							3,
 							false,
 							60,
@@ -236,7 +235,7 @@ void 		DelRaopDevice(struct sMR *Device);
 
 	switch (action) {
 		case SQ_STOP:
-			device->TrackDuration = 0;
+			device->TrackDuration = -1;
 		case SQ_PAUSE: {
 			tRaopReq *Req = malloc(sizeof(tRaopReq));
 
@@ -284,17 +283,13 @@ void 		DelRaopDevice(struct sMR *Device);
 										p->channels, p->sample_size, p->sample_rate);
 			break;
 		}
-		case SQ_STARTED: {
-			device->TrackStartTime = *((u32_t*) param);
-			if (device->Config.SendMetaData) {
-				tRaopReq *Req = malloc(sizeof(tRaopReq));
-
-				strcpy(Req->Type, "STARTED");
-				QueueInsert(&device->Queue, Req);
-				pthread_cond_signal(&device->Cond);
-			}
+		case SQ_METASEND:
+			device->MetaDataWait = 5;
 			break;
-		}
+		case SQ_STARTED:
+			device->TrackStartTime = *((u32_t*) param);
+			device->MetaDataWait = 1;
+			break;
 		default:
 			break;
 	}
@@ -331,9 +326,27 @@ static void *PlayerThread(void *args)
 				raopcl_reconnect(Device->Raop);
 			}
 
-			if (Device->Config.SendMetaData && Device->TrackDuration) {
+			if (Device->Config.SendMetaData && Device->TrackDuration != -1) {
 				raopcl_progress(Device->Raop, Device->TrackStartTime, Device->TrackDuration);
 			}
+
+			pthread_mutex_lock(&Device->Mutex);
+			if (Device->MetaDataWait && !--Device->MetaDataWait) {
+				sq_metadata_t metadata;
+
+				pthread_mutex_unlock(&Device->Mutex);
+				LOG_INFO("[%p]: getting metadata", Device);
+				sq_get_metadata(Device->SqueezeHandle, &metadata, false);
+				Device->TrackDuration = metadata.duration;
+				raopcl_set_daap(Device->Raop, 5, "minm", 's', metadata.title,
+												 "asar", 's', metadata.artist,
+												 "asal", 's', metadata.album,
+												 "asgn", 's', metadata.genre,
+												 "astn", 'i', (int) metadata.track
+											 );
+				sq_free_metadata(&metadata);
+			}
+			else pthread_mutex_unlock(&Device->Mutex);
 
 			continue;
 		}
@@ -364,18 +377,6 @@ static void *PlayerThread(void *args)
 		if (!strcasecmp(req->Type, "VOLUME")) {
 			LOG_INFO("[%p]: processing volume", Device);
 			raopcl_update_volume(Device->Raop, req->Data.Volume, false);
-		}
-
-		if (!strcasecmp(req->Type, "STARTED")) {
-			sq_metadata_t metadata;
-			LOG_INFO("[%p]: getting metadata", Device);
-			sq_get_metadata(Device->SqueezeHandle, &metadata, false);
-			Device->TrackDuration = metadata.duration;
-			raopcl_set_daap(Device->Raop, 3, "minm", metadata.title,
-											 "asar", metadata.artist,
-											 "asal", metadata.album);
-			sq_free_metadata(&metadata);
-
 		}
 
 		free(req);
@@ -422,7 +423,7 @@ static void *UpdateMRThread(void *args)
 	int i, TimeStamp;
 	DiscoveredList DiscDevices;
 
-	LOG_DEBUG("Begin Cast devices update", NULL);
+	LOG_DEBUG("Begin Raop devices update", NULL);
 	TimeStamp = gettime_ms();
 
 	query_mDNS(gl_mDNSId, "_raop._tcp.local", &DiscDevices, glScanTimeout);
@@ -595,6 +596,7 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	Device->PlayerIP = data->addr;
 	Device->PlayerPort = data->port;
 	Device->TearDownWait = false;
+	Device->TrackDuration = -1;
 	strcpy(Device->FriendlyName, data->hostname);
 	p = stristr(Device->FriendlyName, ".local");
 	if (p) *p = '\0';

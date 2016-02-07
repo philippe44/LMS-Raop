@@ -2,6 +2,7 @@
  * audio_stream.c: audio file stream
  *
  * Copyright (C) 2005 Shiro Ninomiya <shiron@snino.com>
+ *  (c) Philippe, philippe_44@outlook.com: AirPlay V2 + simple library
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

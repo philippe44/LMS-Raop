@@ -1,8 +1,8 @@
 /*
- *  Squeeze2cast - LMS to Cast gateway
+ *  Squeeze2Raop - LMS to Raop gateway
  *
  *  Squeezelite : (c) Adrian Smith 2012-2014, triode1@btinternet.com
- *  Additions & gateway : (c) Philippe 2014, philippe_44@outlook.com
+ *  Additions & gateway : (c) Philippe 2016, philippe_44@outlook.com
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -91,7 +91,8 @@ struct sMR {
 	bool			TearDownWait;
 	u32_t			TearDownTO;
 	u32_t			TrackStartTime;
-	u32_t			TrackDuration;
+	s32_t			TrackDuration;
+	u8_t			MetaDataWait;
 	char *SampleSize;
 	char *SampleRate;
 	char *Channels;

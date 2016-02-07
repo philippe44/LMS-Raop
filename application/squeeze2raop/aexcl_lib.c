@@ -1,6 +1,7 @@
 /*****************************************************************************
  * socket interface library
  * Copyright (C) 2004 Shiro Ninomiya <shiron@snino.com>
+ *  (c) Philippe, philippe_44@outlook.com: AirPlay V2 + simple library
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

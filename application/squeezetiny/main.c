@@ -61,7 +61,6 @@ void sq_end() {
 
 	for (i = 0; i < MAX_PLAYER; i++) {
 		if (thread_ctx[i].in_use) {
-			LOG_INFO("[%p]: removing player %d", &thread_ctx[i], i);
 			sq_wipe_device(&thread_ctx[i]);
 		}
 	}
@@ -361,7 +360,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 	}
 	NFREE(rsp);
 
-	if (!next) {
+	if (!next && metadata->duration) {
 		sprintf(cmd, "%s time", ctx->cli_id);
 		rsp = cli_send_cmd(cmd, true, true, ctx);
 		if (rsp && *rsp) metadata->duration -= (u32_t) (atof(rsp) * 1000);

@@ -2,6 +2,7 @@
  * rtsp_client.c: RTSP Client
  *
  * Copyright (C) 2004 Shiro Ninomiya <shiron@snino.com>
+ *  (c) Philippe, philippe_44@outlook.com: AirPlay V2 + simple library
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -295,15 +296,31 @@ bool rtspcl_set_daap(struct rtspcl_s *p, __u32 timestamp, int count, va_list arg
 	hds[1].key	= NULL;
 
 	while (count-- && (q-str) < 1024) {
-		char *fmt, *data;
-		int i, size;
+		char *fmt, type;
+		__u32 i, size;
 
 		fmt = va_arg(args, char*);
-		data = va_arg(args, char*);
-		q = (__u8*) memcpy(q, fmt, 4) + 4;
-		size = strlen(data);
-		for (i = 0; i < 4; i++) *q++ = size >> (24-8*i);
-		q = (__u8*) memcpy(q, data, size) + size;
+		type = va_arg(args, int);
+		q = (char*) memcpy(q, fmt, 4) + 4;
+
+		switch(type) {
+			case 's': {
+				char *data;
+
+				data = va_arg(args, char*);
+				size = strlen(data);
+				for (i = 0; i < 4; i++) *q++ = size >> (24-8*i);
+				q = (char*) memcpy(q, data, size) + size;
+				break;
+			}
+			case 'i': {
+				int data;
+				data = va_arg(args, int);
+				*q++ = 0; *q++ = 2;
+				*q++ = (data >> 8); *q++ = data;
+				break;
+			}
+		}
 	}
 
 	rc = exec_request(p, "SET_PARAMETER", "application/x-dmap-tagged", str, q-str, 2, hds, NULL, NULL);

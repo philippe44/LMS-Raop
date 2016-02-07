@@ -262,7 +262,7 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 
 					n = recv(ctx->fd, ctx->streambuf->writep, space, 0);
 					if (n == 0) {
-						LOG_INFO("[%p] end of stream (t:%Ld)", ctx, ctx->stream.bytes);
+						LOG_INFO("[%p] end of stream (t:%lld)", ctx, ctx->stream.bytes);
 						_disconnect(DISCONNECT, DISCONNECT_OK, ctx);
 					}
 					if (n < 0 && last_error() != ERROR_WOULDBLOCK) {

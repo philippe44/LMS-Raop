@@ -2,6 +2,7 @@
  * rtsp_client.c: RAOP Client
  *
  * Copyright (C) 2004 Shiro Ninomiya <shiron@snino.com>
+ *  (c) Philippe, philippe_44@outlook.com: AirPlay V2 + simple library
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -417,16 +418,22 @@ bool raopcl_update_volume(struct raopcl_s *p, int vol, bool force)
 bool raopcl_progress(struct raopcl_s *p, __u32 start, __u32 duration)
 {
 	char a[128];
+	__u32 end;
 
 	if (!p || !p->rtspcl || p->state < RAOP_FLUSHED) return false;
+
+	if (duration)
+		end = (__u32) (((__u64) (start + duration - p->rtp_ts.first_clock) * p->sample_rate) / 1000 + p->rtp_ts.first);
+	else
+		end = (__u32) p->rtp_ts.audio + (3599L * p->sample_rate);
+
+	start = (__u32) (((__u64) (start - p->rtp_ts.first_clock) * p->sample_rate) / 1000 + p->rtp_ts.first);
 
 	/*
 	This is very hacky: it works only because the RTP counter is derived from
 	the main clock in ms
 	*/
-	sprintf(a, "progress: %u/%u/%u\r\n", (__u32) (((__u64) (start - p->rtp_ts.first_clock) * p->sample_rate) / 1000 + p->rtp_ts.first),
-										 p->rtp_ts.audio,
-										 (__u32) (((__u64) (start + duration - p->rtp_ts.first_clock) * p->sample_rate) / 1000 + p->rtp_ts.first));
+	sprintf(a, "progress: %u/%u/%u\r\n", start, p->rtp_ts.audio, end);
 
 	return rtspcl_set_parameter(p->rtspcl, a);
 }
@@ -596,7 +603,7 @@ bool raopcl_connect(struct raopcl_s *p, struct in_addr host, __u16 destport, rao
 	RAND_bytes((__u8*) &seed, sizeof(seed));
 	VALGRIND_MAKE_MEM_DEFINED(&seed, sizeof(seed));
 	sprintf(sid, "%10lu", (long unsigned int) seed.sid);
-	sprintf(sci, "%016Lx", (long long int) seed.sci);
+	sprintf(sci, "%016llx", (long long int) seed.sci);
 
 	// RTSP misc setup
 	if (!rtspcl_add_exthds(p->rtspcl,"Client-Instance", sci)) goto erexit;

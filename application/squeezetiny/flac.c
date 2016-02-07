@@ -2,6 +2,7 @@
  *  Squeezelite - lightweight headless squeezeplay emulator for linux
  *
  *  (c) Adrian Smith 2012, triode1@btinternet.com
+ *  (c) Philippe, philippe_44@outlook.com for raop/multi-instance modifications
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +22,10 @@
 #include "squeezelite.h"
 
 #include <FLAC/stream_decoder.h>
+
+#if OSX
+#define LINKALL 1
+#endif
 
 #if !LINKALL
 static struct {
@@ -285,6 +290,8 @@ struct codec *register_flac(void) {
 
 
 void deregister_flac(void) {
+#if !LINKALL
 	if (gf.handle) dlclose(gf.handle);
+#endif
 }
 

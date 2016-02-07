@@ -1,3 +1,25 @@
+/* 
+ *  Squeezelite - lightweight headless squeezebox emulator
+ *
+ *  (c) Adrian Smith 2012-2014, triode1@btinternet.com
+ *  (c) Philippe, philippe_44@outlook.com for raop/multi-instance modifications
+ *  
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+
 #ifndef __SQUEEZEDEFS_H
 #define __SQUEEZEDEFS_H
 
@@ -8,7 +30,7 @@
 #if LINUX || OSX || FREEBSD
 
 #define STREAM_THREAD_STACK_SIZE  64 * 1024
-#define DECODE_THREAD_STACK_SIZE 32 * 1024
+#define DECODE_THREAD_STACK_SIZE 128 * 1024
 #define OUTPUT_THREAD_STACK_SIZE  64 * 1024
 #define SLIMPROTO_THREAD_STACK_SIZE  64 * 1024
 #define thread_t pthread_t;

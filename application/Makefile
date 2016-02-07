@@ -14,9 +14,10 @@ squeezeraop_dir = squeeze2raop
 build_dir	= ./bin
 
 #LIBRARY = libixml.a libfaad.a
-LIBRARY = libixml.a 
+LIBRARY = libixml.a libsoxr.a
 
 DEFINES = -DHAVE_STDINT_H -D RESAMPLE
+#DEFINES = -DHAVE_STDINT_H
 
 INCLUDE = -I../../libupnp/1.6.19/ixml/inc\
           -I../../libupnp/1.6.19/upnp/inc\

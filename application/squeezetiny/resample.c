@@ -2,6 +2,7 @@
  *  Squeezelite - lightweight headless squeezebox emulator
  *
  *  (c) Adrian Smith 2012-2015, triode1@btinternet.com
+ *  (c) Philippe, philippe_44@outlook.com for raop/multi-instance modifications
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,6 +31,9 @@
 extern log_level 	decode_loglevel;
 static log_level 	*loglevel = &decode_loglevel;
 
+#if !WIN
+#define LINKALL 1
+#endif
 
 #if !LINKALL
 struct  {
@@ -46,9 +50,8 @@ struct  {
 	soxr_runtime_spec_t (* soxr_runtime_spec)(unsigned num_threads);
 #endif
 	// soxr_strerror is a macro so not included here
-#endif
 } gr;
-
+#endif
 
 struct soxr {
 	soxr_t resampler;
@@ -258,7 +261,9 @@ bool resample_init(char *opt, struct thread_ctx_s *ctx) {
 	char *atten = NULL;
 	char *precision = NULL, *passband_end = NULL, *stopband_begin = NULL, *phase_response = NULL;
 
+#if !LINKALL
 	if (!gr.handle) return false;
+#endif
 
 	r = ctx->decode.process_handle = malloc(sizeof(struct soxr));
 	if (!r) {
@@ -387,7 +392,9 @@ bool register_soxr(void) {
 }
 
 void deregister_soxr(void) {
+#if !LINKALL
 	dlclose(gr.handle);
+#endif
 }
 
 #endif // #if RESAMPLE

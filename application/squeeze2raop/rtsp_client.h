@@ -2,6 +2,7 @@
  * rtsp_client.h: RTSP Client
  *
  * Copyright (C) 2004 Shiro Ninomiya <shiron@snino.com>
+ * Copyright (C) 2016 Philippe <philippe44@outlook.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,8 +18,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111, USA.
  *****************************************************************************/
-
-#ifndef __RTSP_CLIENT_H
+ 
+ #ifndef __RTSP_CLIENT_H
 #define __RTSP_CLIENT_H
 
 struct rtspcl_s;

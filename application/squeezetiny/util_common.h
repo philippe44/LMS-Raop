@@ -1,5 +1,5 @@
 /*
- *  Squeeze2upnp - LMS to uPNP gateway
+ *  Squeezelite - a lightweight LMS player
  *
  *  Squeezelite : (c) Adrian Smith 2012-2014, triode1@btinternet.com
  *  Additions & gateway : (c) Philippe 2014, philippe_44@outlook.com
