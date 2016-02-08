@@ -677,7 +677,7 @@ bool raopcl_connect(struct raopcl_s *p, struct in_addr host, __u16 destport, rao
 	// if the above fails for any reason, tear everything down
 	if (!rc) raopcl_disconnect(p);
 
-	if (p->volume && !raopcl_update_volume(p, p->volume, true)) goto erexit;
+	if (!raopcl_update_volume(p, p->volume, true)) goto erexit;
 
  erexit:
 	if (sac) free(sac);
