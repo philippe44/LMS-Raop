@@ -60,13 +60,25 @@ char *_aprintf(const char *fmt, ...)
 int open_tcp_socket(struct in_addr host, unsigned short *port)
 {
 	int sd;
+	int optval = 1;
 
 	/* socket creation */
 	sd = socket(AF_INET, SOCK_STREAM, 0);
+
 	if (sd < 0) {
 		LOG_ERROR("cannot create tcp socket %x", host);
 		return -1;
 	}
+
+	optval = setsockopt(sd, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval));
+#if 0 //only Linux supports this
+	optval = 120;
+	optval = setsockopt(sd, SOL_TCP, TCP_KEEPIDLE, &optval, sizeof(optval));
+	optval = 60;
+	optval = setsockopt(sd, SOL_TCP, TCP_KEEPINTVL, &optval, sizeof(optval));
+	optval = 10;
+	optval = setsockopt(sd, SOL_TCP, TCP_KEEPCNT, &optval, sizeof(optval));
+#endif
 
 	if (!bind_host(sd, host, port)) {
 		close(sd);
