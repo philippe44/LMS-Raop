@@ -27,7 +27,7 @@
 #include "raop_play.h"
 
 log_level	util_loglevel = lINFO;
-log_level	raop_loglevel = lDEBUG;
+log_level	raop_loglevel = lINFO;
 
 log_level main_log = lINFO;
 log_level *loglevel =&main_log;
@@ -149,17 +149,19 @@ int main(int argc, char *argv[])
 		int i;
 
 		n = fread(buf, 352*4, 1, infile);
-		pcm_to_alac(buf, 352, &buffer, &size, 352, 2, false);
-		pcm_to_alac_fast(buf, 352, &buf2, &size, 352);
+		//pcm_to_alac(buf, 352, &buf2, &size, 352, 2, false);
+		pcm_to_alac_fast(buf, 352, &buffer, &size, 352);
+		/*
 		for (i = 0; i < size; i++) {
 			if (buf2[i] != buffer[i]) {
 				printf("error");
 			}
 		}
+		*/
 		// buffer = buf;
-		timestamp = raopcl_send_sample(raopcl, buffer, size, 352, false, 3000);
+		timestamp = raopcl_send_sample(raopcl, buffer, size, 352, false, 500);
 		free(buffer);
-		free(buf2);
+		//free(buf2);
 	} while (n);
 
  erexit:

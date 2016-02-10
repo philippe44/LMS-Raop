@@ -577,7 +577,7 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 
 	if (!Device->Config.Enabled) return false;
 
-#if 0
+#if 1
 	if (!stristr(data->name, "jbl")) {
 		printf("ONLY JBL %s\n", data->name);
 		return false;

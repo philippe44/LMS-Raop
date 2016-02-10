@@ -257,7 +257,7 @@ __u32 raopcl_send_sample(struct raopcl_s *p, __u8 *sample, int size, int frames,
 		u32_t sleep_time = min(read_ahead / 2, 100);
 
 		if (sleep_time < 10) sleep_time = 10;
-		LOG_SDEBUG("[%p]: waiting for buffer to empty %d %d", p, p->rtp_ts.audio - p->rtp_ts.first, now);
+		LOG_SDEBUG("[%p]: waiting for buffer to empty %u %u", p, p->rtp_ts.audio - p->rtp_ts.first, now);
 		usleep(sleep_time * 1000);
 	}
 
@@ -909,7 +909,7 @@ void *rtp_control_thread(void *args)
 			if (raopcld->ctrl_running) {
 				LOG_ERROR("[%p]: control socket closed", raopcld);
 				sleep(1);
-        	}
+			}
 			continue;
 		}
 
