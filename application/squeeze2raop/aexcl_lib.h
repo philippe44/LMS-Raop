@@ -34,7 +34,7 @@ typedef struct rtp_port_s {
 } rtp_port_t;
 
 int open_tcp_socket(struct in_addr host, unsigned short *port);
-int open_udp_socket(struct in_addr host, unsigned short *port);
+int open_udp_socket(struct in_addr host, unsigned short *port, bool blocking);
 bool get_tcp_connect_by_host(int sd, struct in_addr host, unsigned short destport);
 bool get_tcp_connect(int sd, struct sockaddr_in dest_addr);
 bool bind_host(int sd, struct in_addr host,unsigned short *port);

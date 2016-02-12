@@ -24,6 +24,10 @@
 #include "aexcl_lib.h"
 #include "rtsp_client.h"
 
+#if WIN
+#define poll WSAPoll
+#endif
+
 #define MAX_NUM_KD 20
 typedef struct rtspcl_s {
     int fd;
@@ -64,6 +68,24 @@ struct rtspcl_s *rtspcl_create(char *useragent)
 	rtspcld->useragent = useragent;
 	rtspcld->fd = -1;
 	return rtspcld;
+}
+
+
+/*----------------------------------------------------------------------------*/
+bool rtspcl_is_connected(struct rtspcl_s *p)
+{
+	int n;
+	struct pollfd pfds;
+
+	pfds.fd = p->fd;
+	pfds.events = POLLOUT;
+
+	if (p->fd == -1) return true;
+
+	n = poll(&pfds, 1, 0);
+	if (n == - 1 || pfds.revents & POLLERR || pfds.revents & POLLHUP) return false;
+
+	return true;
 }
 
 

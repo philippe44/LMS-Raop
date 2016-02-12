@@ -321,7 +321,7 @@ static void *PlayerThread(void *args)
 			}
 
 			if (!raopcl_is_sane(Device->Raop)) {
-				LOG_ERROR("[%p]: dead connection, attempting reset", Device);
+				LOG_ERROR("[%p]: broken connection, attempting reset", Device);
 				raopcl_disconnect(Device->Raop);
 				raopcl_reconnect(Device->Raop);
 			}
@@ -577,7 +577,7 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 
 	if (!Device->Config.Enabled) return false;
 
-#if 1
+#if 0
 	if (!stristr(data->name, "jbl")) {
 		printf("ONLY JBL %s\n", data->name);
 		return false;
@@ -865,6 +865,9 @@ int main(int argc, char *argv[])
 
 	signal(SIGINT, sighandler);
 	signal(SIGTERM, sighandler);
+#if defined(SIGPIPE)
+	signal(SIGPIPE, SIG_IGN);
+#endif
 #if defined(SIGQUIT)
 	signal(SIGQUIT, sighandler);
 #endif

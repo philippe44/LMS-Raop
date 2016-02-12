@@ -149,6 +149,10 @@ int main(int argc, char *argv[])
 		int i;
 
 		n = fread(buf, 352*4, 1, infile);
+		if (!n) {
+			fseek(infile, 0, SEEK_SET);
+			n = fread(buf, 352*4, 1, infile);
+		}
 		//pcm_to_alac(buf, 352, &buf2, &size, 352, 2, false);
 		pcm_to_alac_fast(buf, 352, &buffer, &size, 352);
 		/*

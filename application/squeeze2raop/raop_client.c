@@ -76,7 +76,7 @@ typedef struct {
 typedef struct raopcl_s {
 	struct rtspcl_s *rtspcl;
 	raop_state_t state;
-	bool sane;
+	int sane;
 	__u8 iv[16]; // initialization vector for aes-cbc
 	__u8 nv[16]; // next vector for aes-cbc
 	__u8 key[16]; // key for aes-cbc
@@ -135,7 +135,8 @@ raop_state_t raopcl_get_state(struct raopcl_s *p)
 /*----------------------------------------------------------------------------*/
 bool raopcl_is_sane(struct raopcl_s *p)
 {
-	return p->sane;
+	if (!rtspcl_is_connected(p->rtspcl) || p->sane >= 10) return false;
+	return true;
 }
 
 
@@ -211,8 +212,10 @@ __u32 raopcl_send_sample(struct raopcl_s *p, __u8 *sample, int size, int frames,
 	struct sockaddr_in addr;
 	u8_t *buffer;
 	rtp_audio_pkt_t *packet;
-	size_t n;
 	u32_t playtime, now;
+	struct timeval timeout = { 0, 20*1000L };
+	fd_set wfds;
+	size_t n;
 	bool first = false;
 
 	// don't send anything if not ready, this might confuse the player !
@@ -304,10 +307,23 @@ __u32 raopcl_send_sample(struct raopcl_s *p, __u8 *sample, int size, int frames,
 	p->backlog[n].size = sizeof(rtp_audio_pkt_t) + size;
 	pthread_mutex_unlock(&p->mutex);
 
-	n = sendto(p->rtp_ports.audio.fd, (void*) packet, sizeof(rtp_audio_pkt_t) + size, 0, (void*) &addr, sizeof(addr));
-	if (n != sizeof(rtp_audio_pkt_t) + size) {
-		LOG_ERROR("[%p]: error sending audio packet", p);
+	//LOG_SDEBUG("[%p]: sending buffer %u (n:%u)", p, gettime_ms(), now);
+
+	FD_ZERO(&wfds);
+	FD_SET(p->rtp_ports.audio.fd, &wfds);
+
+	if (select(p->rtp_ports.audio.fd + 1, NULL, &wfds, NULL, &timeout) == -1) {
+		LOG_ERROR("[%p]: audio socket unavailable", p);
+		p->sane++;
 	}
+	else {
+		n = sendto(p->rtp_ports.audio.fd, (void*) packet, sizeof(rtp_audio_pkt_t) + size, 0, (void*) &addr, sizeof(addr));
+		if (n != sizeof(rtp_audio_pkt_t) + size) {
+			LOG_ERROR("[%p]: error sending audio packet", p);
+			p->sane++;
+		}
+	}
+	//LOG_SDEBUG("[%p]: sent buffer %u", p, gettime_ms());
 
 	if (playtime % 10000 < 8) {
 		LOG_INFO("check n:%u p:%u tsa:%u sn:%u", now, playtime, p->rtp_ts.audio, p->seq_number);
@@ -330,7 +346,7 @@ struct raopcl_s *raopcl_create(char *local, raop_codec_t codec, raop_crypto_t cr
 	memset(raopcld, 0, sizeof(raopcl_data_t));
 
 	raopcld->state = RAOP_DOWN_FULL;
-	raopcld->sane = true;
+	raopcld->sane = 0;
 	raopcld->sample_rate = sample_rate;
 	raopcld->sample_size = sample_size;
 	raopcld->channels = channels;
@@ -598,7 +614,7 @@ bool raopcl_connect(struct raopcl_s *p, struct in_addr host, __u16 destport, rao
 	p->ssrc = _random(0xffffffff);
 	p->latency = 0;
 	p->encrypt = (p->crypto != RAOP_CLEAR);
-	p->sane = true;
+	p->sane = 0;
 
 	RAND_bytes((__u8*) &seed, sizeof(seed));
 	VALGRIND_MAKE_MEM_DEFINED(&seed, sizeof(seed));
@@ -643,9 +659,9 @@ bool raopcl_connect(struct raopcl_s *p, struct in_addr host, __u16 destport, rao
 
 	// open RTP sockets, need local ports here before sending SETUP
 	p->rtp_ports.ctrl.lport = p->rtp_ports.time.lport = p->rtp_ports.audio.lport = 0;
-	if ((p->rtp_ports.ctrl.fd = open_udp_socket(p->local_addr, &p->rtp_ports.ctrl.lport)) == -1) goto erexit;
-	if ((p->rtp_ports.time.fd = open_udp_socket(p->local_addr, &p->rtp_ports.time.lport)) == -1) goto erexit;
-	if ((p->rtp_ports.audio.fd = open_udp_socket(p->local_addr, &p->rtp_ports.audio.lport)) == -1) goto erexit;
+	if ((p->rtp_ports.ctrl.fd = open_udp_socket(p->local_addr, &p->rtp_ports.ctrl.lport, true)) == -1) goto erexit;
+	if ((p->rtp_ports.time.fd = open_udp_socket(p->local_addr, &p->rtp_ports.time.lport, true)) == -1) goto erexit;
+	if ((p->rtp_ports.audio.fd = open_udp_socket(p->local_addr, &p->rtp_ports.audio.lport, true)) == -1) goto erexit;
 
 	// RTSP SETUP : get all RTP destination ports
 	if (!rtspcl_setup(p->rtspcl, &p->rtp_ports, kd)) goto erexit;
@@ -969,8 +985,8 @@ void *rtp_control_thread(void *args)
 					  raopcld, lost.seq_number, lost.n, missed, error);
 
 			if (error || missed > 100) {
-				LOG_ERROR("[%p]: attempting link reset", raopcld);
-				raopcld->sane = false;
+				LOG_ERROR("[%p]: ctrl socket error", raopcld);
+				raopcld->sane += 5;
 			}
 
 			continue;

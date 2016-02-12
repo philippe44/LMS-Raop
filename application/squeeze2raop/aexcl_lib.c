@@ -18,6 +18,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111, USA.
  *****************************************************************************/
 #include <stdarg.h>
+#include <fcntl.h>
+#include <signal.h>
 
 #include "platform.h"
 #include "aexcl_lib.h"
@@ -54,6 +56,16 @@ char *_aprintf(const char *fmt, ...)
 }
 
 
+static void set_nonblock(int s) {
+#if WIN
+	u_long iMode = 1;
+	ioctlsocket(s, FIONBIO, &iMode);
+#else
+	int flags = fcntl(s, F_GETFL,0);
+	fcntl(s, F_SETFL, flags | O_NONBLOCK);
+#endif
+}
+
 /*
  * open tcp port
  */
@@ -64,13 +76,14 @@ int open_tcp_socket(struct in_addr host, unsigned short *port)
 
 	/* socket creation */
 	sd = socket(AF_INET, SOCK_STREAM, 0);
+	//set_nonblock(sd):
 
 	if (sd < 0) {
 		LOG_ERROR("cannot create tcp socket %x", host);
 		return -1;
 	}
 
-	optval = setsockopt(sd, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval));
+	setsockopt(sd, SOL_SOCKET, SO_KEEPALIVE, (void*) &optval, sizeof(optval));
 #if 0 //only Linux supports this
 	optval = 120;
 	optval = setsockopt(sd, SOL_TCP, TCP_KEEPIDLE, &optval, sizeof(optval));
@@ -88,12 +101,14 @@ int open_tcp_socket(struct in_addr host, unsigned short *port)
 	return sd;
 }
 
-int open_udp_socket(struct in_addr host, unsigned short *port)
+int open_udp_socket(struct in_addr host, unsigned short *port, bool blocking)
 {
 	int sd;
 
 	/*socket creation*/
 	sd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (!blocking) set_nonblock(sd);
+
 	if (sd < 0) {
 		LOG_ERROR("cannot create udp socket %x", host);
 		return -1;

@@ -1,0 +1,10 @@
+0.1.0.0
+ dev-100
+  - Move back to blocking sockets but keep select() to ensure audio socket is ready to write 
+  - no SIGPIPE on Linux (was exiting the application on attempt to re-establish connection)
+ dev-9
+ - UDP sockets are non blocking
+ - detect failed UDP socket for audio (every frame send), ctrl, time and TCP socket main (every second)
+ - wait up to 100ms for audio socket to be available in send_sample
+ 
+ 
