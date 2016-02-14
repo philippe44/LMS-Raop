@@ -422,6 +422,10 @@ static void *UpdateMRThread(void *args)
 	struct sMR *Device = NULL;
 	int i, TimeStamp;
 	DiscoveredList DiscDevices;
+	static bool Running = false;
+
+	if (Running) return NULL;
+	Running = true;
 
 	LOG_DEBUG("Begin Raop devices update", NULL);
 	TimeStamp = gettime_ms();
@@ -430,6 +434,7 @@ static void *UpdateMRThread(void *args)
 
 	if (!glMainRunning) {
 		LOG_DEBUG("Aborting ...", NULL);
+		Running = false;
 		return NULL;
 	}
 
@@ -501,6 +506,7 @@ static void *UpdateMRThread(void *args)
 	}
 
 	LOG_DEBUG("End Raop devices update %d", gettime_ms() - TimeStamp);
+	Running = false;
 	return NULL;
 }
 
@@ -518,6 +524,7 @@ static void *MainThread(void *args)
 		ScanPoll += elapsed;
 		if (glScanInterval && ScanPoll > glScanInterval*1000) {
 			pthread_attr_t attr;
+
 			ScanPoll = 0;
 
 			for (i = 0; i < MAX_RENDERERS; i++) {
@@ -526,7 +533,7 @@ static void *MainThread(void *args)
 			}
 
 			pthread_attr_init(&attr);
-			pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + 32*1024);
+			pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + 64*1024);
 			pthread_create(&glUpdateMRThread, &attr, &UpdateMRThread, NULL);
 			pthread_detach(glUpdateMRThread);
 			pthread_attr_destroy(&attr);
@@ -566,6 +573,7 @@ static void *MainThread(void *args)
 /*----------------------------------------------------------------------------*/
 static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 {
+	pthread_attr_t attr;
 	raop_crypto_t Crypto;
 	char *p;
 
@@ -648,8 +656,12 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	pthread_cond_init(&Device->Cond, 0);
 	QueueInit(&Device->Queue);
 
+	pthread_attr_init(&attr);
+	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + 64*1024);
 	pthread_create(&Device->Thread, NULL, &PlayerThread, Device);
-	return true;
+	pthread_attr_destroy(&attr);
+
+	return true;
 }
 
 
@@ -695,6 +707,8 @@ void DelRaopDevice(struct sMR *Device)
 /*----------------------------------------------------------------------------*/
 static bool Start(void)
 {
+	pthread_attr_t attr;
+
 	if (glScanInterval) {
 		if (glScanInterval < SCAN_INTERVAL) glScanInterval = SCAN_INTERVAL;
 		if (glScanTimeout < SCAN_TIMEOUT) glScanTimeout = SCAN_TIMEOUT;
@@ -708,7 +722,11 @@ static bool Start(void)
 	else gl_mDNSId = init_mDNS(false, glIPaddress);
 
 	/* start the main thread */
+	pthread_attr_init(&attr);
+	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + 64*1024);
 	pthread_create(&glMainThread, NULL, &MainThread, NULL);
+	pthread_attr_destroy(&attr);
+
 	return true;
 }
 

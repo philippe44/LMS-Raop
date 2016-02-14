@@ -83,7 +83,7 @@ bool rtspcl_is_connected(struct rtspcl_s *p)
 	if (p->fd == -1) return true;
 
 	n = poll(&pfds, 1, 0);
-	if (n == - 1 || pfds.revents & POLLERR || pfds.revents & POLLHUP) return false;
+	if (n == - 1 || (pfds.revents & POLLERR) || (pfds.revents & POLLHUP)) return false;
 
 	return true;
 }
@@ -163,7 +163,7 @@ bool rtspcl_add_exthds(struct rtspcl_s *p, char *key, char *data)
 		free(p->exthds[i].key);
 		free(p->exthds[i].data);
 	}
-	else p->exthds[i + 1].key=NULL;
+	else p->exthds[i + 1].key = NULL;
 
 	p->exthds[i].key = strdup(key);
 	p->exthds[i].data = strdup(data);
@@ -205,6 +205,7 @@ bool rtspcl_remove_all_exthds(struct rtspcl_s *p)
 		free(p->exthds[i].data);
 		i++;
 	}
+	memset(p->exthds, 0, sizeof(p->exthds));
 
 	return true;
 }

@@ -104,3 +104,4 @@ alpha/
 _backup/
 application - */
 test/
+cov-int/

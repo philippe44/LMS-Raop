@@ -307,17 +307,21 @@ __u32 raopcl_send_sample(struct raopcl_s *p, __u8 *sample, int size, int frames,
 	p->backlog[n].size = sizeof(rtp_audio_pkt_t) + size;
 	pthread_mutex_unlock(&p->mutex);
 
-	//LOG_SDEBUG("[%p]: sending buffer %u (n:%u)", p, gettime_ms(), now);
-
 	FD_ZERO(&wfds);
 	FD_SET(p->rtp_ports.audio.fd, &wfds);
 
+	//LOG_SDEBUG("[%p]: sending buffer %u (n:%u)", p, gettime_ms(), now);
 	if (select(p->rtp_ports.audio.fd + 1, NULL, &wfds, NULL, &timeout) == -1) {
 		LOG_ERROR("[%p]: audio socket unavailable", p);
 		p->sane++;
 	}
 	else {
+		//now = gettime_ms();
 		n = sendto(p->rtp_ports.audio.fd, (void*) packet, sizeof(rtp_audio_pkt_t) + size, 0, (void*) &addr, sizeof(addr));
+		//now = gettime_ms() - now;
+		//if (now > 50) {
+		//	LOG_ERROR("[%p]: too much time to send %u", p, now);
+		//}
 		if (n != sizeof(rtp_audio_pkt_t) + size) {
 			LOG_ERROR("[%p]: error sending audio packet", p);
 			p->sane++;
@@ -401,10 +405,12 @@ void raopcl_terminate_rtp(struct raopcl_s *p)
 	p->rtp_ports.ctrl.fd = p->rtp_ports.time.fd = p->rtp_ports.audio.fd = -1;
 
 	for (i = 0; i < MAX_BACKLOG; i++) {
+		pthread_mutex_lock(&p->mutex);
 		if (p->backlog[i].buffer) {
 			free(p->backlog[i].buffer);
 			p->backlog[i].buffer = NULL;
 		}
+		pthread_mutex_unlock(&p->mutex);
 	}
 }
 
