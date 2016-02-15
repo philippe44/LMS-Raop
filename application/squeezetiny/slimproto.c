@@ -891,6 +891,8 @@ void slimproto_close(struct thread_ctx_s *ctx) {
 
 /*---------------------------------------------------------------------------*/
 void slimproto_thread_init(char *server, u8_t mac[6], const char *name, const char *namefile, struct thread_ctx_s *ctx) {
+	pthread_attr_t attr;
+
 	wake_create(ctx->wake_e);
 
 	ctx->running = true;
@@ -943,16 +945,10 @@ void slimproto_thread_init(char *server, u8_t mac[6], const char *name, const ch
 
 	ctx->new_server = 0;
 
-#if LINUX || OSX || FREEBSD
-	pthread_attr_t attr;
 	pthread_attr_init(&attr);
 	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + SLIMPROTO_THREAD_STACK_SIZE);
 	pthread_create(&ctx->thread, &attr, (void *(*)(void*)) slimproto, ctx);
 	pthread_attr_destroy(&attr);
-#endif
-#if WIN
-	ctx->thread = CreateThread(NULL, SLIMPROTO_THREAD_STACK_SIZE, (LPTHREAD_START_ROUTINE)&slimproto, ctx, 0, NULL);
-#endif
 }
 
 

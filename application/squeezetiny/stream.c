@@ -303,6 +303,8 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 /*---------------------------------------------------------------------------*/
 void stream_thread_init(unsigned streambuf_size, struct thread_ctx_s *ctx) {
 
+	pthread_attr_t attr;
+
 	LOG_DEBUG("[%p] streambuf size: %u", ctx, streambuf_size);
 
 	ctx->streambuf = &ctx->__s_buf;
@@ -324,16 +326,10 @@ void stream_thread_init(unsigned streambuf_size, struct thread_ctx_s *ctx) {
 	touch_memory(ctx->streambuf->buf, ctx->streambuf->size);
 #endif
 
-#if LINUX || OSX || FREEBSD
-	pthread_attr_t attr;
 	pthread_attr_init(&attr);
 	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + STREAM_THREAD_STACK_SIZE);
 	pthread_create(&ctx->stream_thread, &attr, (void *(*)(void*)) stream_thread, ctx);
 	pthread_attr_destroy(&attr);
-#endif
-#if WIN
-	ctx->stream_thread = CreateThread(NULL, STREAM_THREAD_STACK_SIZE, (LPTHREAD_START_ROUTINE)&stream_thread, ctx, 0, NULL);
-#endif
 }
 
 void stream_close(struct thread_ctx_s *ctx) {

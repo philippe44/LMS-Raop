@@ -152,6 +152,8 @@ void decode_end(void) {
 
 /*---------------------------------------------------------------------------*/
 void decode_thread_init(struct thread_ctx_s *ctx) {
+	pthread_attr_t attr;
+
 	LOG_DEBUG("[%p]: init decode", ctx);
 	mutex_create(ctx->decode.mutex);
 
@@ -168,16 +170,10 @@ void decode_thread_init(struct thread_ctx_s *ctx) {
 		ctx->decode.process = false;
 	);
 
-#if LINUX || OSX || FREEBSD
-	pthread_attr_t attr;
 	pthread_attr_init(&attr);
 	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + DECODE_THREAD_STACK_SIZE);
 	pthread_create(&ctx->decode_thread, &attr, (void *(*)(void*)) decode_thread, ctx);
 	pthread_attr_destroy(&attr);
-#endif
-#if WIN
-	ctx->decode_thread = CreateThread(NULL, DECODE_THREAD_STACK_SIZE, (LPTHREAD_START_ROUTINE)&decode_thread, ctx, 0, NULL);
-#endif
 }
 
 /*---------------------------------------------------------------------------*/

@@ -97,9 +97,16 @@ static void *output_raop_thread(struct thread_ctx_s *ctx) {
 		}
 
 		if (ctx->output.state == OUTPUT_RUNNING) {
+			u32_t now;
 			pcm_to_alac_fast((u32_t*) ctx->output.buf, ctx->output.buf_frames, &buffer, &size, FRAME_BLOCK);
+			now = gettime_ms();
 			playtime = raopcl_send_sample(ctx->output.device, buffer, size,
 									 FRAME_BLOCK, false, ctx->config.read_ahead);
+			now = gettime_ms() - now;
+			if (now > 200) {
+				LOG_ERROR("[%p]: too much time to send %u", ctx, now);
+			}
+
 			NFREE(buffer);
 		}
 		else
@@ -138,6 +145,8 @@ static void *output_raop_thread(struct thread_ctx_s *ctx) {
 
 /*---------------------------------------------------------------------------*/
 void output_raop_thread_init(struct raopcl_s *raopcl, unsigned output_buf_size, u32_t sample_rate, u8_t sample_size, struct thread_ctx_s *ctx) {
+	pthread_attr_t attr;
+
 	LOG_INFO("[%p]: init output raop", ctx);
 
 	memset(&ctx->output, 0, sizeof(ctx->output));
@@ -163,16 +172,10 @@ void output_raop_thread_init(struct raopcl_s *raopcl, unsigned output_buf_size, 
 
 	output_init_common(raopcl, output_buf_size, sample_rate, ctx);
 
-#if LINUX || OSX || FREEBSD
-	pthread_attr_t attr;
 	pthread_attr_init(&attr);
 	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + OUTPUT_THREAD_STACK_SIZE);
 	pthread_create(&ctx->output_thread, &attr, (void *(*)(void*)) &output_raop_thread, ctx);
 	pthread_attr_destroy(&attr);
-#endif
-#if WIN
-	ctx->output_thread = CreateThread(NULL, OUTPUT_THREAD_STACK_SIZE, (LPTHREAD_START_ROUTINE)&output_raop_thread, ctx, 0, NULL);
-#endif
 }
 
 

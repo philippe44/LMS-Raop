@@ -311,22 +311,24 @@ __u32 raopcl_send_sample(struct raopcl_s *p, __u8 *sample, int size, int frames,
 	FD_SET(p->rtp_ports.audio.fd, &wfds);
 
 	//LOG_SDEBUG("[%p]: sending buffer %u (n:%u)", p, gettime_ms(), now);
+
 	if (select(p->rtp_ports.audio.fd + 1, NULL, &wfds, NULL, &timeout) == -1) {
+		LOG_ERROR("[%p]: audio socket closed", p);
+		p->sane += 5;
+	}
+
+	if (FD_ISSET(p->rtp_ports.audio.fd, &wfds)) {
+		n = sendto(p->rtp_ports.audio.fd, (void*) packet, sizeof(rtp_audio_pkt_t) + size, 0, (void*) &addr, sizeof(addr));
+		if (n != sizeof(rtp_audio_pkt_t) + size) {
+			LOG_ERROR("[%p]: error sending audio packet", p);
+			p->sane += 2;
+		}
+	}
+	else {
 		LOG_ERROR("[%p]: audio socket unavailable", p);
 		p->sane++;
 	}
-	else {
-		//now = gettime_ms();
-		n = sendto(p->rtp_ports.audio.fd, (void*) packet, sizeof(rtp_audio_pkt_t) + size, 0, (void*) &addr, sizeof(addr));
-		//now = gettime_ms() - now;
-		//if (now > 50) {
-		//	LOG_ERROR("[%p]: too much time to send %u", p, now);
-		//}
-		if (n != sizeof(rtp_audio_pkt_t) + size) {
-			LOG_ERROR("[%p]: error sending audio packet", p);
-			p->sane++;
-		}
-	}
+
 	//LOG_SDEBUG("[%p]: sent buffer %u", p, gettime_ms());
 
 	if (playtime % 10000 < 8) {
