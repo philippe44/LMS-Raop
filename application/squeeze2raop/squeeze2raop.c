@@ -342,8 +342,7 @@ static void *PlayerThread(void *args)
 												 "asar", 's', metadata.artist,
 												 "asal", 's', metadata.album,
 												 "asgn", 's', metadata.genre,
-												 "astn", 'i', (int) metadata.track
-											 );
+												 "astn", 'i', (int) metadata.track);
 				sq_free_metadata(&metadata);
 			}
 			else pthread_mutex_unlock(&Device->Mutex);
