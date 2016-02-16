@@ -1,3 +1,6 @@
+0.1.0.1
+ - First relase attempt
+ 
 0.1.0.0
  dev-12
   - add pthread_join in Windows now that everything is pthread
