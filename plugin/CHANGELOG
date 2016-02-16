@@ -1,5 +1,10 @@
 0.1.0.0
- dev-100
+ dev-12
+  - add pthread_join in Windows now that everything is pthread
+  - msdns can now bound to <interface> only for better detection
+ dev-11
+  - All thread are now pthread on Windows - including the old squeezelite ones
+ dev-10
   - Move back to blocking sockets but keep select() to ensure audio socket is ready to write 
   - no SIGPIPE on Linux (was exiting the application on attempt to re-establish connection)
  dev-9

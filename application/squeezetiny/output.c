@@ -335,9 +335,7 @@ void output_close_common(struct thread_ctx_s *ctx) {
 	ctx->output_running = false;
 	UNLOCK;
 
-#if LINUX || OSX || FREEBSD
 	pthread_join(ctx->output_thread, NULL);
-#endif
 
 	buf_destroy(ctx->outputbuf);
 	free(ctx->silencebuf);

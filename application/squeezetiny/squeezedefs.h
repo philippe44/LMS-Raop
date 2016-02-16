@@ -23,7 +23,7 @@
 #ifndef __SQUEEZEDEFS_H
 #define __SQUEEZEDEFS_H
 
-#define VERSION "v0.1.0.0-dev-11"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.1.0.0-dev-12"" ("__DATE__" @ "__TIME__")"
 
 #include <pthread.h>
 #include "platform.h"

@@ -129,9 +129,9 @@ static void sendSTAT(const char *event, u32_t server_timestamp, struct thread_ct
 		if (now > ctx->status.updated) 	ms_played += (now - ctx->status.updated);
 		}
 		*/
-		LOG_INFO("[%p]: ms_played: %u (now: %u)", ctx, ms_played, now);
+		LOG_DEBUG("[%p]: ms_played: %u (now: %u)", ctx, ms_played, now);
 	} else {
-		LOG_SDEBUG("[%p]: ms_played: 0", ctx);
+		LOG_DEBUG("[%p]: ms_played: 0", ctx);
 		ms_played = 0;
 	}
 

@@ -187,9 +187,7 @@ void decode_close(struct thread_ctx_s *ctx) {
 	}
 	ctx->decode_running = false;
 	UNLOCK_D;
-#if LINUX || OSX || FREEBSD
 	pthread_join(ctx->decode_thread, NULL);
-#endif
 	mutex_destroy(ctx->decode.mutex);
 }
 

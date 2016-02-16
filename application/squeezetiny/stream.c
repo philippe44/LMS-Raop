@@ -337,9 +337,7 @@ void stream_close(struct thread_ctx_s *ctx) {
 	LOCK_S;
 	ctx->stream_running = false;
 	UNLOCK_S;
-#if LINUX || OSX || FREEBSD
 	pthread_join(ctx->stream_thread, NULL);
-#endif
 	free(ctx->stream.header);
 	buf_destroy(ctx->streambuf);
 }

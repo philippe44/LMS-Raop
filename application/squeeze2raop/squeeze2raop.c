@@ -54,13 +54,13 @@ bool				glAutoSaveConfigFile = false;
 bool				glGracefullShutdown = true;
 int					gl_mDNSId;
 
-log_level	slimproto_loglevel = lWARN;
+log_level	slimproto_loglevel = lINFO;
 log_level	stream_loglevel = lWARN;
 log_level	decode_loglevel = lWARN;
-log_level	output_loglevel = lWARN;
+log_level	output_loglevel = lINFO;
 log_level	main_loglevel = lINFO;
 log_level	slimmain_loglevel = lINFO;
-log_level	util_loglevel = lWARN;
+log_level	util_loglevel = lINFO;
 log_level	raop_loglevel = lINFO;
 
 tMRConfig			glMRConfig = {
