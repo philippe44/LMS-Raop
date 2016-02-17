@@ -323,6 +323,7 @@ __u32 raopcl_send_sample(struct raopcl_s *p, __u8 *sample, int size, int frames,
 			LOG_ERROR("[%p]: error sending audio packet", p);
 			p->sane += 2;
 		}
+		usleep((frames * 1000000LL) / (p->sample_rate * 2));
 	}
 	else {
 		LOG_ERROR("[%p]: audio socket unavailable", p);

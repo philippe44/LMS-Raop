@@ -129,7 +129,7 @@ static void sendSTAT(const char *event, u32_t server_timestamp, struct thread_ct
 		if (now > ctx->status.updated) 	ms_played += (now - ctx->status.updated);
 		}
 		*/
-		LOG_DEBUG("[%p]: ms_played: %u (now: %u)", ctx, ms_played, now);
+		LOG_INFO("[%p]: ms_played: %u (now: %u)", ctx, ms_played, now);
 	} else {
 		LOG_DEBUG("[%p]: ms_played: 0", ctx);
 		ms_played = 0;
@@ -419,7 +419,7 @@ static void process_audg(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	audg->gainL = unpackN(&audg->gainL);
 	audg->gainR = unpackN(&audg->gainR);
 
-	LOG_INFO("[%p] (old) audg gainL: %u gainR: %u", ctx, audg->old_gainL, audg->old_gainR);
+	LOG_DEBUG("[%p] (old) audg gainL: %u gainR: %u", ctx, audg->old_gainL, audg->old_gainR);
 
 	gain = (audg->old_gainL + audg->old_gainL) / 2;
 

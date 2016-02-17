@@ -68,7 +68,7 @@ tMRConfig			glMRConfig = {
 							"",
 							false,
 							false,
-							3,
+							30,
 							false,
 							60,
 							false,
@@ -98,7 +98,7 @@ sq_dev_param_t glDeviceParam = {
 #endif
 					{ 0x00,0x00,0x00,0x00,0x00,0x00 },
 					false,
-					1000,
+					3000,
 #if defined(RESAMPLE)
 					true,
 					"",
