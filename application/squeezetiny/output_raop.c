@@ -97,16 +97,9 @@ static void *output_raop_thread(struct thread_ctx_s *ctx) {
 		}
 
 		if (ctx->output.state == OUTPUT_RUNNING) {
-			u32_t now;
 			pcm_to_alac_fast((u32_t*) ctx->output.buf, ctx->output.buf_frames, &buffer, &size, FRAME_BLOCK);
-			now = gettime_ms();
 			playtime = raopcl_send_sample(ctx->output.device, buffer, size,
 									 FRAME_BLOCK, false, ctx->config.read_ahead);
-			now = gettime_ms() - now;
-			if (now > 200) {
-				LOG_ERROR("[%p]: too much time to send %u", ctx, now);
-			}
-
 			NFREE(buffer);
 		}
 		else

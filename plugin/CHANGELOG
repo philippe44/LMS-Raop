@@ -1,5 +1,8 @@
+0.1.0.2
+ - pace down UDP audio packet sending
+ 
 0.1.0.1
- - First relase attempt
+ - First release attempt
  
 0.1.0.0
  dev-12
