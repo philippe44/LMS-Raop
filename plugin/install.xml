@@ -1,5 +1,6 @@
 <?xml version='1.0' standalone='yes'?>
 <extensions>
+  <version>0.1.0.2</version>
   <optionsURL>plugins/RaopBridge/settings/basic.html</optionsURL>
   <targetApplication>
     <maxVersion>*.*</maxVersion>
@@ -8,9 +9,8 @@
   </targetApplication>
   <email>philippe_44@outlook.com</email>
   <defaultState>enabled</defaultState>
-  <name>PLUGIN_RAOPBRIDGE</name>
-  <version>0.1.0.2</version>
-  <description>PLUGIN_RAOPBRIDGE_DESC</description>
   <module>Plugins::RaopBridge::Plugin</module>
+  <name>PLUGIN_RAOPBRIDGE</name>
   <creator>Philippe</creator>
+  <description>PLUGIN_RAOPBRIDGE_DESC</description>
 </extensions>
