@@ -547,6 +547,7 @@ static bool raopcl_analyse_setup(struct raopcl_s *p, key_data_t *setup_kd)
 	const char delimiters[] = ";";
 	bool rc = true;
 
+#if 0
 	// get audio jack info
 	if ((buf = kd_lookup(setup_kd,"Audio-Jack-Status")) == NULL) {
 		LOG_ERROR("[%p]: Audio-Jack-Status is missing", p);
@@ -564,6 +565,7 @@ static bool raopcl_analyse_setup(struct raopcl_s *p, key_data_t *setup_kd)
 		}
 		token = strtok(NULL, delimiters);
 	}
+#endif
 
 	// get transport (port ...) info
 	if ((buf = kd_lookup(setup_kd, "Transport")) == NULL){
