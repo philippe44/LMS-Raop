@@ -610,13 +610,14 @@ bool raopcl_connect(struct raopcl_s *p, struct in_addr host, __u16 destport, rao
 	char sid[10+1], sci[16+1];
 	char *sac = NULL;
 	char sdp[1024];
-	bool rc = false;
 	key_data_t kd[MAX_KD];
 	char *buf;
 
 	if (!p) return false;
 
 	if (p->state >= RAOP_FLUSHING) return true;
+
+	kd[0].key = NULL;
 
 	if (host.s_addr != INADDR_ANY) p->host_addr.s_addr = host.s_addr;
 	if (codec != RAOP_NOCODEC) p->codec = codec;
@@ -634,8 +635,8 @@ bool raopcl_connect(struct raopcl_s *p, struct in_addr host, __u16 destport, rao
 
 	// RTSP misc setup
 	if (!rtspcl_add_exthds(p->rtspcl,"Client-Instance", sci)) goto erexit;
-	//if (rtspcl_add_exthds(p->rtspcl,"Active-Remote", "1986535575")) goto erexit;
-	//if (rtspcl_add_exthds(p->rtspcl,"DACP-ID", sci)) goto erexit;
+	//if (!rtspcl_add_exthds(p->rtspcl,"Active-Remote", "1986535575")) goto erexit;
+	//if (!rtspcl_add_exthds(p->rtspcl,"DACP-ID", sci)) goto erexit;
 
 	// RTSP connect
 	if (!rtspcl_connect(p->rtspcl, p->local_addr, host, destport, sid)) goto erexit;
@@ -659,13 +660,13 @@ bool raopcl_connect(struct raopcl_s *p, struct in_addr host, __u16 destport, rao
 			sid, rtspcl_local_ip(p->rtspcl), buf);
 	free(buf);
 
-	if (!raopcl_set_sdp(p, sdp)) goto erexit;
+	if (raopcl_set_sdp(p, sdp)) goto erexit;
 
 	// RTSP ANNOUNCE
 	base64_encode(&seed.sac, 16, &sac);
 	remove_char_from_string(sac, '=');
 	if (!rtspcl_add_exthds(p->rtspcl, "Apple-Challenge", sac)) goto erexit;
-	if (!rtspcl_announce_sdp(p->rtspcl, sdp)) goto erexit;
+	if (!rtspcl_announce_sdp(p->rtspcl, sdp))goto erexit;
 	if (!rtspcl_mark_del_exthds(p->rtspcl, "Apple-Challenge")) goto erexit;
 
 	// open RTP sockets, need local ports here before sending SETUP
@@ -689,7 +690,7 @@ bool raopcl_connect(struct raopcl_s *p, struct in_addr host, __u16 destport, rao
 	p->time_running = true;
 	pthread_create(&p->time_thread, NULL, rtp_timing_thread, (void*) p);
 
-	rc = rtspcl_record(p->rtspcl, p->seq_number, p->rtp_ts.first, kd);
+	if (!rtspcl_record(p->rtspcl, p->seq_number, p->rtp_ts.first, kd)) goto erexit;
 	if (kd_lookup(kd, "Audio-Latency")) p->latency = atoi(kd_lookup(kd, "Audio-Latency"));
 	free_kd(kd);
 
@@ -701,15 +702,18 @@ bool raopcl_connect(struct raopcl_s *p, struct in_addr host, __u16 destport, rao
 	p->flush_mode = RAOP_RECLOCK;
 	pthread_mutex_unlock(&p->mutex);
 
-	// if the above fails for any reason, tear everything down
-	if (!rc) raopcl_disconnect(p);
-
 	if (!raopcl_update_volume(p, p->volume, true)) goto erexit;
+
+	if (sac) free(sac);
+	return true;
 
  erexit:
 	if (sac) free(sac);
-	return rc;
-}
+	free_kd(kd);
+	raopcl_disconnect(p);
+
+	return false;
+}
 
 
 /*----------------------------------------------------------------------------*/
