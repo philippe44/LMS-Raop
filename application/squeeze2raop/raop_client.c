@@ -660,7 +660,7 @@ bool raopcl_connect(struct raopcl_s *p, struct in_addr host, __u16 destport, rao
 			sid, rtspcl_local_ip(p->rtspcl), buf);
 	free(buf);
 
-	if (raopcl_set_sdp(p, sdp)) goto erexit;
+	if (!raopcl_set_sdp(p, sdp)) goto erexit;
 
 	// RTSP ANNOUNCE
 	base64_encode(&seed.sac, 16, &sac);
