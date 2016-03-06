@@ -27,7 +27,7 @@
 #include "raop_play.h"
 
 log_level	util_loglevel = lINFO;
-log_level	raop_loglevel = lINFO;
+log_level	raop_loglevel = lDEBUG;
 
 log_level main_log = lINFO;
 log_level *loglevel =&main_log;
@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
 	infile = fopen("test.pcm", "rb");
 	buf = malloc(2000);
 	LOG_INFO( "%s to %s\n", RAOP_CONNECTED, host );
-	//raopcl_update_volume(raopcl, volume, true);
+	raopcl_update_volume(raopcl, 90, true);
 
 	do {
 		u8_t *buffer, *buf2;

@@ -1,6 +1,8 @@
 0.1.0.3
  - (dev-1) disable accurate sample point
  - (dev-2) disable jack audio test
+ - (dev-2) re-enable accurate sample point with proper interpolation
+ 
 0.1.0.2
  - pace down UDP audio packet sending
  

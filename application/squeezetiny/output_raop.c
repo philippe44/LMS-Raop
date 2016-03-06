@@ -103,10 +103,7 @@ static void *output_raop_thread(struct thread_ctx_s *ctx) {
 			NFREE(buffer);
 		}
 		else {
-			//pcm_to_alac_fast((u32_t*) ctx->output.buf, ctx->output.buf_frames, &buffer, &size, FRAME_BLOCK);
-			//playtime = raopcl_send_sample(ctx->output.device, buffer, size, FRAME_BLOCK, false, 20);
 			playtime = raopcl_send_sample(ctx->output.device, NULL, 0, FRAME_BLOCK, true, 20);
-			//NFREE(buffer);
         }
 
 		ctx->output.buf_frames = 0;
