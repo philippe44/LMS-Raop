@@ -1,5 +1,5 @@
 # LMS-to-Raop
-LMS to Air Playbridge
+LMS to AirPlay bridge
 
 Allow AirPlay players to be used by Logitech Media Server, as a normal Logitech Hardware. It provides synchronisation, replaygain, gapless,fade in/out/cross and all other LMS goodies
 
