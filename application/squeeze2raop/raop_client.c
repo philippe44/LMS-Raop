@@ -663,11 +663,14 @@ bool raopcl_connect(struct raopcl_s *p, struct in_addr host, __u16 destport, rao
 	if (!raopcl_set_sdp(p, sdp)) goto erexit;
 
 	// RTSP ANNOUNCE
-	base64_encode(&seed.sac, 16, &sac);
-	remove_char_from_string(sac, '=');
-	if (!rtspcl_add_exthds(p->rtspcl, "Apple-Challenge", sac)) goto erexit;
-	if (!rtspcl_announce_sdp(p->rtspcl, sdp))goto erexit;
-	if (!rtspcl_mark_del_exthds(p->rtspcl, "Apple-Challenge")) goto erexit;
+	if (p->crypto) {
+		base64_encode(&seed.sac, 16, &sac);
+		remove_char_from_string(sac, '=');
+		if (!rtspcl_add_exthds(p->rtspcl, "Apple-Challenge", sac)) goto erexit;
+		if (!rtspcl_announce_sdp(p->rtspcl, sdp))goto erexit;
+		if (!rtspcl_mark_del_exthds(p->rtspcl, "Apple-Challenge")) goto erexit;
+	}
+	else if (!rtspcl_announce_sdp(p->rtspcl, sdp))goto erexit;
 
 	// open RTP sockets, need local ports here before sending SETUP
 	p->rtp_ports.ctrl.lport = p->rtp_ports.time.lport = p->rtp_ports.audio.lport = 0;
