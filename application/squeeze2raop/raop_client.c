@@ -369,7 +369,7 @@ struct raopcl_s *raopcl_create(char *local, raop_codec_t codec, raop_crypto_t cr
 	raopcld->rtp_ts.audio = raopcld->rtp_ts.first = raopcld->rtp_ts.first_clock;
 
 	// init RTSP if needed
-	if (((raopcld->rtspcl = rtspcl_create("iTunes/10.6.2 (Windows; N;)")) == NULL)) {
+	if (((raopcld->rtspcl = rtspcl_create("iTunes/7.6.2 (Windows; N;)")) == NULL)) {
 		LOG_ERROR("[%p]: Cannot create RTSP contex", raopcld);
 		free(raopcld);
 		return NULL;
@@ -527,7 +527,8 @@ static bool raopcl_set_sdp(struct raopcl_s *p, char *sdp)
 			strcat(sdp, buf);
 			free(key);
 			free(iv);
-            free(buf);
+			free(buf);
+			break;
 		}
 		case RAOP_CLEAR:
 			break;
@@ -623,20 +624,23 @@ bool raopcl_connect(struct raopcl_s *p, struct in_addr host, __u16 destport, rao
 	if (codec != RAOP_NOCODEC) p->codec = codec;
 	if (destport != 0) p->rtsp_port = destport;
 
-	p->ssrc = _random(0xffffffff);
+	RAND_bytes((__u8*) &p->ssrc, sizeof(p->ssrc));
+	VALGRIND_MAKE_MEM_DEFINED(&p->ssrc, sizeof(p->ssrc));
+
 	p->latency = 0;
 	p->encrypt = (p->crypto != RAOP_CLEAR);
 	p->sane = 0;
 
 	RAND_bytes((__u8*) &seed, sizeof(seed));
 	VALGRIND_MAKE_MEM_DEFINED(&seed, sizeof(seed));
-	sprintf(sid, "%10lu", (long unsigned int) seed.sid);
+	sprintf(sid, "%010lu", (long unsigned int) seed.sid);
 	sprintf(sci, "%016llx", (long long int) seed.sci);
 
 	// RTSP misc setup
 	if (!rtspcl_add_exthds(p->rtspcl,"Client-Instance", sci)) goto erexit;
 	//if (!rtspcl_add_exthds(p->rtspcl,"Active-Remote", "1986535575")) goto erexit;
 	//if (!rtspcl_add_exthds(p->rtspcl,"DACP-ID", sci)) goto erexit;
+	//rtspcl_add_exthds(p->rtspcl, "Client-instance-identifier", "ee956297-dd40-49ce-9548-7c9dc58cf18f");
 
 	// RTSP connect
 	if (!rtspcl_connect(p->rtspcl, p->local_addr, host, destport, sid)) goto erexit;
@@ -661,6 +665,7 @@ bool raopcl_connect(struct raopcl_s *p, struct in_addr host, __u16 destport, rao
 	free(buf);
 
 	if (!raopcl_set_sdp(p, sdp)) goto erexit;
+	//rtspcl_add_exthds(p->rtspcl, "Client-computer-name", "BUREAU-XP");
 
 	// RTSP ANNOUNCE
 	if (p->crypto) {
@@ -760,6 +765,7 @@ bool raopcl_disconnect(struct raopcl_s *p)
 		rc = raopcl_teardown(p);
 		rc &= rtspcl_disconnect(p->rtspcl);
 	}
+	else rtspcl_remove_all_exthds(p->rtspcl);
 
 	pthread_mutex_lock(&p->mutex);
 	p->state = RAOP_DOWN_FULL;
