@@ -637,10 +637,10 @@ bool raopcl_connect(struct raopcl_s *p, struct in_addr host, __u16 destport, rao
 	sprintf(sci, "%016llx", (long long int) seed.sci);
 
 	// RTSP misc setup
-	if (!rtspcl_add_exthds(p->rtspcl,"Client-Instance", sci)) goto erexit;
-	//if (!rtspcl_add_exthds(p->rtspcl,"Active-Remote", "1986535575")) goto erexit;
-	//if (!rtspcl_add_exthds(p->rtspcl,"DACP-ID", sci)) goto erexit;
-	//rtspcl_add_exthds(p->rtspcl, "Client-instance-identifier", "ee956297-dd40-49ce-9548-7c9dc58cf18f");
+	//rtspcl_add_exthds(p->rtspcl,"Client-Instance", sci);
+	//rtspcl_add_exthds(p->rtspcl,"Active-Remote", "1986535575");
+	//rtspcl_add_exthds(p->rtspcl,"DACP-ID", sci)) goto erexit;
+	//rtspcl_add_exthds(p->rtspcl, "Client-instance-identifier", "4ab62645-5008-4384-be35-05dd6f0bdc92");
 
 	// RTSP connect
 	if (!rtspcl_connect(p->rtspcl, p->local_addr, host, destport, sid)) goto erexit;
@@ -665,7 +665,14 @@ bool raopcl_connect(struct raopcl_s *p, struct in_addr host, __u16 destport, rao
 	free(buf);
 
 	if (!raopcl_set_sdp(p, sdp)) goto erexit;
+
 	//rtspcl_add_exthds(p->rtspcl, "Client-computer-name", "BUREAU-XP");
+
+	// AppleTV expect now the timing port ot be opened BEFORE the setup message
+	p->rtp_ports.time.lport = p->rtp_ports.time.rport = 0;
+	if ((p->rtp_ports.time.fd = open_udp_socket(p->local_addr, &p->rtp_ports.time.lport, true)) == -1) goto erexit;
+	p->time_running = true;
+	pthread_create(&p->time_thread, NULL, rtp_timing_thread, (void*) p);
 
 	// RTSP ANNOUNCE
 	if (p->crypto) {
@@ -677,10 +684,11 @@ bool raopcl_connect(struct raopcl_s *p, struct in_addr host, __u16 destport, rao
 	}
 	else if (!rtspcl_announce_sdp(p->rtspcl, sdp))goto erexit;
 
+	//rtspcl_mark_del_exthds(p->rtspcl, "Client-computer-name");
+
 	// open RTP sockets, need local ports here before sending SETUP
-	p->rtp_ports.ctrl.lport = p->rtp_ports.time.lport = p->rtp_ports.audio.lport = 0;
+	p->rtp_ports.ctrl.lport = p->rtp_ports.audio.lport = 0;
 	if ((p->rtp_ports.ctrl.fd = open_udp_socket(p->local_addr, &p->rtp_ports.ctrl.lport, true)) == -1) goto erexit;
-	if ((p->rtp_ports.time.fd = open_udp_socket(p->local_addr, &p->rtp_ports.time.lport, true)) == -1) goto erexit;
 	if ((p->rtp_ports.audio.fd = open_udp_socket(p->local_addr, &p->rtp_ports.audio.lport, true)) == -1) goto erexit;
 
 	// RTSP SETUP : get all RTP destination ports
@@ -688,15 +696,11 @@ bool raopcl_connect(struct raopcl_s *p, struct in_addr host, __u16 destport, rao
 	if (!raopcl_analyse_setup(p, kd)) goto erexit;
 	free_kd(kd);
 
-	LOG_DEBUG( "[%p]: opened audio socket   l:%5d r:%d", p, p->rtp_ports.audio.lport, p->rtp_ports.audio.rport );
+	LOG_DEBUG( "[%p]:opened audio socket   l:%5d r:%d", p, p->rtp_ports.audio.lport, p->rtp_ports.audio.rport );
 	LOG_DEBUG( "[%p]:opened timing socket  l:%5d r:%d", p, p->rtp_ports.time.lport, p->rtp_ports.time.rport );
 	LOG_DEBUG( "[%p]:opened control socket l:%5d r:%d", p, p->rtp_ports.ctrl.lport, p->rtp_ports.ctrl.rport );
 
 	p->seq_number = _random(0xffff);
-
-	// now timing thread can start
-	p->time_running = true;
-	pthread_create(&p->time_thread, NULL, rtp_timing_thread, (void*) p);
 
 	if (!rtspcl_record(p->rtspcl, p->seq_number, p->rtp_ts.first, kd)) goto erexit;
 	if (kd_lookup(kd, "Audio-Latency")) p->latency = atoi(kd_lookup(kd, "Audio-Latency"));
@@ -891,7 +895,16 @@ void *rtp_timing_thread(void *args)
 
 		if (!FD_ISSET(raopcld->rtp_ports.time.fd, &rfds)) continue;
 
-		n = recv(raopcld->rtp_ports.time.fd, (void*) &req, sizeof(req), 0);
+		if (addr.sin_port) {
+			n = recv(raopcld->rtp_ports.time.fd, (void*) &req, sizeof(req), 0);
+		}
+		else {
+			struct sockaddr_in client;
+			int len = sizeof(client);
+			n = recvfrom(raopcld->rtp_ports.time.fd, (void*) &req, sizeof(req), 0, (struct sockaddr *)&client, (socklen_t *)&len);
+			addr.sin_port = client.sin_port;
+			LOG_DEBUG("[%p]: NTP remote port: %d", ntohs(addr.sin_port));
+		}
 
 		if( n > 0) 	{
 			rtp_time_pkt_t rsp;

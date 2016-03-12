@@ -8,6 +8,7 @@
 		   sid must not have leading space
 		   true random for ssrc
 		   add 64 bits Linux static version (needed for -eg- fedora)
+		   timing thread must start before ANNOUNCE for AppleTV
  
 0.1.0.2
  - pace down UDP audio packet sending
