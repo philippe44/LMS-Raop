@@ -4,11 +4,13 @@
  - (dev-3) re-enable accurate sample point with proper interpolation
  - (dev-4) proper cleanup of headers when raopcl_connect fails
  - (dev-5) don't send Apple-Challenge when there is no encryption
- - (dev-6) remote client-instance upon every disconnect
+ - (dev-7) remote client-instance upon every disconnect
 		   sid must not have leading space
 		   true random for ssrc
 		   add 64 bits Linux static version (needed for -eg- fedora)
 		   timing thread must start before ANNOUNCE for AppleTV
+ - (dev-8) armv5 build with full static libs (including codecs)
+ - (dev-9) armv5el renamed armv5hf as it requires hard float
  
 0.1.0.2
  - pace down UDP audio packet sending
