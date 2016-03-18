@@ -490,6 +490,7 @@ static void *UpdateMRThread(void *args)
 		Device = &glMRDevices[i];
 		if (!Device->InUse) continue;
 		if (Device->TimeOut && Device->MissingCount) Device->MissingCount--;
+		// LOG_INFO("[%p]: missing %d %s", Device, Device->MissingCount, Device->FriendlyName);
 		if (Device->MissingCount) continue;
 
 		LOG_INFO("[%p]: removing renderer (%s)", Device, Device->FriendlyName);
