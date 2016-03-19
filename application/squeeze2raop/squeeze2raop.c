@@ -473,9 +473,10 @@ static void *UpdateMRThread(void *args)
 		else {
 			for (j = 0; j < MAX_RENDERERS; j++) {
 				if (glMRDevices[j].InUse && !strcmp(glMRDevices[j].UDN, p->name)) {
-					if (p->port != glMRDevices[j].PlayerPort) {
-						LOG_INFO("[%p]: updating port %d", &glMRDevices[j], p->port);
+					if (p->port != glMRDevices[j].PlayerPort || p->addr.s_addr != glMRDevices[j].PlayerIP.s_addr) {
+						LOG_INFO("[%p]: changed ip:port %d", &glMRDevices[j], inet_ntoa(p->addr), p->port);
 						glMRDevices[j].PlayerPort = p->port;
+						glMRDevices[j].PlayerIP = p->addr;
 					}
 					break;
 				}

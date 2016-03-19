@@ -12,6 +12,7 @@
  - (dev-8) armv5 build with full static libs (including codecs)
  - (dev-9) armv5el renamed armv5hf as it requires hard float
  - (dev-10) mdns search was missing some answers ==> causing device to be missed
+ - (dev-11) detect ip:port change
  
  
 0.1.0.2
