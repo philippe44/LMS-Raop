@@ -135,8 +135,19 @@ raop_state_t raopcl_get_state(struct raopcl_s *p)
 /*----------------------------------------------------------------------------*/
 bool raopcl_is_sane(struct raopcl_s *p)
 {
-	if (!rtspcl_is_connected(p->rtspcl) || p->sane >= 10) return false;
-	return true;
+	bool rc = true;
+
+	if (!rtspcl_is_connected(p->rtspcl)) {
+		rc = false;
+		LOG_ERROR("[%p]: not connected", p);
+	}
+
+	if (p->sane >= 10) {
+		rc = false;
+		LOG_ERROR("[%p]: too many errors %d", p, p->sane);
+	}
+
+	return rc;
 }
 
 
@@ -889,8 +900,8 @@ void *rtp_timing_thread(void *args)
 
 		if ((n = select(raopcld->rtp_ports.time.fd + 1, &rfds, NULL, NULL, &timeout)) == -1) {
 			LOG_ERROR("[%p]: raopcl_time_connect: socket closed on the other end", raopcld);
-			sleep(1);
-			break;
+			usleep(100000);
+			continue;
 		}
 
 		if (!FD_ISSET(raopcld->rtp_ports.time.fd, &rfds)) continue;
@@ -937,8 +948,8 @@ void *rtp_timing_thread(void *args)
 
 		if (n == 0) {
 			LOG_ERROR("[%p]: read, disconnected on the other end", raopcld);
-			sleep(1);
-			break;
+			usleep(100000);
+			continue;
 		}
 	}
 
