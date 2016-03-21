@@ -109,8 +109,6 @@ sq_dev_param_t glDeviceParam = {
 /* globals */
 /*----------------------------------------------------------------------------*/
 static pthread_t 	glMainThread;
-unsigned int 		glPort;
-char 				glIPaddress[16] = "?";
 void				*glConfigID = NULL;
 char				glConfigName[SQ_STR_LENGTH] = "./config.xml";
 static bool			glDiscovery = false;
@@ -719,8 +717,8 @@ static bool Start(void)
 	memset(&glMRDevices, 0, sizeof(glMRDevices));
 
 	// init mDNS
-	if (strstr(glIPaddress, "?")) gl_mDNSId = init_mDNS(false, NULL);
-	else gl_mDNSId = init_mDNS(false, glIPaddress);
+	if (strstr(glInterface, "?")) gl_mDNSId = init_mDNS(false, NULL);
+	else gl_mDNSId = init_mDNS(false, glInterface);
 
 	/* start the main thread */
 	pthread_attr_init(&attr);
