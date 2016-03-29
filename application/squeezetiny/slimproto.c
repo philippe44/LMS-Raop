@@ -418,6 +418,8 @@ static void process_audg(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 
 	LOG_DEBUG("[%p] (old) audg gainL: %u gainR: %u", ctx, audg->old_gainL, audg->old_gainR);
 
+	if (ctx->config.player_volume == 0xff) return;
+
 	gain = (audg->old_gainL + audg->old_gainL) / 2;
 
 	if (ctx->config.player_volume) {
