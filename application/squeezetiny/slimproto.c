@@ -417,22 +417,21 @@ static void process_audg(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	audg->gainR = unpackN(&audg->gainR);
 
 	LOG_DEBUG("[%p] (old) audg gainL: %u gainR: %u", ctx, audg->old_gainL, audg->old_gainR);
-
-	if (ctx->config.player_volume == 0xff) return;
-
 	gain = (audg->old_gainL + audg->old_gainL) / 2;
+	LOCK_O;
 
-	if (ctx->config.player_volume) {
-		LOCK_O;
-		ctx->output.gainL = audg->adjust ? audg->gainL : FIXED_ONE;
-		ctx->output.gainR = audg->adjust ? audg->gainR : FIXED_ONE;
-		UNLOCK_O;
-	}
-	else {
-		LOCK_O;
+	if (!ctx->config.player_volume) {
 		ctx->output.gainL = ctx->output.gainR = FIXED_ONE;
 		UNLOCK_O;
 		ctx_callback(ctx, SQ_VOLUME, NULL, (void*) &gain);
+	}
+	else {
+		if (ctx->config.player_volume > 0) {
+			ctx->output.gainL = audg->adjust ? audg->gainL : FIXED_ONE;
+			ctx->output.gainR = audg->adjust ? audg->gainR : FIXED_ONE;
+		}
+		else ctx->output.gainL = ctx->output.gainR = FIXED_ONE;
+		UNLOCK_O;
 	}
 }
 

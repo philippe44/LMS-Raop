@@ -162,9 +162,9 @@ PLUGIN_RAOPBRIDGE_AUDIOPARAM_DESC
 	EN	Currently only 'pcm' is supported
 	EN	<br><b>Volume</b>: Most AirPlay devices can have their volume set by the bridge directly but a few fails on this command and playback is
 	EN	interrupted at each volume change. Set this to a value between 1..100 to try to set only once the player's volume and then
-	EN	apply volume digitally on each sample. This requires much more CPU processing. Set to 0 for normal mode
-	EN	Set it to -1 to ignore all LMS volume commands
-
+	EN	apply volume digitally on each sample (This requires much more CPU processing). Set this to a negative value -1..-100 to fix the player's
+	EN	volume and ignore LMS commands (-100 = loudest). Set to 0 for normal mode
+	
 PLUGIN_RAOPBRIDGE_PLAYERVOLUME
 	EN	Fix analogue volume at
 

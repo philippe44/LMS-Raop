@@ -639,7 +639,7 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 								 Device->SampleRate ? atoi(Device->SampleRate) : 44100,
 								 Device->SampleSize ? atoi(Device->SampleSize) : 16,
 								 Device->Channels ? atoi(Device->Channels) : 2,
-								 Device->sq_config.player_volume);
+								 abs(Device->sq_config.player_volume));
 
 	if (!Device->Raop) {
 		LOG_ERROR("[%p]: cannot create raop device", Device);

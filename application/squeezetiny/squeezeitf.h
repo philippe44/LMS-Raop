@@ -72,7 +72,7 @@ typedef	struct sq_dev_param_s {
 	char		codecs[SQ_STR_LENGTH];
 	u32_t		sample_rate;
 	u8_t		mac[6];
-	u8_t		player_volume;
+	signed char	player_volume;
 	u16_t		read_ahead;
 #if defined(RESAMPLE)
 	bool		resample;
