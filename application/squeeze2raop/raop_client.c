@@ -263,8 +263,7 @@ __u32 raopcl_send_sample(struct raopcl_s *p, __u8 *sample, int size, int frames,
 
 	pthread_mutex_unlock(&p->mutex);
 
-	playtime = p->rtp_ts.first_clock + ((__u32) (p->rtp_ts.audio - p->rtp_ts.first) * 1000LL) / p->sample_rate;
-	LOG_SDEBUG("[%p]: sending audio ts:%u (played:%u) ", p, p->rtp_ts.audio, playtime);
+	playtime = p->rtp_ts.first_clock + ((__u64) ((__u32) (p->rtp_ts.audio - p->rtp_ts.first)) * 1000LL) / p->sample_rate;
 
 	// wait till we can send that frame (enough buffer consumed)
 	if (playtime > (now = gettime_ms()) + read_ahead) {
@@ -274,6 +273,8 @@ __u32 raopcl_send_sample(struct raopcl_s *p, __u8 *sample, int size, int frames,
 		LOG_SDEBUG("[%p]: waiting for buffer to empty %u %u", p, p->rtp_ts.audio - p->rtp_ts.first, now);
 		usleep(sleep_time * 1000);
 	}
+
+	LOG_SDEBUG("[%p]: sending audio ts:%u (played:%u now:%u) ", p, p->rtp_ts.audio, playtime, now);
 
 	// really send data only if needed
 	if (p->rtp_ports.audio.fd == -1 || p->state != RAOP_STREAMING || skip || now > playtime || !sample)
