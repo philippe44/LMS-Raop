@@ -1,6 +1,7 @@
 0.1.0.6
  - Volume can be set -1 ... -100 to be fixed
  - hash32 check for NULL string
+ - (dev-4) 32 bits overflow lead to high CPU usage in raop_send_sample
  
 0.1.0.5
  - Interface parameter was not taken into account
