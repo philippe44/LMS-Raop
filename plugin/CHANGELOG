@@ -1,4 +1,8 @@
-0.1.0.6
+0.1.1.0
+ - if MAC cannot be retrieved, create a fake one from UDN
+ - force first 2 bytes of MAC to be 0xaa unless <mac_address> is set in config file
+
+0.1.0.6 (not released)
  - Volume can be set -1 ... -100 to be fixed
  - hash32 check for NULL string
  - (dev-4) 32 bits overflow lead to high CPU usage in raop_send_sample
