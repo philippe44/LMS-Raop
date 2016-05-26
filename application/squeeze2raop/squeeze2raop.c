@@ -575,6 +575,7 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	pthread_attr_t attr;
 	raop_crypto_t Crypto;
 	char *p;
+	u32_t mac_size = 6;
 
 	// read parameters from default then config file
 	memset(Device, 0, sizeof(struct sMR));
@@ -585,7 +586,7 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	if (!Device->Config.Enabled) return false;
 
 #if 0
-	if (!stristr(data->name, "Mar")) {
+	if (!stristr(data->name, "JBL")) {
 		printf("ONLY JBL %s\n", data->name);
 		return false;
 	}
@@ -610,11 +611,14 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 
 	LOG_INFO("[%p]: adding renderer (%s)", Device, Device->FriendlyName);
 
-	if (!memcmp(Device->sq_config.mac, "\0\0\0\0\0\0", 6)) {
-		u32_t hash = hash32(data->name);
+	if (!memcmp(Device->sq_config.mac, "\0\0\0\0\0\0", mac_size)) {
+		if (SendARP(*((in_addr_t*) &Device->PlayerIP), INADDR_ANY, Device->sq_config.mac, &mac_size)) {
+			u32_t hash = hash32(Device->UDN);
 
+			LOG_ERROR("[%p]: cannot get mac %s, creating fake %x", Device, Device->FriendlyName, hash);
+			memcpy(Device->sq_config.mac + 2, &hash, 4);
+		}
 		memset(Device->sq_config.mac, 0xaa, 2);
-		memcpy(Device->sq_config.mac + 2, &hash, 4);
 	}
 
 	// gather RAOP device capabilities, to be macthed mater
