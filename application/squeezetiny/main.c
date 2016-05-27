@@ -44,12 +44,6 @@ struct thread_ctx_s thread_ctx[MAX_PLAYER];
 /*----------------------------------------------------------------------------*/
 /* locals */
 /*----------------------------------------------------------------------------*/
-static char 			_gl_server[SERVER_NAME_LEN + 1];
-static char 			*gl_server = NULL;
-
-/*----------------------------------------------------------------------------*/
-/* locals */
-/*----------------------------------------------------------------------------*/
 static void sq_wipe_device(struct thread_ctx_s *ctx);
 
 extern log_level	slimmain_loglevel;
@@ -440,14 +434,8 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 
 
 /*---------------------------------------------------------------------------*/
-void sq_init(char *server)
+void sq_init(void)
 {
-	if (server) {
-		strcpy(_gl_server, server);
-		gl_server = _gl_server;
-	}
-	else gl_server = NULL;
-
 #if WIN
 	winsock_init();
 #endif
@@ -510,7 +498,7 @@ bool sq_run_device(sq_dev_handle_t handle, struct raopcl_s *raopcl, char *name, 
 	}
 #endif
 
-	slimproto_thread_init(gl_server, ctx->config.mac, name, "", ctx);
+	slimproto_thread_init(name, "", ctx);
 
 	return true;
 }

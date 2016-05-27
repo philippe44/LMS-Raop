@@ -73,7 +73,8 @@ void SaveConfig(char *name, void *ref, bool full)
 	else {
 		root = XMLAddNode(doc, NULL, "squeeze2raop", NULL);
 
-		XMLAddNode(doc, root, "server", glSQServer);
+
+		// XMLAddNode(doc, root, "server", glSQServer);
 		XMLAddNode(doc, root, "interface", glInterface);
 		XMLAddNode(doc, root, "slimproto_log", level2debug(slimproto_loglevel));
 		XMLAddNode(doc, root, "stream_log", level2debug(stream_loglevel));
@@ -106,6 +107,7 @@ void SaveConfig(char *name, void *ref, bool full)
 
 		XMLAddNode(doc, common, "encryption", "%d", (int) glMRConfig.Encryption);
 		XMLAddNode(doc, common, "read_ahead", "%d", (int) glDeviceParam.read_ahead);
+		XMLAddNode(doc, common, "server", glDeviceParam.server);
 	}
 
 	for (i = 0; i < MAX_RENDERERS; i++) {
@@ -180,6 +182,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "send_metadata")) Conf->SendMetaData = atol(val);
 	if (!strcmp(name, "send_coverart")) Conf->SendCoverArt = atol(val);
 	if (!strcmp(name, "name")) strcpy(Conf->Name, val);
+	if (!strcmp(name, "server")) strcpy(sq_conf->server, val);
 	if (!strcmp(name, "mac"))  {
 		unsigned mac[6];
 		int i;
@@ -194,7 +197,10 @@ static void LoadGlobalItem(char *name, char *val)
 {
 	if (!val) return;
 
-	if (!strcmp(name, "server")) strcpy(glSQServer, val);
+	// if (!strcmp(name, "server")) strcpy(glSQServer, val);
+	// temporary to ensure parameter transfer from global to common
+	if (!strcmp(name, "server")) strcpy(glDeviceParam.server, val);
+
 	if (!strcmp(name, "interface")) strcpy(glInterface, val);
 	if (!strcmp(name, "slimproto_log")) slimproto_loglevel = debug2level(val);
 	if (!strcmp(name, "stream_log")) stream_loglevel = debug2level(val);

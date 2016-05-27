@@ -98,7 +98,8 @@
 	[% END %]
 	
 	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_MDNSMGMT" desc="PLUGIN_RAOPBRIDGE_MDNSMGMT_DESC" %]
-		[% "PLUGIN_RAOPBRIDGE_ENABLEDEFS" | string %]
+		[% "PLUGIN_RAOPBRIDGE_SERVER" | string %]&nbsp<input type="text" class="stdedit" name="server" id="server" value="[% server %]" size="10">
+		&nbsp[% "PLUGIN_RAOPBRIDGE_ENABLEDEFS" | string %]
 		<select class="stdedit" name="enabled" id="enabled">
 		[% FOREACH entry IN YESNOBOX %] 
 			<option [% IF entry.1 == enabled %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>

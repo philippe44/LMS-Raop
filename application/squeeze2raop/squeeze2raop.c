@@ -40,7 +40,6 @@
 /*----------------------------------------------------------------------------*/
 /* globals initialized */
 /*----------------------------------------------------------------------------*/
-char				glSQServer[SQ_STR_LENGTH] = "?";
 char				glInterface[16] = "?";
 #if LINUX || FREEBSD
 bool				glDaemonize = false;
@@ -91,6 +90,7 @@ sq_dev_param_t glDeviceParam = {
 					STREAMBUF_SIZE,
 					OUTPUTBUF_SIZE,
 					"flc,pcm,aif,aac,mp3",
+					"?",
 #if defined(RESAMPLE)
 					SQ_RATE_96000,
 #else
@@ -801,7 +801,7 @@ bool ParseArgs(int argc, char **argv) {
 
 		switch (opt[0]) {
 		case 's':
-			strcpy(glSQServer, optarg);
+			strcpy(glDeviceParam.server, optarg);
 			break;
 #if defined(RESAMPLE)
 		case 'u':
@@ -941,8 +941,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (strstr(glSQServer, "?")) sq_init(NULL);
-	else sq_init(glSQServer);
+	sq_init();
 
 	if (!Start()) {
 		LOG_ERROR("Cannot start", NULL);

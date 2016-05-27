@@ -785,7 +785,12 @@ void discover_server(struct thread_ctx_s *ctx) {
 
 	closesocket(disc_sock);
 
-	ctx->slimproto_ip = ctx->serv_addr.sin_addr.s_addr = s.sin_addr.s_addr;
+	ctx->slimproto_ip =  s.sin_addr.s_addr;
+	ctx->slimproto_port = ntohs(s.sin_port);
+
+	ctx->serv_addr.sin_port = s.sin_port;
+	ctx->serv_addr.sin_addr.s_addr = s.sin_addr.s_addr;
+	ctx->serv_addr.sin_family = AF_INET;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -801,9 +806,11 @@ static void slimproto(struct thread_ctx_s *ctx) {
 
 		if (ctx->new_server) {
 			ctx->slimproto_ip = ctx->new_server;
-			LOG_INFO("[%p] switching server to %s:%d", ctx, inet_ntoa(ctx->serv_addr.sin_addr), ntohs(ctx->serv_addr.sin_port));
 			ctx->new_server = 0;
 			reconnect = false;
+
+			discover_server(ctx);
+			LOG_INFO("[%p] switching server to %s:%d", ctx, inet_ntoa(ctx->serv_addr.sin_addr), ntohs(ctx->serv_addr.sin_port));
 		}
 
 		ctx->sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -817,7 +824,10 @@ static void slimproto(struct thread_ctx_s *ctx) {
 			sleep(5);
 
 			// rediscover server if it was not set at startup
-			if (!ctx->server && ++failed_connect > 5) discover_server(ctx);
+			if (!strcmp(ctx->config.server, "?") && ++failed_connect > 5) {
+				ctx->slimproto_ip = 0;
+				discover_server(ctx);
+            }
 
 		} else {
 
@@ -888,26 +898,22 @@ void slimproto_close(struct thread_ctx_s *ctx) {
 
 
 /*---------------------------------------------------------------------------*/
-void slimproto_thread_init(char *server, u8_t mac[6], const char *name, const char *namefile, struct thread_ctx_s *ctx) {
+void slimproto_thread_init(const char *name, const char *namefile, struct thread_ctx_s *ctx) {
 	pthread_attr_t attr;
+	int i;
 
 	wake_create(ctx->wake_e);
 
 	ctx->running = true;
 	ctx->slimproto_ip = 0;
-	ctx->slimproto_port = 0;
+	ctx->slimproto_port = PORT;
 	ctx->sock = -1;
 
-	if (server) {
-		server_addr(server, &ctx->slimproto_ip, &ctx->slimproto_port);
-		strncpy(ctx->server, server, SERVER_NAME_LEN);
+	if (strcmp(ctx->config.server, "?")) {
+		server_addr(ctx->config.server, &ctx->slimproto_ip, &ctx->slimproto_port);
 	}
 
 	discover_server(ctx);
-
-	if (!ctx->slimproto_port) {
-		ctx->slimproto_port = PORT;
-	}
 
 	if (name) {
 		strncpy(ctx->player_name, name, PLAYER_NAME_LEN);
@@ -921,23 +927,29 @@ void slimproto_thread_init(char *server, u8_t mac[6], const char *name, const ch
 	LOCK_O;
 	sprintf(ctx->fixed_cap, ",MaxSampleRate=%u", ctx->config.sample_rate);
 
-	strcat(ctx->fixed_cap, ",");
-	strcat(ctx->fixed_cap, ctx->config.codecs);
-#if 0
-		for (i = 0; i < MAX_CODECS; i++) {
-			if (codecs[i] && codecs[i]->id && strlen(ctx->fixed_cap) < 128 - 10) {
+	// filter codecs to eliminated unwanted and unloaded ones
+	for (i = 0; i < MAX_CODECS; i++) {
+		char *type, *next;
+
+		if (!codecs[i] || !codecs[i]->id) continue;
+
+		type = strdup(codecs[i]->types);
+		// do not use strtok for re-entrance
+		do {
+			next = strchr(type, ',');
+			if (next) *next = '\0';
+			if (strstr(ctx->config.codecs, type) && strlen(ctx->fixed_cap) < 128 - 10) {
 				strcat(ctx->fixed_cap, ",");
-				strcat(ctx->fixed_cap, codecs[i]->types);
+				strcat(ctx->fixed_cap, type);
 			}
-		}
-#endif
+			if (next) type = next + 1;
+		} while (next);
+	   free(type);
+	}
+
 	UNLOCK_O;
 
-	ctx->serv_addr.sin_family = AF_INET;
-	ctx->serv_addr.sin_addr.s_addr = ctx->slimproto_ip;
-	ctx->serv_addr.sin_port = htons(ctx->slimproto_port);
-
-	memcpy(ctx->mac, mac, 6);
+	memcpy(ctx->mac, ctx->config.mac, 6);
 
 	LOG_INFO("[%p] connecting to %s:%d", ctx, inet_ntoa(ctx->serv_addr.sin_addr), ntohs(ctx->serv_addr.sin_port));
 

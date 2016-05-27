@@ -168,6 +168,9 @@ PLUGIN_RAOPBRIDGE_AUDIOPARAM_DESC
 PLUGIN_RAOPBRIDGE_PLAYERVOLUME
 	EN	Fix analogue volume at
 
+PLUGIN_RAOPBRIDGE_SERVER
+	EN	LMS Server
+	
 PLUGIN_RAOPBRIDGE_ENABLED
 	EN	Enabled
 	
@@ -190,8 +193,11 @@ PLUGIN_RAOPBRIDGE_MDNSMGMT
 	EN	Player discovery options
 	
 PLUGIN_RAOPBRIDGE_MDNSMGMT_DESC
-	EN	Misc options<br>- For the default list newly discovered players can be automatically added to LMS – For individual players a 
-	EN	player can be enabled or disabled<br>- Number of mDNS scan cycles a player can be found missing before being removed
+	EN	Misc options
+	EN	<br>- For the default list newly discovered players can be automatically added to LMS 
+	EN	<br>– For individual players a player can be enabled or disabled
+	EN	<br>- Number of mDNS scan cycles a player can be found missing before being removed
+	EN	<br>- Force LMS server (? for auto-discovery)
 
 PLUGIN_RAOPBRIDGE_ENABLEDEFS
 	EN	Player is enabled

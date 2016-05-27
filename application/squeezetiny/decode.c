@@ -128,7 +128,6 @@ void decode_init(void) {
 	codecs[i++] = register_pcm();
 	if ((codecs[i] = register_mad()) == NULL) codecs[i] = register_mpg();
 	i++;
-	codecs[i++] = register_mad();
 	codecs[i++] = register_flac();
 	codecs[i++] = register_faad();
 #if RESAMPLE

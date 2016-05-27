@@ -70,6 +70,7 @@ typedef	struct sq_dev_param_s {
 	unsigned 	stream_buf_size;
 	unsigned 	output_buf_size;
 	char		codecs[SQ_STR_LENGTH];
+	char 		server[SQ_STR_LENGTH];
 	u32_t		sample_rate;
 	u8_t		mac[6];
 	signed char	player_volume;
@@ -95,7 +96,7 @@ struct raopcl_s;
 
 typedef bool (*sq_callback_t)(sq_dev_handle_t handle, void *caller_id, sq_action_t action, u8_t *cookie, void *param);
 
-void				sq_init(char *server);
+void				sq_init(void);
 void				sq_end(void);
 
 // only name cannot be NULL
