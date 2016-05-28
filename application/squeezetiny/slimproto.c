@@ -929,20 +929,20 @@ void slimproto_thread_init(const char *name, const char *namefile, struct thread
 
 	// filter codecs to eliminated unwanted and unloaded ones
 	for (i = 0; i < MAX_CODECS; i++) {
-		char *type, *next;
+		char *type, *next, *p;
 
 		if (!codecs[i] || !codecs[i]->id) continue;
 
-		type = strdup(codecs[i]->types);
+		p = type = strdup(codecs[i]->types);
 		// do not use strtok for re-entrance
 		do {
-			next = strchr(type, ',');
+			next = strchr(p, ',');
 			if (next) *next = '\0';
-			if (strstr(ctx->config.codecs, type) && strlen(ctx->fixed_cap) < 128 - 10) {
+			if (strstr(ctx->config.codecs, p) && strlen(ctx->fixed_cap) < 128 - 10) {
 				strcat(ctx->fixed_cap, ",");
-				strcat(ctx->fixed_cap, type);
+				strcat(ctx->fixed_cap, p);
 			}
-			if (next) type = next + 1;
+			if (next) p = next + 1;
 		} while (next);
 	   free(type);
 	}
