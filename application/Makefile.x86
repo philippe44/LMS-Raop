@@ -1,10 +1,7 @@
 # Cross compile support - create a Makefile which defines these three variables and then includes this Makefile...
-#CC = arm-linux-gnueabi-gcc
 CFLAGS  ?= -Wall -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES)
-#CFLAGS  ?= -pg -Wall -fPIC -ggdb $(OPTS) $(INCLUDE) $(DEFINES)
-#LDFLAGS ?= -pg -lpthread -lssl -lcrypto -ldl -lm -lrt -L. 
-LDFLAGS ?= -lpthread -lssl -lcrypto -ldl -lm -lrt -L. 
-# for LD debug -s
+LDFLAGS ?= -lgomp -lpthread -lssl -lcrypto -ldl -lm -lrt -lz -L. 
+
 EXECUTABLE ?= squeeze2raop-x86
 EXECUTABLE_STATIC ?= squeeze2raop-x86-static
 
@@ -13,11 +10,10 @@ squeezeraop_dir = squeeze2raop
 
 build_dir	= ./bin
 
-#LIBRARY = libixml.a libfaad.a
 LIBRARY = libixml.a libsoxr.a
+LIBRARY_STATIC = libixml.a libfaad.a libsoxr.a libFLAC.a libmad.a
 
-DEFINES = -DHAVE_STDINT_H -D RESAMPLE
-#DEFINES = -DHAVE_STDINT_H
+DEFINES = -DHAVE_STDINT_H -DRESAMPLE
 
 INCLUDE = -I../../libupnp/1.6.19/ixml/inc\
           -I../../libupnp/1.6.19/upnp/inc\
@@ -25,32 +21,39 @@ INCLUDE = -I../../libupnp/1.6.19/ixml/inc\
 		  -I../../mpg123/src/libmpg123\
 		  -I../../flac/include\
 		  -I../../faad2/include\
-		  -I../../soxr/src\
 		  -I../../libmad\
-		  -I.\
+		  -I../../soxr/src\
 		  -I../../valgrind/memcheck\
 		  -I../../valgrind/include\
+		  -I.\
 		  -I$(squeezetiny_dir)\
 		  -I$(squeezeraop_dir)\
           -I$(squeezeraop_dir)/inc
-			    
 
 SOURCES = \
-	$(squeezetiny_dir)/slimproto.c $(squeezetiny_dir)/buffer.c \
-    $(squeezetiny_dir)/stream.c $(squeezetiny_dir)/utils.c \
-    $(squeezetiny_dir)/pcm.c $(squeezetiny_dir)/mpg.c \
-    $(squeezetiny_dir)/flac.c $(squeezetiny_dir)/mad.c \
-    $(squeezetiny_dir)/faad.c \
-	$(squeezetiny_dir)/process.c $(squeezetiny_dir)/resample.c \
-	$(squeezetiny_dir)/output.c $(squeezetiny_dir)/decode.c \
-	$(squeezetiny_dir)/output_pack.c $(squeezetiny_dir)/output_raop.c \
-    $(squeezetiny_dir)/main.c $(squeezetiny_dir)/util_common.c \
-	$(squeezeraop_dir)/raop_client.c $(squeezeraop_dir)/rtsp_client.c \
-	$(squeezeraop_dir)/aes.c $(squeezeraop_dir)/aexcl_lib.c \
-	$(squeezeraop_dir)/base64.c $(squeezeraop_dir)/alac_wrapper.c \
-    $(squeezeraop_dir)/util.c $(squeezeraop_dir)/conf_util.c \
-	$(squeezeraop_dir)/squeeze2raop.c\
-	../../mdnssd/mdnssd-min.c 
+		$(squeezetiny_dir)/slimproto.c $(squeezetiny_dir)/buffer.c \
+        $(squeezetiny_dir)/stream.c $(squeezetiny_dir)/utils.c \
+		$(squeezetiny_dir)/pcm.c \
+		$(squeezetiny_dir)/process.c $(squeezetiny_dir)/resample.c \
+		$(squeezetiny_dir)/output.c $(squeezetiny_dir)/decode.c \
+		$(squeezetiny_dir)/output_pack.c $(squeezetiny_dir)/output_raop.c \
+        $(squeezetiny_dir)/main.c $(squeezetiny_dir)/util_common.c \
+		$(squeezeraop_dir)/raop_client.c $(squeezeraop_dir)/rtsp_client.c \
+		$(squeezeraop_dir)/aes.c $(squeezeraop_dir)/aexcl_lib.c \
+		$(squeezeraop_dir)/base64.c $(squeezeraop_dir)/alac_wrapper.c \
+      	$(squeezeraop_dir)/squeeze2raop.c\
+		$(squeezeraop_dir)/util.c $(squeezeraop_dir)/conf_util.c \
+		../../mdnssd/mdnssd-min.c	
+		
+SOURCES_STATIC = \
+		$(squeezetiny_dir)/mpg.c \
+        $(squeezetiny_dir)/flac.c $(squeezetiny_dir)/mad.c \
+        $(squeezetiny_dir)/faad.c
+		
+SOURCES_SHARED = \
+		$(squeezetiny_dir)/mpg.c \
+        $(squeezetiny_dir)/flac.c $(squeezetiny_dir)/mad.c \
+        $(squeezetiny_dir)/faad.c
 
 DEPS             = $(squeezetiny_dir)/squeezelite.h $(squeezetiny_dir)/slimproto.h\
                    $(squeezetiny_dir)/squeezedefs.h $(squeezetiny_dir)/squeezeitf.h\
@@ -88,22 +91,26 @@ ifeq ($(UNAME), Linux)
 endif
 endif
 
-OBJECTS = $(SOURCES:.c=.o)
+OBJECTS = $(SOURCES:.c=.o) $(SOURCES_SHARED:.c=.o)
+OBJECTS_STATIC = $(SOURCES:.c=.o) $(SOURCES_STATIC:%.c=%-static.o)
 
 all: $(EXECUTABLE) $(EXECUTABLE_STATIC)
 
 $(EXECUTABLE): $(OBJECTS)
 	$(CC) $(OBJECTS) $(LIBRARY) $(LDFLAGS) -o $(build_dir)/$@
 
-$(EXECUTABLE_STATIC): $(OBJECTS)
-	$(CC) $(OBJECTS) $(LIBRARY) $(LDFLAGS) -static -o $(build_dir)/$@
+$(EXECUTABLE_STATIC): $(OBJECTS_STATIC)
+	$(CC) $(OBJECTS_STATIC) $(LIBRARY_STATIC) $(LDFLAGS) -static -o $(build_dir)/$@
 
 $(OBJECTS): $(DEPS)
+$(OBJECTS_STATIC): $(DEPS)
 
-.c.o:
+%.o : %.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) $< -c -o $@
-
+	
+%-static.o : %.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -DLINKALL $< -c -o $*-static.o
 
 clean:
-	rm -f $(OBJECTS) $(EXECUTABLE)
+	rm -f $(OBJECTS) $(EXECUTABLE) $(EXECUTABLE_STATIC) $(OBJECTS_STATIC)
 
