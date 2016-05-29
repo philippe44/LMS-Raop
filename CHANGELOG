@@ -1,4 +1,4 @@
-0.1.2.0-dev-2
+0.1.2.0
  - mad was registered twice
  - do not declare a codec to LMS if the shared lib has not been loaded
  - move <server> parameter from global to <common> (parameter copy for compatibility needs to be removed later)
