@@ -1,8 +1,9 @@
-0.1.2.0
+0.1.2.0-dev-2
  - mad was registered twice
  - do not declare a codec to LMS if the shared lib has not been loaded
  - move <server> parameter from global to <common> (parameter copy for compatibility needs to be removed later)
  - fix server switch & rediscovery
+ - all -static version now include mp3, flac and aac decoder built-in
  
 0.1.1.0
  - if MAC cannot be retrieved, create a fake one from UDN

@@ -23,10 +23,6 @@
 
 #include <mad.h>
 
-#if OSX
-#define LINKALL 1
-#endif
-
 #define MAD_DELAY 529
 
 #define READBUF_SIZE 2048 // local buffer used by decoder: FIXME merge with any other decoders needing one?

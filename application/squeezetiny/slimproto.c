@@ -900,7 +900,7 @@ void slimproto_close(struct thread_ctx_s *ctx) {
 /*---------------------------------------------------------------------------*/
 void slimproto_thread_init(const char *name, const char *namefile, struct thread_ctx_s *ctx) {
 	pthread_attr_t attr;
-	int i;
+	char *codec, *buf;
 
 	wake_create(ctx->wake_e);
 
@@ -927,25 +927,22 @@ void slimproto_thread_init(const char *name, const char *namefile, struct thread
 	LOCK_O;
 	sprintf(ctx->fixed_cap, ",MaxSampleRate=%u", ctx->config.sample_rate);
 
-	// filter codecs to eliminated unwanted and unloaded ones
-	for (i = 0; i < MAX_CODECS; i++) {
-		char *type, *next, *p;
+	codec = buf = strdup(ctx->config.codecs);
+	while (codec && *codec ) {
+		char *p = strchr(codec, ',');
+		int i;
 
-		if (!codecs[i] || !codecs[i]->id) continue;
-
-		p = type = strdup(codecs[i]->types);
-		// do not use strtok for re-entrance
-		do {
-			next = strchr(p, ',');
-			if (next) *next = '\0';
-			if (strstr(ctx->config.codecs, p) && strlen(ctx->fixed_cap) < 128 - 10) {
+		if (p) *p = '\0';
+		for (i = 0; i < MAX_CODECS; i++) {
+			if (codecs[i] && codecs[i]->id && strstr(codecs[i]->types, codec)) {
 				strcat(ctx->fixed_cap, ",");
-				strcat(ctx->fixed_cap, p);
+				strcat(ctx->fixed_cap, codec);
+				break;
 			}
-			if (next) p = next + 1;
-		} while (next);
-	   free(type);
+		}
+		codec = (p) ? p + 1 : NULL;
 	}
+	free(buf);
 
 	UNLOCK_O;
 

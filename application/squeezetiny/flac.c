@@ -23,10 +23,6 @@
 
 #include <FLAC/stream_decoder.h>
 
-#if OSX
-#define LINKALL 1
-#endif
-
 #if !LINKALL
 static struct {
 	void *handle;

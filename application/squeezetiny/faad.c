@@ -29,10 +29,6 @@ struct chunk_table {
 	u32_t sample, offset;
 };
 
-#if OSX
-#define LINKALL 1
-#endif
-
 #if !LINKALL
 struct {
 	void *handle;
