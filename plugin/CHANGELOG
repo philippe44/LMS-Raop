@@ -1,3 +1,8 @@
+0.1.2.1 
+ - Player name set from LMS are now persistent, no need to set it from the plugin settings
+ - adding <friendly_name> parameter to keep trace or true player name
+ - Player auto refresh could be in conflict wihh external modifications
+ 
 0.1.2.0
  - mad was registered twice
  - do not declare a codec to LMS if the shared lib has not been loaded

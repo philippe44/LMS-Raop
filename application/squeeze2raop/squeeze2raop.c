@@ -91,6 +91,7 @@ sq_dev_param_t glDeviceParam = {
 					OUTPUTBUF_SIZE,
 					"flc,pcm,aif,aac,mp3",
 					"?",
+					"",
 #if defined(RESAMPLE)
 					SQ_RATE_96000,
 #else
@@ -288,6 +289,9 @@ void 		DelRaopDevice(struct sMR *Device);
 			device->TrackStartTime = *((u32_t*) param);
 			device->MetaDataWait = 1;
 			break;
+		case SQ_SETNAME:
+			strcpy(device->sq_config.name, param);
+			break;
 		default:
 			break;
 	}
@@ -455,9 +459,9 @@ static void *UpdateMRThread(void *args)
 			if (AddRaopDevice(Device, p) && !glSaveConfigFile) {
 				// create a new slimdevice
 				Device->SqueezeHandle = sq_reserve_device(Device, &sq_callback);
+				if (!*(Device->sq_config.name)) strcpy(Device->sq_config.name, Device->FriendlyName);
 				if (!Device->SqueezeHandle || !sq_run_device(Device->SqueezeHandle,
 					Device->Raop,
-					*(Device->Config.Name) ? Device->Config.Name : Device->FriendlyName,
 					&Device->sq_config,
 					Device->SampleRate ? atoi(Device->SampleRate) : 44100,
 					Device->SampleSize ? atoi(Device->SampleSize) : 16)) {

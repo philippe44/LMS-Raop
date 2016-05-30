@@ -478,7 +478,7 @@ sq_dev_handle_t sq_reserve_device(void *MR, sq_callback_t callback)
 
 
 /*---------------------------------------------------------------------------*/
-bool sq_run_device(sq_dev_handle_t handle, struct raopcl_s *raopcl, char *name, sq_dev_param_t *param, u32_t sample_rate, u8_t sample_size)
+bool sq_run_device(sq_dev_handle_t handle, struct raopcl_s *raopcl, sq_dev_param_t *param, u32_t sample_rate, u8_t sample_size)
 {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
 
@@ -498,7 +498,7 @@ bool sq_run_device(sq_dev_handle_t handle, struct raopcl_s *raopcl, char *name, 
 	}
 #endif
 
-	slimproto_thread_init(name, "", ctx);
+	slimproto_thread_init(ctx);
 
 	return true;
 }
