@@ -333,7 +333,7 @@ static void *PlayerThread(void *args)
 			}
 
 			pthread_mutex_lock(&Device->Mutex);
-			if (Device->MetaDataWait && !--Device->MetaDataWait) {
+			if (Device->MetaDataWait && !--Device->MetaDataWait && Device->Config.SendMetaData) {
 				sq_metadata_t metadata;
 
 				pthread_mutex_unlock(&Device->Mutex);

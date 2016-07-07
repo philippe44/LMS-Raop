@@ -49,7 +49,7 @@ PLUGIN_RAOPBRIDGE_OPTIONS_DESC
 	EN	for details.
 
 PLUGIN_RAOPBRIDGE_DEBUG
-	EN	Debug Settings
+	EN	Additional debugging
 
 PLUGIN_RAOPBRIDGE_DEBUG_DESC
 	EN	Specify debugging level for writing to the log file.

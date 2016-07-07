@@ -915,7 +915,7 @@ void *rtp_timing_thread(void *args)
 			int len = sizeof(client);
 			n = recvfrom(raopcld->rtp_ports.time.fd, (void*) &req, sizeof(req), 0, (struct sockaddr *)&client, (socklen_t *)&len);
 			addr.sin_port = client.sin_port;
-			LOG_DEBUG("[%p]: NTP remote port: %d", ntohs(addr.sin_port));
+			LOG_DEBUG("[%p]: NTP remote port: %d", raopcld, ntohs(addr.sin_port));
 		}
 
 		if( n > 0) 	{
