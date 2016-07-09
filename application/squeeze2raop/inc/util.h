@@ -44,6 +44,7 @@ int			pthread_cond_reltimedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, u3
 char 		*XMLGetFirstDocumentItem(IXML_Document *doc, const char *item);
 char 		*XMLGetFirstElementItem(IXML_Element *element, const char *item);
 IXML_Node   *XMLAddNode(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...);
+IXML_Node *XMLUpdateNode(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...);
 int 		XMLAddAttribute(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...);
 
 #endif

@@ -1,7 +1,10 @@
 0.1.2.2
- - Metadata was always sent even if disabled (onyl elapsed time was filtered)
+ - Metadata was always sent even if disabled (only elapsed time was filtered)
  - NTP port log was wrong
  - Filter out LocalLink addresses (AirPort Express)
+ - when using "songinfo" query, LMS wants a client_id, although documented differently
+ - cli_wait set at 1s
+ - Refresh of configuration file was not adding missing parameters
  
 0.1.2.1 
  - Player name set from LMS are now persistent, no need to set it from the plugin settings

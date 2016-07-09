@@ -57,7 +57,7 @@ void SaveConfig(char *name, void *ref, bool full)
 	old_root = ixmlDocument_getElementById(old_doc, "squeeze2raop");
 
 	if (!full && old_doc) {
-		root = ixmlNode_cloneNode((IXML_Node*) old_root, true);
+		ixmlDocument_importNode(doc, (IXML_Node*) old_root, true, &root);
 		ixmlNode_appendChild((IXML_Node*) doc, root);
 
 		list = ixmlDocument_getElementsByTagName((IXML_Document*) root, "device");
@@ -69,46 +69,45 @@ void SaveConfig(char *name, void *ref, bool full)
 			ixmlNode_free(device);
 		}
 		if (list) ixmlNodeList_free(list);
+		common = (IXML_Node*) ixmlDocument_getElementById((IXML_Document*) root, "common");
 	}
 	else {
 		root = XMLAddNode(doc, NULL, "squeeze2raop", NULL);
-
-
-		// XMLAddNode(doc, root, "server", glSQServer);
-		XMLAddNode(doc, root, "interface", glInterface);
-		XMLAddNode(doc, root, "slimproto_log", level2debug(slimproto_loglevel));
-		XMLAddNode(doc, root, "stream_log", level2debug(stream_loglevel));
-		XMLAddNode(doc, root, "output_log", level2debug(output_loglevel));
-		XMLAddNode(doc, root, "decode_log", level2debug(decode_loglevel));
-		XMLAddNode(doc, root, "main_log",level2debug(main_loglevel));
-		XMLAddNode(doc, root, "slimmain_log", level2debug(slimmain_loglevel));
-		XMLAddNode(doc, root, "raop_log",level2debug(raop_loglevel));
-		XMLAddNode(doc, root, "util_log",level2debug(util_loglevel));
-		XMLAddNode(doc, root, "scan_interval", "%d", (u32_t) glScanInterval);
-		XMLAddNode(doc, root, "scan_timeout", "%d", (u32_t) glScanTimeout);
-		XMLAddNode(doc, root, "log_limit", "%d", (s32_t) glLogLimit);
-
-		common = XMLAddNode(doc, root, "common", NULL);
-		XMLAddNode(doc, common, "streambuf_size", "%d", (u32_t) glDeviceParam.stream_buf_size);
-		XMLAddNode(doc, common, "output_size", "%d", (u32_t) glDeviceParam.output_buf_size);
-		XMLAddNode(doc, common, "enabled", "%d", (int) glMRConfig.Enabled);
-		XMLAddNode(doc, common, "codecs", glDeviceParam.codecs);
-		XMLAddNode(doc, common, "sample_rate", "%d", (int) glDeviceParam.sample_rate);
-#if defined(RESAMPLE)
-		XMLAddNode(doc, common, "resample", "%d", (int) glDeviceParam.resample);
-		XMLAddNode(doc, common, "resample_options", glDeviceParam.resample_options);
-#endif
-		XMLAddNode(doc, common, "player_volume", "%d", (int) glDeviceParam.player_volume);
-		XMLAddNode(doc, common, "send_metadata", "%d", (int) glMRConfig.SendMetaData);
-		XMLAddNode(doc, common, "send_coverart", "%d", (int) glMRConfig.SendCoverArt);
-		XMLAddNode(doc, common, "remove_count", "%d", (u32_t) glMRConfig.RemoveCount);
-		XMLAddNode(doc, common, "auto_play", "%d", (int) glMRConfig.AutoPlay);
-		XMLAddNode(doc, common, "idle_timeout", "%d", (int) glMRConfig.IdleTimeout);
-
-		XMLAddNode(doc, common, "encryption", "%d", (int) glMRConfig.Encryption);
-		XMLAddNode(doc, common, "read_ahead", "%d", (int) glDeviceParam.read_ahead);
-		XMLAddNode(doc, common, "server", glDeviceParam.server);
+		common = (IXML_Node*) XMLAddNode(doc, root, "common", NULL);
 	}
+
+	XMLUpdateNode(doc, root, "interface", glInterface);
+	XMLUpdateNode(doc, root, "slimproto_log", level2debug(slimproto_loglevel));
+	XMLUpdateNode(doc, root, "stream_log", level2debug(stream_loglevel));
+	XMLUpdateNode(doc, root, "output_log", level2debug(output_loglevel));
+	XMLUpdateNode(doc, root, "decode_log", level2debug(decode_loglevel));
+	XMLUpdateNode(doc, root, "main_log",level2debug(main_loglevel));
+	XMLUpdateNode(doc, root, "slimmain_log", level2debug(slimmain_loglevel));
+	XMLUpdateNode(doc, root, "raop_log",level2debug(raop_loglevel));
+	XMLUpdateNode(doc, root, "util_log",level2debug(util_loglevel));
+	XMLUpdateNode(doc, root, "scan_interval", "%d", (u32_t) glScanInterval);
+	XMLUpdateNode(doc, root, "scan_timeout", "%d", (u32_t) glScanTimeout);
+	XMLUpdateNode(doc, root, "log_limit", "%d", (s32_t) glLogLimit);
+
+	XMLUpdateNode(doc, common, "streambuf_size", "%d", (u32_t) glDeviceParam.stream_buf_size);
+	XMLUpdateNode(doc, common, "output_size", "%d", (u32_t) glDeviceParam.output_buf_size);
+	XMLUpdateNode(doc, common, "enabled", "%d", (int) glMRConfig.Enabled);
+	XMLUpdateNode(doc, common, "codecs", glDeviceParam.codecs);
+	XMLUpdateNode(doc, common, "sample_rate", "%d", (int) glDeviceParam.sample_rate);
+#if defined(RESAMPLE)
+	XMLUpdateNode(doc, common, "resample", "%d", (int) glDeviceParam.resample);
+	XMLUpdateNode(doc, common, "resample_options", glDeviceParam.resample_options);
+#endif
+	XMLUpdateNode(doc, common, "player_volume", "%d", (int) glDeviceParam.player_volume);
+	XMLUpdateNode(doc, common, "send_metadata", "%d", (int) glMRConfig.SendMetaData);
+	XMLUpdateNode(doc, common, "send_coverart", "%d", (int) glMRConfig.SendCoverArt);
+	XMLUpdateNode(doc, common, "remove_count", "%d", (u32_t) glMRConfig.RemoveCount);
+	XMLUpdateNode(doc, common, "auto_play", "%d", (int) glMRConfig.AutoPlay);
+	XMLUpdateNode(doc, common, "idle_timeout", "%d", (int) glMRConfig.IdleTimeout);
+
+	XMLUpdateNode(doc, common, "encryption", "%d", (int) glMRConfig.Encryption);
+	XMLUpdateNode(doc, common, "read_ahead", "%d", (int) glDeviceParam.read_ahead);
+	XMLUpdateNode(doc, common, "server", glDeviceParam.server);
 
 	for (i = 0; i < MAX_RENDERERS; i++) {
 		IXML_Node *dev_node;
@@ -120,13 +119,13 @@ void SaveConfig(char *name, void *ref, bool full)
 		if (old_doc && ((dev_node = (IXML_Node*) FindMRConfig(old_doc, p->UDN)) != NULL)) {
 			IXML_Node *node;
 
-			dev_node = ixmlNode_cloneNode(dev_node, true);
+			ixmlDocument_importNode(doc, (IXML_Node*) dev_node, true, &dev_node);
 			ixmlNode_appendChild((IXML_Node*) root, dev_node);
 			node = (IXML_Node*) ixmlDocument_getElementById((IXML_Document*) dev_node, "name");
 			node = ixmlNode_getFirstChild(node);
 			ixmlNode_setNodeValue(node, p->sq_config.name);
 			// TODO: remove after migration
-			if (!ixmlDocument_getElementById((IXML_Document*) dev_node, "friendly_name")) XMLAddNode(doc, dev_node, "friendly_name", p->FriendlyName);
+			XMLUpdateNode(doc, dev_node, "friendly_name", p->FriendlyName);
 		}
 		// new device, add nodes
 		else {
@@ -151,7 +150,7 @@ void SaveConfig(char *name, void *ref, bool full)
 		node = ixmlNode_getFirstChild(node);
 		udn = (char*) ixmlNode_getNodeValue(node);
 		if (!FindMRConfig(doc, udn)) {
-			device = ixmlNode_cloneNode(device, true);
+			ixmlDocument_importNode(doc, (IXML_Node*) device, true, &device);
 			ixmlNode_appendChild((IXML_Node*) root, device);
 		}
 	}

@@ -288,7 +288,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 	else metadata->remote = false;
 	NFREE(rsp)
 
-	sprintf(cmd, "songinfo 0 10 url:%s tags:cfldatgrK", metadata->path);
+	sprintf(cmd, "%s songinfo 0 10 url:%s tags:cfldatgrK", ctx->cli_id, metadata->path);
 	rsp = cli_send_cmd(cmd, false, false, ctx);
 
 	if (rsp && *rsp) {
