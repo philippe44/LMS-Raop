@@ -35,6 +35,7 @@
 #include "util.h"
 
 #include "mdnssd-itf.h"
+#include "http_fetcher.h"
 
 
 /*----------------------------------------------------------------------------*/
@@ -329,7 +330,7 @@ static void *PlayerThread(void *args)
 			}
 
 			if (Device->Config.SendMetaData && Device->TrackDuration != -1) {
-				raopcl_progress(Device->Raop, Device->TrackStartTime, Device->TrackDuration);
+				raopcl_progress(Device->Raop, Device->TrackStartTime, sq_position_ms(Device->SqueezeHandle, NULL), Device->TrackDuration);
 			}
 
 			pthread_mutex_lock(&Device->Mutex);
@@ -345,6 +346,16 @@ static void *PlayerThread(void *args)
 												 "asal", 's', metadata.album,
 												 "asgn", 's', metadata.genre,
 												 "astn", 'i', (int) metadata.track);
+				// TODO: check that it's JPEG
+				if (metadata.artwork && Device->Config.SendCoverArt) {
+					char *image = NULL, *contentType = NULL;
+					int size = http_fetch(metadata.artwork, &contentType, &image);
+
+					if (size != -1) raopcl_set_artwork(Device->Raop, contentType, size - 1, image);
+
+					NFREE(image);
+					NFREE(contentType);
+				}
 				sq_free_metadata(&metadata);
 			}
 			else pthread_mutex_unlock(&Device->Mutex);

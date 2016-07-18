@@ -452,13 +452,15 @@ bool raopcl_update_volume(struct raopcl_s *p, int vol, bool force)
 
 
 /*----------------------------------------------------------------------------*/
-bool raopcl_progress(struct raopcl_s *p, __u32 start, __u32 duration)
+bool raopcl_progress(struct raopcl_s *p, __u32 start, __u32 elapsed, __u32 duration)
 {
 	char a[128];
-	__u32 end;
+	__u32 end, now;
 
 	if (!p || !p->rtspcl || p->state < RAOP_FLUSHED) return false;
 
+	// do duration & now that first and *after* update start
+	now = (__u32) (((__u64) (start + elapsed - p->rtp_ts.first_clock) * p->sample_rate) / 1000 + p->rtp_ts.first);
 	if (duration)
 		end = (__u32) (((__u64) (start + duration - p->rtp_ts.first_clock) * p->sample_rate) / 1000 + p->rtp_ts.first);
 	else
@@ -466,13 +468,25 @@ bool raopcl_progress(struct raopcl_s *p, __u32 start, __u32 duration)
 
 	start = (__u32) (((__u64) (start - p->rtp_ts.first_clock) * p->sample_rate) / 1000 + p->rtp_ts.first);
 
+	// TODO: need to find a better fix for this timer overflow
+	if (end < start) end = 0xffffffff;
+
 	/*
 	This is very hacky: it works only because the RTP counter is derived from
 	the main clock in ms
 	*/
-	sprintf(a, "progress: %u/%u/%u\r\n", start, p->rtp_ts.audio, end);
+	sprintf(a, "progress: %u/%u/%u\r\n", start, now, end);
 
 	return rtspcl_set_parameter(p->rtspcl, a);
+}
+
+
+/*----------------------------------------------------------------------------*/
+bool raopcl_set_artwork(struct raopcl_s *p, char *content_type, int size, char *image)
+{
+	if (!p || !p->rtspcl || p->state < RAOP_FLUSHED) return false;
+
+	return rtspcl_set_artwork(p->rtspcl, p->rtp_ts.audio, content_type, size, image);
 }
 
 
@@ -649,7 +663,7 @@ bool raopcl_connect(struct raopcl_s *p, struct in_addr host, __u16 destport, rao
 	sprintf(sci, "%016llx", (long long int) seed.sci);
 
 	// RTSP misc setup
-	//rtspcl_add_exthds(p->rtspcl,"Client-Instance", sci);
+	rtspcl_add_exthds(p->rtspcl,"Client-Instance", sci);
 	//rtspcl_add_exthds(p->rtspcl,"Active-Remote", "1986535575");
 	//rtspcl_add_exthds(p->rtspcl,"DACP-ID", sci)) goto erexit;
 	//rtspcl_add_exthds(p->rtspcl, "Client-instance-identifier", "4ab62645-5008-4384-be35-05dd6f0bdc92");
@@ -680,7 +694,7 @@ bool raopcl_connect(struct raopcl_s *p, struct in_addr host, __u16 destport, rao
 
 	//rtspcl_add_exthds(p->rtspcl, "Client-computer-name", "BUREAU-XP");
 
-	// AppleTV expect now the timing port ot be opened BEFORE the setup message
+	// AppleTV expects now the timing port ot be opened BEFORE the setup message
 	p->rtp_ports.time.lport = p->rtp_ports.time.rport = 0;
 	if ((p->rtp_ports.time.fd = open_udp_socket(p->local_addr, &p->rtp_ports.time.lport, true)) == -1) goto erexit;
 	p->time_running = true;

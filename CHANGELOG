@@ -1,3 +1,8 @@
+0.1.3.0
+ - Add coverart
+ - Position was still counting when track was paused
+ - DAAP parameters where missing mlit & mikd fields
+ 
 0.1.2.2
  - Metadata was always sent even if disabled (only elapsed time was filtered)
  - NTP port log was wrong
@@ -5,7 +10,7 @@
  - when using "songinfo" query, LMS wants a client_id, although documented differently
  - cli_wait set at 1s
  - Refresh of configuration file was not adding missing parameters
- 
+  
 0.1.2.1 
  - Player name set from LMS are now persistent, no need to set it from the plugin settings
  - adding <friendly_name> parameter to keep trace or true player name

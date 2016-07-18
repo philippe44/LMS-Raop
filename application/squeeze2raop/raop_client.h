@@ -97,7 +97,8 @@ bool 	raopcl_set_content(raopcl_t *p, char* itemname, char* songartist, char* so
 __u32 	raopcl_get_latency(struct raopcl_s *p);
 bool 	raopcl_is_sane(struct raopcl_s *p);
 __u32 	raopcl_get_timestamp(struct raopcl_s *p);
-bool 	raopcl_progress(struct raopcl_s *p, __u32 start, __u32 end);
+bool 	raopcl_progress(struct raopcl_s *p, __u32 start, __u32 now, __u32 end);
 bool 	raopcl_set_daap(struct raopcl_s *p, int count, ...);
+bool raopcl_set_artwork(struct raopcl_s *p, char *content_type, int size, char *image);
 
 #endif

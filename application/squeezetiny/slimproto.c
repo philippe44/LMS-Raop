@@ -116,21 +116,7 @@ static void sendHELO(bool reconnect, const char *fixed_cap, const char *var_cap,
 static void sendSTAT(const char *event, u32_t server_timestamp, struct thread_ctx_s *ctx) {
 	struct STAT_packet pkt;
 	u32_t now = gettime_ms();
-	u32_t ms_played;
-
-	if (ctx->status.frames_played) {
-		u32_t index = (now / TIMEGAPS) % ctx->output.nb_timerefs;
-		u32_t frames_played = ctx->output.timerefs[index];
-		u32_t next_frames_played = (index < ctx->output.nb_timerefs - 1) ?
-									ctx->output.timerefs[index + 1] : ctx->output.timerefs[0];
-
-		frames_played += ((next_frames_played - frames_played) * (now - (now / TIMEGAPS) * TIMEGAPS)) / TIMEGAPS;
-		ms_played = (u32_t)(((u64_t) frames_played * (u64_t)1000) / (u64_t)ctx->status.current_sample_rate);
-		LOG_DEBUG("[%p]: ms_played: %u (now: %u)", ctx, ms_played, now);
-	} else {
-		LOG_DEBUG("[%p]: ms_played: 0", ctx);
-		ms_played = 0;
-	}
+	u32_t ms_played = sq_position_ms(ctx->self, &now);
 
 	memset(&pkt, 0, sizeof(struct STAT_packet));
 	memcpy(&pkt.opcode, "STAT", 4);

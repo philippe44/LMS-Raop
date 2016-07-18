@@ -112,6 +112,7 @@ void				sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_
 bool				sq_get_metadata(sq_dev_handle_t handle, struct sq_metadata_s *metadata, bool next);
 void				sq_default_metadata(struct sq_metadata_s *metadata, bool init);
 void 				sq_free_metadata(struct sq_metadata_s *metadata);
+u32_t 				sq_position_ms(int handle, u32_t *ref);
 
 #endif
 

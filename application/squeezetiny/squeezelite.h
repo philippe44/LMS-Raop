@@ -220,6 +220,7 @@ void packN(u32_t *dest, u32_t val);
 void packn(u16_t *dest, u16_t val);
 u32_t unpackN(u32_t *src);
 u16_t unpackn(u16_t *src);
+u32_t position_ms(struct thread_ctx_s *ctx, u32_t *ref);
 #if OSX
 void set_nosigpipe(sockfd s);
 #else

@@ -42,6 +42,7 @@ bool rtspcl_set_parameter(struct rtspcl_s *p, char *param);
 bool rtspcl_flush(struct rtspcl_s *p, __u16 seq_number, __u32 timestamp);
 bool rtspcl_teardown(struct rtspcl_s *p);
 bool rtspcl_set_daap(struct rtspcl_s *p, __u32 timestamp, int count, va_list args);
+bool rtspcl_set_artwork(struct rtspcl_s *p, __u32 timestamp, char *content_type, int size, char *image);
 
 bool rtspcl_remove_all_exthds(struct rtspcl_s *p);
 bool rtspcl_add_exthds(struct rtspcl_s *p, char *key, char *data);

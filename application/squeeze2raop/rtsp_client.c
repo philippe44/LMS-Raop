@@ -300,12 +300,31 @@ bool rtspcl_set_parameter(struct rtspcl_s *p, char *param)
 
 
 /*----------------------------------------------------------------------------*/
+bool rtspcl_set_artwork(struct rtspcl_s *p, __u32 timestamp, char *content_type, int size, char *image)
+{
+	key_data_t hds[2];
+	char rtptime[20];
+
+	if (!p) return false;
+
+	sprintf(rtptime, "rtptime=%u", timestamp);
+
+	hds[0].key	= "RTP-Info";
+	hds[0].data	= rtptime;
+	hds[1].key	= NULL;
+
+	return exec_request(p, "SET_PARAMETER", content_type, image, size, 2, hds, NULL, NULL);
+}
+
+
+/*----------------------------------------------------------------------------*/
 bool rtspcl_set_daap(struct rtspcl_s *p, __u32 timestamp, int count, va_list args)
 {
 	key_data_t hds[2];
 	char rtptime[20];
 	char *q, *str;
 	bool rc;
+	int i;
 
 	if (!p) return false;
 
@@ -318,9 +337,15 @@ bool rtspcl_set_daap(struct rtspcl_s *p, __u32 timestamp, int count, va_list arg
 	hds[0].data	= rtptime;
 	hds[1].key	= NULL;
 
+	// set mandatory headers first, the final size will be set at the end
+	q = (char*) memcpy(q, "mlit", 4) + 8;
+	q = (char*) memcpy(q, "mikd", 4) + 4;
+	for (i = 0; i < 3; i++) *q++ = 0; *q++ = 1;
+	*q++ = 2;
+
 	while (count-- && (q-str) < 1024) {
 		char *fmt, type;
-		__u32 i, size;
+		__u32 size;
 
 		fmt = va_arg(args, char*);
 		type = va_arg(args, int);
@@ -345,6 +370,9 @@ bool rtspcl_set_daap(struct rtspcl_s *p, __u32 timestamp, int count, va_list arg
 			}
 		}
 	}
+
+	// set "mlit" object size
+	for (i = 0; i < 4; i++) *(str + 4 + i) = (q-str-8) >> (24-8*i);
 
 	rc = exec_request(p, "SET_PARAMETER", "application/x-dmap-tagged", str, q-str, 2, hds, NULL, NULL);
 	free(str);
@@ -425,7 +453,7 @@ static bool exec_request(struct rtspcl_s *rtspcld, char *cmd, char *content_type
 
 	if(!rtspcld || rtspcld->fd == -1) return false;
 
-	if ((req = malloc(4096)) == NULL) return false;
+	if ((req = malloc(4096+length)) == NULL) return false;
 
 	sprintf(req, "%s %s RTSP/1.0\r\n",cmd, url ? url : rtspcld->url);
 

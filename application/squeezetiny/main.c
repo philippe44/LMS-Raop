@@ -206,6 +206,32 @@ static char *cli_decode(char *str) {
 }
 
 
+/*---------------------------------------------------------------------------*/
+u32_t sq_position_ms(int handle, u32_t *ref) {
+	u32_t ms_played;
+	u32_t now = (ref) ? *ref : gettime_ms();
+	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
+
+	if (!handle) return 0;
+
+	if (ctx->status.frames_played) {
+		u32_t index = (now / TIMEGAPS) % ctx->output.nb_timerefs;
+		u32_t frames_played = ctx->output.timerefs[index];
+		u32_t next_frames_played = (index < ctx->output.nb_timerefs - 1) ?
+									ctx->output.timerefs[index + 1] : ctx->output.timerefs[0];
+
+		frames_played += ((next_frames_played - frames_played) * (now - (now / TIMEGAPS) * TIMEGAPS)) / TIMEGAPS;
+		ms_played = (u32_t)(((u64_t) frames_played * (u64_t)1000) / (u64_t)ctx->status.current_sample_rate);
+		LOG_DEBUG("[%p]: ms_played: %u (now: %u)", ctx, ms_played, now);
+	} else {
+		LOG_DEBUG("[%p]: ms_played: 0", ctx);
+		ms_played = 0;
+	}
+
+	return ms_played;
+}
+
+
 /*--------------------------------------------------------------------------*/
 static void sq_init_metadata(sq_metadata_t *metadata)
 {
