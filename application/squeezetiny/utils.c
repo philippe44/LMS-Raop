@@ -50,6 +50,8 @@
 
 #include <fcntl.h>
 
+extern log_level 	util_loglevel;
+//static log_level 	*loglevel = &util_loglevel;
 
 // cmdline parsing
 char *next_param(char *src, char c) {
@@ -123,7 +125,7 @@ u32_t gettime_ms(void) {
 #endif
 }
 
-#if WIN3
+#if WIN
 #if defined(_MSC_VER) || defined(_MSC_EXTENSIONS)
 #define DELTA_EPOCH_IN_MICROSECS  11644473600000000Ui64
 #else

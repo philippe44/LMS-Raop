@@ -98,6 +98,7 @@ struct sMR {
 	char *Channels;
 	char *Codecs;
 	char *Crypto;
+	char ActiveRemote[11];
 };
 
 

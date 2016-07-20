@@ -13,7 +13,7 @@ build_dir	= ./bin
 LIBRARY = libixml.a libsoxr.a
 LIBRARY_STATIC = libixml.a libfaad.a libsoxr.a libFLAC.a libmad.a
 
-DEFINES = -DHAVE_STDINT_H -DRESAMPLE
+DEFINES = -DHAVE_STDINT_H -DRESAMPLE -DNDEBUG
 
 INCLUDE = -I../../libupnp/1.6.19/ixml/inc\
           -I../../libupnp/1.6.19/upnp/inc\
@@ -26,6 +26,7 @@ INCLUDE = -I../../libupnp/1.6.19/ixml/inc\
 		  -I../../valgrind/memcheck\
 		  -I../../valgrind/include\
 		  -I../../http_fetcher/include\
+		  -I../../tinysvcmdns\
 		  -I.\
 		  -I$(squeezetiny_dir)\
 		  -I$(squeezeraop_dir)\
@@ -45,7 +46,8 @@ SOURCES = \
       	$(squeezeraop_dir)/squeeze2raop.c\
 		$(squeezeraop_dir)/util.c $(squeezeraop_dir)/conf_util.c \
 		../../mdnssd/mdnssd-min.c \
-		../../http_fetcher/src/http_fetcher.c ../../http_fetcher/src/http_error_codes.c
+		../../http_fetcher/src/http_fetcher.c ../../http_fetcher/src/http_error_codes.c\
+		../../tinysvcmdns/mdns.c ../../tinysvcmdns/mdnsd.c
 		
 SOURCES_STATIC = \
 		$(squeezetiny_dir)/mpg.c \

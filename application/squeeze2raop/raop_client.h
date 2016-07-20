@@ -82,7 +82,7 @@ typedef struct {
 } __attribute__ ((packed)) rtp_audio_pkt_t;
 #endif
 
-struct raopcl_s *raopcl_create(char *local, raop_codec_t codec, raop_crypto_t crypto, int sample_rate, int sample_size, int channels, int volume);
+struct raopcl_s *raopcl_create(char *local, char *DACP_id, char *active_remote, raop_codec_t codec, raop_crypto_t crypto, int sample_rate, int sample_size, int channels, int volume);
 bool	raopcl_destroy(struct raopcl_s *p);
 bool	raopcl_connect(struct raopcl_s *p, struct in_addr host, __u16 destport, raop_codec_t codec);
 bool 	raopcl_reconnect(struct raopcl_s *p);

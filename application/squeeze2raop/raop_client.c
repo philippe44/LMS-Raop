@@ -76,6 +76,7 @@ typedef struct {
 typedef struct raopcl_s {
 	struct rtspcl_s *rtspcl;
 	raop_state_t state;
+	char DACP_id[17], active_remote[11];
 	int sane;
 	__u8 iv[16]; // initialization vector for aes-cbc
 	__u8 nv[16]; // next vector for aes-cbc
@@ -355,7 +356,7 @@ __u32 raopcl_send_sample(struct raopcl_s *p, __u8 *sample, int size, int frames,
 
 
 /*----------------------------------------------------------------------------*/
-struct raopcl_s *raopcl_create(char *local, raop_codec_t codec, raop_crypto_t crypto, int sample_rate, int sample_size, int channels, int volume)
+struct raopcl_s *raopcl_create(char *local, char *DACP_id, char *active_remote, raop_codec_t codec, raop_crypto_t crypto, int sample_rate, int sample_size, int channels, int volume)
 {
 	raopcl_data_t *raopcld;
 
@@ -372,6 +373,8 @@ struct raopcl_s *raopcl_create(char *local, raop_codec_t codec, raop_crypto_t cr
 	raopcld->volume = volume;
 	raopcld->codec = codec;
 	raopcld->crypto = crypto;
+	strcpy(raopcld->DACP_id, DACP_id);
+	strcpy(raopcld->active_remote, active_remote);
 	if (!local || strstr(local, "?")) raopcld->local_addr.s_addr = INADDR_ANY;
 	else raopcld->local_addr.s_addr = inet_addr(local);
 	raopcld->rtp_ports.ctrl.fd = raopcld->rtp_ports.time.fd = raopcld->rtp_ports.audio.fd = -1;
@@ -459,7 +462,7 @@ bool raopcl_progress(struct raopcl_s *p, __u32 start, __u32 elapsed, __u32 durat
 
 	if (!p || !p->rtspcl || p->state < RAOP_FLUSHED) return false;
 
-	// do duration & now that first and *after* update start
+	// do 'duration' & 'now' first and *after* update 'start'
 	now = (__u32) (((__u64) (start + elapsed - p->rtp_ts.first_clock) * p->sample_rate) / 1000 + p->rtp_ts.first);
 	if (duration)
 		end = (__u32) (((__u64) (start + duration - p->rtp_ts.first_clock) * p->sample_rate) / 1000 + p->rtp_ts.first);
@@ -664,8 +667,8 @@ bool raopcl_connect(struct raopcl_s *p, struct in_addr host, __u16 destport, rao
 
 	// RTSP misc setup
 	rtspcl_add_exthds(p->rtspcl,"Client-Instance", sci);
-	//rtspcl_add_exthds(p->rtspcl,"Active-Remote", "1986535575");
-	//rtspcl_add_exthds(p->rtspcl,"DACP-ID", sci)) goto erexit;
+	rtspcl_add_exthds(p->rtspcl,"Active-Remote", p->active_remote);
+	rtspcl_add_exthds(p->rtspcl,"DACP-ID", p->DACP_id);
 	//rtspcl_add_exthds(p->rtspcl, "Client-instance-identifier", "4ab62645-5008-4384-be35-05dd6f0bdc92");
 
 	// RTSP connect

@@ -36,6 +36,8 @@
 
 #include "mdnssd-itf.h"
 #include "http_fetcher.h"
+#include "mdns.h"
+#include "mdnsd.h"
 
 
 /*----------------------------------------------------------------------------*/
@@ -53,6 +55,7 @@ static char			*glSaveConfigFile = NULL;
 bool				glAutoSaveConfigFile = false;
 bool				glGracefullShutdown = true;
 int					gl_mDNSId;
+char 				glDACPid[] = "1A2B3D4EA1B2C3D4";
 
 log_level	slimproto_loglevel = lINFO;
 log_level	stream_loglevel = lWARN;
@@ -128,8 +131,12 @@ struct sMR			glMRDevices[MAX_RENDERERS];
 extern log_level	main_loglevel;
 static log_level 	*loglevel = &main_loglevel;
 
-pthread_t			glUpdateMRThread;
+static pthread_t			glUpdateMRThread;
 static bool			glMainRunning = true;
+
+static struct mdnsd *gl_mDNSResponder;
+static int			glActiveRemoteSock;
+static pthread_t	glActiveRemoteThread;
 
 static char usage[] =
 			VERSION "\n"
@@ -234,13 +241,19 @@ void 		DelRaopDevice(struct sMR *Device);
 	pthread_mutex_lock(&device->Mutex);
 
 	switch (action) {
+		case SQ_FINISHED:
+			device->LastFlush = gettime_ms();
+			device->TearDownWait = true;
+			// will miss the last "buffer time" track position updates on the player
+			device->TrackDuration = -1;
+			break;
 		case SQ_STOP:
 			device->TrackDuration = -1;
 		case SQ_PAUSE: {
 			tRaopReq *Req = malloc(sizeof(tRaopReq));
 
 			strcpy(Req->Type, "FLUSH");
-			Req->Data.FlushMode = (action == SQ_STOP) ? RAOP_RECLOCK : RAOP_REBUFFER;
+			Req->Data.FlushMode = (action != SQ_PAUSE) ? RAOP_REBUFFER : RAOP_RECLOCK;
 			QueueInsert(&device->Queue, Req);
 			pthread_cond_signal(&device->Cond);
 			break;
@@ -620,6 +633,7 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	Device->PlayerPort = data->port;
 	Device->TearDownWait = false;
 	Device->TrackDuration = -1;
+	sprintf(Device->ActiveRemote, "%d", hash32(Device->UDN));
 	strcpy(Device->FriendlyName, data->hostname);
 	p = stristr(Device->FriendlyName, ".local");
 	if (p) *p = '\0';
@@ -654,7 +668,7 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	else
 		Crypto = RAOP_CLEAR;
 
-	Device->Raop = raopcl_create(glInterface, RAOP_ALAC, Crypto,
+	Device->Raop = raopcl_create(glInterface, glDACPid, Device->ActiveRemote, RAOP_ALAC, Crypto,
 								 Device->SampleRate ? atoi(Device->SampleRate) : 44100,
 								 Device->SampleSize ? atoi(Device->SampleSize) : 16,
 								 Device->Channels ? atoi(Device->Channels) : 2,
@@ -722,6 +736,150 @@ void DelRaopDevice(struct sMR *Device)
 	memset(Device, 0, sizeof(struct sMR));
 }
 
+
+/*----------------------------------------------------------------------------*/
+static void *ActiveRemoteThread(void *args)
+{
+	int n;
+	char buf[1024], command[20], ActiveRemote[11];
+	char response[] = "HTTP/1.1 204 No Content\r\nDate: %s,%02d %s %4d %02d:%02d:%02d GMT\r\nDAAP-Server: iTunes/7.6.2 (Windows; N;)\r\nContent-Type: application/x-dmap-tagged\r\nContent-Length: 0\r\n\r\n";
+	char *day[] = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
+	char *month[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sept", "Oct", "Nov", "Dec" };
+
+	if (listen(glActiveRemoteSock, 5) < 0) {
+		LOG_ERROR("Cannot listen", NULL);
+		return NULL;
+	}
+
+	while (glMainRunning) {
+		int sd, i;
+		struct sockaddr cli_addr;
+		socklen_t clilen = sizeof(cli_addr);
+		struct sMR *Device = NULL;
+		char *p;
+		time_t now = time(NULL);
+		struct tm gmt;
+
+		sd = accept(glActiveRemoteSock, (struct sockaddr *) &cli_addr, &clilen);
+
+		if (sd < 0) {
+			if (glMainRunning) {
+				LOG_ERROR("Accept error", NULL);
+			}
+			continue;
+		}
+
+		// receive data, all should be in a single receive, hopefully
+		n = recv(sd, (void*) buf, 1024, 0);
+
+		// a pretty basic reading of command
+		buf[n] = '\0';
+		strlwr(buf);
+		p = strstr(buf, "active-remote:");
+		sscanf(p, "active-remote:%s", ActiveRemote);
+		p = strstr(buf, "/ctrl-int/1/");
+		sscanf(p, "/ctrl-int/1/%s", command);
+
+		for (i = 0; i < MAX_RENDERERS; i++) {
+			if (glMRDevices[i].InUse && !strcmp(glMRDevices[i].ActiveRemote, ActiveRemote)) {
+				Device = &glMRDevices[i];
+				break;
+			}
+		}
+
+		if (!Device) {
+			LOG_ERROR("DACP from unknown player %s", buf);
+			continue;
+		}
+
+		if (strstr(command, "pause")) sq_notify(Device->SqueezeHandle, Device, SQ_PAUSE, NULL, NULL);
+		if (strstr(command, "play") || strstr(command, "playresume")) sq_notify(Device->SqueezeHandle, Device, SQ_PLAY, NULL, NULL);
+		if (strstr(command, "playpause")) sq_notify(Device->SqueezeHandle, Device, SQ_PLAY_PAUSE, NULL, NULL);
+		if (strstr(command, "stop")) sq_notify(Device->SqueezeHandle, Device, SQ_STOP, NULL, NULL);
+		if (strstr(command, "mutetoggle")) sq_notify(Device->SqueezeHandle, Device, SQ_MUTE_TOGGLE, NULL, NULL);
+		if (strstr(command, "nextitem")) sq_notify(Device->SqueezeHandle, Device, SQ_NEXT, NULL, NULL);
+		if (strstr(command, "previtem")) sq_notify(Device->SqueezeHandle, Device, SQ_PREVIOUS, NULL, NULL);
+		if (strstr(command, "volumeup")) sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, "up");
+		if (strstr(command, "volumedown")) sq_notify(Device->SqueezeHandle, Device, SQ_PREVIOUS, NULL, "down");
+
+		// send pre-made response
+		gmt = *gmtime(&now);
+		sprintf(buf, response, day[gmt.tm_wday], gmt.tm_mday, month[gmt.tm_mon],
+								gmt.tm_year + 1900, gmt.tm_hour, gmt.tm_min, gmt.tm_sec);
+		n = send(sd, buf, strlen(buf), 0);
+
+		close(sd);
+	}
+
+	return NULL;
+}
+
+/*----------------------------------------------------------------------------*/
+void StartActiveRemote(u32_t host)
+{
+	struct mdns_service *svc;
+	struct sockaddr_in my_addr;
+	socklen_t nlen = sizeof(struct sockaddr);
+	int port;
+	char buf[128];
+	const char *txt[] = {
+		"txtvers=1",
+		"Ver=1",
+		"DbId=63B5E5C0C201542E",
+		"OSsi=0x1F5",
+		NULL
+	};
+
+	if ((glActiveRemoteSock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+		LOG_ERROR("Cannot create ActiveRemote socket", NULL);
+		return;
+	}
+
+	memset(&my_addr, 0, sizeof(my_addr));
+	my_addr.sin_addr.s_addr = host;
+	my_addr.sin_family = AF_INET;
+	my_addr.sin_port = 0;
+
+	if (bind(glActiveRemoteSock, (struct sockaddr *) &my_addr, sizeof(my_addr)) < 0) {
+		LOG_ERROR("Cannot bind ActiveRemote: %s", strerror(errno));
+		return;
+	}
+
+	getsockname(glActiveRemoteSock, (struct sockaddr *) &my_addr, &nlen);
+	port = ntohs(my_addr.sin_port);
+
+	// start mDNS responder
+	if ((gl_mDNSResponder = mdnsd_start(host)) == NULL) {
+		LOG_ERROR("mdnsd responder start error", NULL);
+	}
+
+	mdnsd_set_hostname(gl_mDNSResponder, "airplay_bridge.local", host);
+	sprintf(buf, "iTunes_Ctrl_%s", glDACPid);
+	svc = mdnsd_register_svc(gl_mDNSResponder, buf, "_dacp._tcp.local", port, NULL, txt);
+	mdns_service_destroy(svc);
+
+	// start ActiveRemote answering thread
+	pthread_create(&glActiveRemoteThread, NULL, ActiveRemoteThread, NULL);
+}
+
+
+
+/*----------------------------------------------------------------------------*/
+void StopActiveRemote(void)
+{
+	if (glActiveRemoteSock != -1) {
+#if WIN
+		shutdown(glActiveRemoteSock, SD_BOTH);
+#else
+		shutdown(glActiveRemoteSock, SHUT_RDWR);
+#endif
+		close(glActiveRemoteSock);
+	}
+	pthread_join(glActiveRemoteThread, NULL);
+	mdnsd_stop(gl_mDNSResponder);
+}
+
+
 /*----------------------------------------------------------------------------*/
 static bool Start(void)
 {
@@ -735,14 +893,18 @@ static bool Start(void)
 
 	memset(&glMRDevices, 0, sizeof(glMRDevices));
 
+	if (strstr(glInterface, "?")) get_local_hostname(glInterface, 16);
+
 	// init mDNS
-	if (strstr(glInterface, "?")) gl_mDNSId = init_mDNS(false, NULL);
-	else gl_mDNSId = init_mDNS(false, glInterface);
+	gl_mDNSId = init_mDNS(false, inet_addr(glInterface));
+
+	// Start the ActiveRemote server
+	StartActiveRemote(inet_addr(glInterface));
 
 	/* start the main thread */
 	pthread_attr_init(&attr);
 	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + 64*1024);
-	pthread_create(&glMainThread, NULL, &MainThread, NULL);
+	pthread_create(&glMainThread, &attr, &MainThread, NULL);
 	pthread_attr_destroy(&attr);
 
 	return true;
@@ -758,7 +920,12 @@ static bool Stop(void)
 	FlushRaopDevices();
 
 	// this forces an ongoing search to end
+	LOG_DEBUG("terminate mDNS queries", NULL);
 	close_mDNS(gl_mDNSId);
+
+	// Stop ActiveRemote server
+	LOG_DEBUG("terminate mDNS responder", NULL);
+	StopActiveRemote();
 
 	LOG_DEBUG("terminate main thread ...", NULL);
 	pthread_join(glMainThread, NULL);

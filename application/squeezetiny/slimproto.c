@@ -649,6 +649,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			if (ctx->output.state == OUTPUT_RUNNING && !ctx->sentSTMu && ctx->status.output_full == 0 && ctx->status.stream_state <= DISCONNECT) {
 				_sendSTMu = true;
 				ctx->sentSTMu = true;
+				ctx_callback(ctx, SQ_FINISHED, NULL, NULL);
 			}
 			if (ctx->output.state == OUTPUT_RUNNING && !ctx->sentSTMo && ctx->status.output_full == 0 && ctx->status.stream_state == STREAMING_HTTP) {
 				_sendSTMo = true;

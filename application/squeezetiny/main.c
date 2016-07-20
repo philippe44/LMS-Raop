@@ -412,6 +412,7 @@ void sq_free_metadata(sq_metadata_t *metadata)
 void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *cookie, void *param)
 {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
+	char cmd[128] = "", *rsp;
 
 	LOG_SDEBUG("[%p] notif %d", ctx, event);
 
@@ -419,43 +420,55 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 	if (!ctx->running || !ctx->on || !handle) return;
 
 	switch (event) {
+		case SQ_PLAY_PAUSE: {
+			LOG_INFO("[%p] remote play/pause", ctx);
+			sprintf(cmd, "%s pause", ctx->cli_id);
+			break;
+		}
 		case SQ_PLAY: {
-			char cmd[128], *rsp;
-
-			LOG_INFO("[%p] Unsollicited play", ctx);
+			LOG_INFO("[%p] remote/auto play", ctx);
 			sprintf(cmd, "%s play", ctx->cli_id);
-			rsp = cli_send_cmd(cmd, false, true, ctx);
-			NFREE(rsp);
 			break;
 		}
 		case SQ_PAUSE: {
-			char cmd[128], *rsp;
-
-			LOG_WARN("[%p] Unsollicited pause", ctx);
-			sprintf(cmd, "%s pause", ctx->cli_id);
-			rsp = cli_send_cmd(cmd, false, true, ctx);
-			NFREE(rsp);
+			LOG_INFO("[%p] remote pause", ctx);
+			sprintf(cmd, "%s pause 1", ctx->cli_id);
 			break;
 		}
 		case SQ_STOP: {
-			char cmd[128], *rsp;
-
-			LOG_INFO("[%p] uPNP forced STOP", ctx);
+			LOG_INFO("[%p] remote STOP", ctx);
 			sprintf(cmd, "%s stop", ctx->cli_id);
-			rsp = cli_send_cmd(cmd, false, true, ctx);
-			NFREE(rsp);
 			break;
 		}
 		case SQ_VOLUME: {
-			char cmd[128], *rsp;
-
-			sprintf(cmd, "%s mixer volume %d", ctx->cli_id, *((u16_t*) param));
-			rsp = cli_send_cmd(cmd, false, true, ctx);
-			NFREE(rsp);
+			LOG_INFO("[%p] remote volume %d", ctx);
+			if (strstr(param, "up")) sprintf(cmd, "%s mixer volume +5", ctx->cli_id);
+			else sprintf(cmd, "%s mixer volume -5", ctx->cli_id);
 			break;
 		}
+		case SQ_MUTE_TOGGLE: {
+			LOG_INFO("[%p] remote volume toggle", ctx);
+			sprintf(cmd, "%s mixer muting toggle", ctx->cli_id);
+			break;
+		}
+		case SQ_PREVIOUS: {
+			LOG_INFO("[%p] remote previous", ctx);
+			sprintf(cmd, "%s playlist index -1", ctx->cli_id);
+			break;
+		}
+		case SQ_NEXT: {
+			LOG_INFO("[%p] remote next", ctx);
+			sprintf(cmd, "%s playlist index +1", ctx->cli_id);
+			break;
+		}
+
 		default: break;
 	 }
+
+	if (*cmd) {
+		rsp = cli_send_cmd(cmd, false, true, ctx);
+		NFREE(rsp);
+   }
 }
 
 
