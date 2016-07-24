@@ -206,32 +206,6 @@ static char *cli_decode(char *str) {
 }
 
 
-/*---------------------------------------------------------------------------*/
-u32_t sq_position_ms(int handle, u32_t *ref) {
-	u32_t ms_played;
-	u32_t now = (ref) ? *ref : gettime_ms();
-	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
-
-	if (!handle) return 0;
-
-	if (ctx->status.frames_played) {
-		u32_t index = (now / TIMEGAPS) % ctx->output.nb_timerefs;
-		u32_t frames_played = ctx->output.timerefs[index];
-		u32_t next_frames_played = (index < ctx->output.nb_timerefs - 1) ?
-									ctx->output.timerefs[index + 1] : ctx->output.timerefs[0];
-
-		frames_played += ((next_frames_played - frames_played) * (now - (now / TIMEGAPS) * TIMEGAPS)) / TIMEGAPS;
-		ms_played = (u32_t)(((u64_t) frames_played * (u64_t)1000) / (u64_t)ctx->status.current_sample_rate);
-		LOG_DEBUG("[%p]: ms_played: %u (now: %u)", ctx, ms_played, now);
-	} else {
-		LOG_DEBUG("[%p]: ms_played: 0", ctx);
-		ms_played = 0;
-	}
-
-	return ms_played;
-}
-
-
 /*--------------------------------------------------------------------------*/
 static void sq_init_metadata(sq_metadata_t *metadata)
 {
@@ -380,13 +354,6 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 	}
 	NFREE(rsp);
 
-	if (!next && metadata->duration) {
-		sprintf(cmd, "%s time", ctx->cli_id);
-		rsp = cli_send_cmd(cmd, true, true, ctx);
-		if (rsp && *rsp) metadata->duration -= (u32_t) (atof(rsp) * 1000);
-		NFREE(rsp);
-	}
-
 	sq_default_metadata(metadata, false);
 
 	LOG_INFO("[%p]: idx %d\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\tduration:%d.%03d\n\tsize:%d\n\tcover:%s", ctx, idx,
@@ -409,6 +376,34 @@ void sq_free_metadata(sq_metadata_t *metadata)
 	NFREE(metadata->artwork);
 }
 
+
+/*--------------------------------------------------------------------------*/
+u32_t sq_get_time(sq_dev_handle_t handle)
+{
+	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
+	char cmd[128];
+	char *rsp;
+	u32_t time = 0;
+
+	if (!handle || !ctx->cli_sock) {
+		LOG_ERROR("[%p]: no handle or CLI socket %d", ctx, handle);
+		return 0;
+	}
+
+	sprintf(cmd, "%s time", ctx->cli_id);
+	rsp = cli_send_cmd(cmd, true, true, ctx);
+	if (rsp && *rsp) {
+		time = (u32_t) (atof(rsp) * 1000);
+	}
+	else {
+		LOG_ERROR("[%p] cannot gettime", ctx);
+	}
+
+	NFREE(rsp);
+	return time;
+}
+
+/*--------------------------------------------------------------------------*/
 void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *cookie, void *param)
 {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
@@ -421,44 +416,44 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 
 	switch (event) {
 		case SQ_PLAY_PAUSE: {
-			LOG_INFO("[%p] remote play/pause", ctx);
 			sprintf(cmd, "%s pause", ctx->cli_id);
 			break;
 		}
 		case SQ_PLAY: {
-			LOG_INFO("[%p] remote/auto play", ctx);
 			sprintf(cmd, "%s play", ctx->cli_id);
 			break;
 		}
 		case SQ_PAUSE: {
-			LOG_INFO("[%p] remote pause", ctx);
 			sprintf(cmd, "%s pause 1", ctx->cli_id);
 			break;
 		}
 		case SQ_STOP: {
-			LOG_INFO("[%p] remote STOP", ctx);
 			sprintf(cmd, "%s stop", ctx->cli_id);
 			break;
 		}
 		case SQ_VOLUME: {
-			LOG_INFO("[%p] remote volume %d", ctx);
 			if (strstr(param, "up")) sprintf(cmd, "%s mixer volume +5", ctx->cli_id);
 			else sprintf(cmd, "%s mixer volume -5", ctx->cli_id);
 			break;
 		}
 		case SQ_MUTE_TOGGLE: {
-			LOG_INFO("[%p] remote volume toggle", ctx);
 			sprintf(cmd, "%s mixer muting toggle", ctx->cli_id);
 			break;
 		}
 		case SQ_PREVIOUS: {
-			LOG_INFO("[%p] remote previous", ctx);
 			sprintf(cmd, "%s playlist index -1", ctx->cli_id);
 			break;
 		}
 		case SQ_NEXT: {
-			LOG_INFO("[%p] remote next", ctx);
 			sprintf(cmd, "%s playlist index +1", ctx->cli_id);
+			break;
+		}
+		case SQ_SHUFFLE: {
+			sprintf(cmd, "%s playlist shuffle 1", ctx->cli_id);
+			break;
+		}
+		case SQ_FF_REW: {
+			sprintf(cmd, "%s time %+d", ctx->cli_id, *((s16_t*) param));
 			break;
 		}
 

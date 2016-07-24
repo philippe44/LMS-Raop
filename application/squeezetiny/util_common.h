@@ -22,7 +22,7 @@
 #ifndef __UTIL_COMMON_H
 #define __UTIL_COMMON_H
 
-#include "squeezedefs.h"
+#include "platform.h"
 
 #define NFREE(p) if (p) { free(p); p = NULL; }
 typedef enum { lERROR = 0, lWARN, lINFO, lDEBUG, lSDEBUG } log_level;

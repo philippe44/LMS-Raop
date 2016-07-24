@@ -124,6 +124,8 @@ bool pcm_to_alac_fast(__u32 *in, int in_size, __u8 **out, int *size, int bsize)
 	__u8 *p ;
 	int count;
 
+	in_size = min(in_size, bsize);
+
 	*out = malloc(bsize * 4 + 16);
 	p = *out;
 
@@ -137,6 +139,7 @@ bool pcm_to_alac_fast(__u32 *in, int in_size, __u8 **out, int *size, int bsize)
 	*p++ |= (*in &  0x00008000) >> 15;			// LB1 b7
 
 	count = in_size - 1;
+
 	while (count--) {
 		// LB1 b6--b0 + LB0 b7
 		*p++ = ((*in & 0x00007f80) >> 7);

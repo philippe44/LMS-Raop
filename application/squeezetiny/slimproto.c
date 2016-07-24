@@ -116,7 +116,19 @@ static void sendHELO(bool reconnect, const char *fixed_cap, const char *var_cap,
 static void sendSTAT(const char *event, u32_t server_timestamp, struct thread_ctx_s *ctx) {
 	struct STAT_packet pkt;
 	u32_t now = gettime_ms();
-	u32_t ms_played = sq_position_ms(ctx->self, &now);
+	u32_t ms_played;
+
+	if (ctx->status.frames_played > ctx->status.device_frames) {
+		ms_played = (u32_t)(((u64_t)(ctx->status.frames_played - ctx->status.device_frames) * (u64_t)1000) / (u64_t)ctx->status.current_sample_rate);
+		if (now > ctx->status.updated) ms_played += (now - ctx->status.updated);
+		LOG_SDEBUG("ms_played: %u (frames_played: %u device_frames: %u)", ms_played, ctx->status.frames_played, ctx->status.device_frames);
+	} else if (ctx->status.frames_played && now > ctx->status.stream_start) {
+		ms_played = now - ctx->status.stream_start;
+		LOG_SDEBUG("ms_played: %u using elapsed time (frames_played: %u device_frames: %u)", ms_played, ctx->status.frames_played, ctx->status.device_frames);
+	} else {
+		LOG_SDEBUG("ms_played: 0", NULL);
+		ms_played = 0;
+	}
 
 	memset(&pkt, 0, sizeof(struct STAT_packet));
 	memcpy(&pkt.opcode, "STAT", 4);
@@ -227,7 +239,6 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 		decode_flush(ctx);
 		output_flush(ctx);
 		ctx->status.frames_played = 0;
-		memset(ctx->output.timerefs, 0, sizeof(ctx->output.timerefs) * ctx->output.nb_timerefs);
 		stream_disconnect(ctx);
 		sendSTAT("STMf", 0, ctx);
 		buf_flush(ctx->streambuf);
@@ -236,7 +247,6 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 		decode_flush(ctx);
 		output_flush(ctx);
 		ctx->status.frames_played = 0;
-		memset(ctx->output.timerefs, 0, sizeof(ctx->output.timerefs) * ctx->output.nb_timerefs);
 		if (stream_disconnect(ctx)) {
 			sendSTAT("STMf", 0, ctx);
 		}
@@ -274,9 +284,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			ctx->output.state = jiffies ? OUTPUT_START_AT : OUTPUT_RUNNING;
 			ctx->output.start_at = jiffies;
 			UNLOCK_O;
-			//FIXME: is this okay even with jiffies ?
-			//if (!jiffies) ctx_callback(ctx, SQ_UNPAUSE, NULL, NULL);
-			ctx_callback(ctx, SQ_UNPAUSE, NULL, NULL);
+			if (ctx->last_command) != 's') ctx_callback(ctx, SQ_UNPAUSE, NULL, NULL);
 			LOG_INFO("unpause at: %u now: %u", jiffies, gettime_ms());
 			sendSTAT("STMr", 0, ctx);
 		}
@@ -638,6 +646,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			ctx->status.frames_played = ctx->output.frames_played_dmp;
 			ctx->status.current_sample_rate = ctx->output.current_sample_rate;
 			ctx->status.updated = ctx->output.updated;
+			ctx->status.device_frames = ctx->output.device_frames;
 
 			if (ctx->output.track_started) {
 				_sendSTMs = true;

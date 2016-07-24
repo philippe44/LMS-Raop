@@ -75,6 +75,7 @@ tMRConfig			glMRConfig = {
 							false,
 							60,
 							false,
+							3000,
 					};
 
 static u8_t LMSVolumeMap[101] = {
@@ -103,7 +104,6 @@ sq_dev_param_t glDeviceParam = {
 #endif
 					{ 0x00,0x00,0x00,0x00,0x00,0x00 },
 					false,
-					3000,
 #if defined(RESAMPLE)
 					true,
 					"",
@@ -253,7 +253,6 @@ void 		DelRaopDevice(struct sMR *Device);
 			tRaopReq *Req = malloc(sizeof(tRaopReq));
 
 			strcpy(Req->Type, "FLUSH");
-			Req->Data.FlushMode = (action != SQ_PAUSE) ? RAOP_REBUFFER : RAOP_RECLOCK;
 			QueueInsert(&device->Queue, Req);
 			pthread_cond_signal(&device->Cond);
 			break;
@@ -343,7 +342,7 @@ static void *PlayerThread(void *args)
 			}
 
 			if (Device->Config.SendMetaData && Device->TrackDuration != -1) {
-				raopcl_progress(Device->Raop, Device->TrackStartTime, sq_position_ms(Device->SqueezeHandle, NULL), Device->TrackDuration);
+				raopcl_progress(Device->Raop, sq_get_time(Device->SqueezeHandle), Device->TrackDuration);
 			}
 
 			pthread_mutex_lock(&Device->Mutex);
@@ -388,10 +387,10 @@ static void *PlayerThread(void *args)
 		}
 
 		if (!strcasecmp(req->Type, "FLUSH")) {
-			LOG_INFO("[%p]: flushing ... (%d)", Device, req->Data.FlushMode);
+			LOG_INFO("[%p]: flushing ... (%d)", Device);
 			Device->LastFlush = gettime_ms();
 			Device->TearDownWait = true;
-			raopcl_flush_stream(Device->Raop, req->Data.FlushMode);
+			raopcl_flush_stream(Device->Raop, false);
 		}
 
 		if (!strcasecmp(req->Type, "OFF")) {
@@ -400,7 +399,7 @@ static void *PlayerThread(void *args)
 		}
 
 		if (!strcasecmp(req->Type, "VOLUME")) {
-			LOG_INFO("[%p]: processing volume", Device);
+			LOG_INFO("[%p]: processing volume: %d", Device, req->Data.Volume);
 			raopcl_update_volume(Device->Raop, req->Data.Volume, false);
 		}
 
@@ -517,7 +516,6 @@ static void *UpdateMRThread(void *args)
 		Device = &glMRDevices[i];
 		if (!Device->InUse) continue;
 		if (Device->TimeOut && Device->MissingCount) Device->MissingCount--;
-		// LOG_INFO("[%p]: missing %d %s", Device, Device->MissingCount, Device->FriendlyName);
 		if (Device->MissingCount) continue;
 
 		LOG_INFO("[%p]: removing renderer (%s)", Device, Device->FriendlyName);
@@ -668,7 +666,9 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	else
 		Crypto = RAOP_CLEAR;
 
-	Device->Raop = raopcl_create(glInterface, glDACPid, Device->ActiveRemote, RAOP_ALAC, Crypto,
+	Device->Raop = raopcl_create(glInterface, glDACPid, Device->ActiveRemote,
+								 RAOP_ALAC, FRAMES_PER_BLOCK, Device->Config.ReadAhead,
+								 Crypto,
 								 Device->SampleRate ? atoi(Device->SampleRate) : 44100,
 								 Device->SampleSize ? atoi(Device->SampleSize) : 16,
 								 Device->Channels ? atoi(Device->Channels) : 2,
@@ -792,8 +792,10 @@ static void *ActiveRemoteThread(void *args)
 			continue;
 		}
 
+		LOG_INFO("[%p]: remote command %s", Device, command);
+
 		if (strstr(command, "pause")) sq_notify(Device->SqueezeHandle, Device, SQ_PAUSE, NULL, NULL);
-		if (strstr(command, "play") || strstr(command, "playresume")) sq_notify(Device->SqueezeHandle, Device, SQ_PLAY, NULL, NULL);
+		if (strstr(command, "play")) sq_notify(Device->SqueezeHandle, Device, SQ_PLAY, NULL, NULL);
 		if (strstr(command, "playpause")) sq_notify(Device->SqueezeHandle, Device, SQ_PLAY_PAUSE, NULL, NULL);
 		if (strstr(command, "stop")) sq_notify(Device->SqueezeHandle, Device, SQ_STOP, NULL, NULL);
 		if (strstr(command, "mutetoggle")) sq_notify(Device->SqueezeHandle, Device, SQ_MUTE_TOGGLE, NULL, NULL);
@@ -801,6 +803,16 @@ static void *ActiveRemoteThread(void *args)
 		if (strstr(command, "previtem")) sq_notify(Device->SqueezeHandle, Device, SQ_PREVIOUS, NULL, NULL);
 		if (strstr(command, "volumeup")) sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, "up");
 		if (strstr(command, "volumedown")) sq_notify(Device->SqueezeHandle, Device, SQ_PREVIOUS, NULL, "down");
+		if (strstr(command, "shuffle_songs")) sq_notify(Device->SqueezeHandle, Device, SQ_SHUFFLE, NULL, NULL);
+		if (strstr(command, "beginff") || strstr(command, "beginrew")) {
+			Device->SkipStart = gettime_ms();
+			Device->SkipDir = strstr(command, "beginff") ? true : false;
+		}
+		if (strstr(command, "playresume")) {
+			s32_t gap = gettime_ms() - Device->SkipStart;
+			gap = (gap + 3) * (gap + 3) * (Device->SkipDir ? 1 : -1);
+			sq_notify(Device->SqueezeHandle, Device, SQ_FF_REW, NULL, &gap);
+		}
 
 		// send pre-made response
 		gmt = *gmtime(&now);

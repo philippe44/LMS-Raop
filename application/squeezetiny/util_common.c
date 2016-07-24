@@ -25,11 +25,11 @@
 #include <string.h>
 #include <ctype.h>
 
-#if defined(WIN32) || defined(WIN)
+#include "platform.h"
+
+#if defined(WIN32) || WIN
 #include <winsock2.h>
 #endif
-
-#include "squeezedefs.h"
 
 #if LINUX || OSX || FREEBSD
 #include <sys/ioctl.h>

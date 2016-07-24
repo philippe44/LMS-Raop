@@ -106,7 +106,7 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, common, "idle_timeout", "%d", (int) glMRConfig.IdleTimeout);
 
 	XMLUpdateNode(doc, common, "encryption", "%d", (int) glMRConfig.Encryption);
-	XMLUpdateNode(doc, common, "read_ahead", "%d", (int) glDeviceParam.read_ahead);
+	XMLUpdateNode(doc, common, "read_ahead", "%d", (int) glMRConfig.ReadAhead);
 	XMLUpdateNode(doc, common, "server", glDeviceParam.server);
 
 	for (i = 0; i < MAX_RENDERERS; i++) {
@@ -174,24 +174,9 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "streambuf_size")) sq_conf->stream_buf_size = atol(val);
 	if (!strcmp(name, "output_size")) sq_conf->output_buf_size = atol(val);
 	if (!strcmp(name, "player_volume")) sq_conf->player_volume = atol(val);
-	if (!strcmp(name, "read_ahead")) sq_conf->read_ahead = atol(val);
-	if (!strcmp(name, "enabled")) Conf->Enabled = atol(val);
 	if (!strcmp(name, "codecs")) strcpy(sq_conf->codecs, val);
 	if (!strcmp(name, "sample_rate")) sq_conf->sample_rate = atol(val);
-#if defined(RESAMPLE)
-	if (!strcmp(name, "resample")) sq_conf->resample = atol(val);
-	if (!strcmp(name, "resample_options")) strcpy(sq_conf->resample_options, val);
-#endif
-	if (!strcmp(name, "remove_count"))Conf->RemoveCount = atol(val);
-	if (!strcmp(name, "player_volume")) sq_conf->player_volume = atol(val);
-	if (!strcmp(name, "auto_play")) Conf->AutoPlay = atol(val);
-	if (!strcmp(name, "idle_timeout")) Conf->IdleTimeout = atol(val);
-	if (!strcmp(name, "encryption")) Conf->Encryption = atol(val);
-	if (!strcmp(name, "read_ahead")) sq_conf->read_ahead = atol(val);
-	if (!strcmp(name, "send_metadata")) Conf->SendMetaData = atol(val);
-	if (!strcmp(name, "send_coverart")) Conf->SendCoverArt = atol(val);
 	if (!strcmp(name, "name")) strcpy(sq_conf->name, val);
-	if (!strcmp(name, "friendly_name")) strcpy(Conf->Name, val);
 	if (!strcmp(name, "server")) strcpy(sq_conf->server, val);
 	if (!strcmp(name, "mac"))  {
 		unsigned mac[6];
@@ -200,6 +185,19 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 		sscanf(val,"%2x:%2x:%2x:%2x:%2x:%2x", &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]);
 		for (i = 0; i < 6; i++) sq_conf->mac[i] = mac[i];
 	}
+#if defined(RESAMPLE)
+	if (!strcmp(name, "resample")) sq_conf->resample = atol(val);
+	if (!strcmp(name, "resample_options")) strcpy(sq_conf->resample_options, val);
+#endif
+	if (!strcmp(name, "enabled")) Conf->Enabled = atol(val);
+	if (!strcmp(name, "remove_count"))Conf->RemoveCount = atol(val);
+	if (!strcmp(name, "auto_play")) Conf->AutoPlay = atol(val);
+	if (!strcmp(name, "idle_timeout")) Conf->IdleTimeout = atol(val);
+	if (!strcmp(name, "encryption")) Conf->Encryption = atol(val);
+	if (!strcmp(name, "read_ahead")) Conf->ReadAhead = atol(val);
+	if (!strcmp(name, "send_metadata")) Conf->SendMetaData = atol(val);
+	if (!strcmp(name, "send_coverart")) Conf->SendCoverArt = atol(val);
+	if (!strcmp(name, "friendly_name")) strcpy(Conf->Name, val);
 }
 
 /*----------------------------------------------------------------------------*/

@@ -116,8 +116,8 @@ frames_t _output_frames(frames_t avail, struct thread_ctx_s *ctx) {
 			if (ctx->output.track_start == ctx->outputbuf->readp) {
 				LOG_INFO("[%p]: track start sample rate: %u replay_gain: %u", ctx, ctx->output.current_sample_rate, ctx->output.next_replay_gain);
 				ctx->output.frames_played = 0;
-				ctx->output.start_detect = DETECT_ACQUIRE;
-				//ctx->output.track_started = true;
+				ctx->output.track_started = true;
+				ctx->output.track_start_time = gettime_ms() + (ctx->output.device_frames * 1000L) / ctx->output.current_sample_rate;
 				if (!(ctx->output.fade == FADE_ACTIVE) || !(ctx->output.fade_mode == FADE_CROSSFADE)) {
 					ctx->output.current_replay_gain = ctx->output.next_replay_gain;
 				}
@@ -356,8 +356,6 @@ void output_flush(struct thread_ctx_s *ctx) {
 		ctx->output.delay_active = false;
 	}
 	ctx->output.frames_played = 0;
-	ctx->output.frames_played_dmp = 0;
-	ctx->output.start_detect = DETECT_IDLE;
 	UNLOCK;
 }
 

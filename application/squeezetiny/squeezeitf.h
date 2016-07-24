@@ -30,18 +30,19 @@
 typedef enum { SQ_PLAY, SQ_PAUSE, SQ_UNPAUSE, SQ_STOP, SQ_SEEK,
 			  SQ_VOLUME, SQ_ONOFF, SQ_NEXT, SQ_CONNECT, SQ_STARTED,
 			  SQ_METASEND, SQ_SETNAME, SQ_FINISHED, SQ_PLAY_PAUSE,
-			  SQ_MUTE_TOGGLE, SQ_PREVIOUS } sq_action_t;
+			  SQ_MUTE_TOGGLE, SQ_PREVIOUS, SQ_SHUFFLE,
+			  SQ_FF_REW } sq_action_t;
 typedef enum {SQ_STREAM = 2, SQ_FULL = 3} sq_mode_t;
 typedef	sq_action_t sq_event_t;
 
-//#define MAX_SUPPORTED_SAMPLERATES 16
-#define MAX_SUPPORTED_SAMPLERATES 2
-#define TEST_RATES = { 384000, 352000, 192000, 176400, 96000, 88200, 48000, 44100, 32000, 24000, 22500, 16000, 12000, 11025, 8000, 0 }
 
-#define STREAMBUF_SIZE (2 * 1024 * 1024)
-#define OUTPUTBUF_SIZE (44100 * 4 * 10)
+#define FRAMES_PER_BLOCK			352
+#define MAX_SUPPORTED_SAMPLERATES 	2
 
-typedef enum { SQ_RATE_384000 = 384000, SQ_RATE_352000 = 352000,
+#define STREAMBUF_SIZE 				(2 * 1024 * 1024)
+#define OUTPUTBUF_SIZE 				(44100 * 4 * 10)
+
+typedef enum { SQ_RATE_384000 = 384000, SQ_RATE_352000 = 352000,
 			   SQ_RATE_192000 = 192000, SQ_RATE_176400 = 176400,
 			   SQ_RATE_96000 = 96000, SQ_RATE_48000 = 48000, SQ_RATE_44100 = 44100,
 			   SQ_RATE_32000 = 32000, SQ_RATE_24000 = 24000, SQ_RATE_22500 = 22500,
@@ -76,7 +77,6 @@ typedef	struct sq_dev_param_s {
 	u32_t		sample_rate;
 	u8_t		mac[6];
 	signed char	player_volume;
-	u16_t		read_ahead;
 #if defined(RESAMPLE)
 	bool		resample;
 	char		resample_options[SQ_STR_LENGTH];
@@ -113,7 +113,7 @@ void				sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_
 bool				sq_get_metadata(sq_dev_handle_t handle, struct sq_metadata_s *metadata, bool next);
 void				sq_default_metadata(struct sq_metadata_s *metadata, bool init);
 void 				sq_free_metadata(struct sq_metadata_s *metadata);
-u32_t 				sq_position_ms(int handle, u32_t *ref);
+u32_t 				sq_get_time(sq_dev_handle_t handle);
 
 #endif
 

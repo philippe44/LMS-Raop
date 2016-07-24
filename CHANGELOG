@@ -1,10 +1,12 @@
 0.1.3.0
- - Add coverart
- - Position was still counting when track was paused
+ - Added coverart
+ - Time was still counting when track was paused
+ - Time was wrong when repositioning (simplifed calculation, ahead by <read_ahad>)
  - DAAP parameters where missing mlit & mikd fields
  - Normal end of tracks was not flushing the connection
- - Improved interface address detection
-  
+ - Improved network interface address detection
+ - Added remote control
+   
 0.1.2.2
  - Metadata was always sent even if disabled (only elapsed time was filtered)
  - NTP port log was wrong

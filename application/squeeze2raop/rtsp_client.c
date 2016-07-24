@@ -83,7 +83,9 @@ bool rtspcl_is_connected(struct rtspcl_s *p)
 	if (p->fd == -1) return true;
 
 	n = poll(&pfds, 1, 0);
-	if (n == - 1 || (pfds.revents & POLLERR) || (pfds.revents & POLLHUP)) return false;
+	if (n == - 1 || (pfds.revents & POLLERR) || (pfds.revents & POLLHUP)) {
+	return false;
+	}
 
 	return true;
 }

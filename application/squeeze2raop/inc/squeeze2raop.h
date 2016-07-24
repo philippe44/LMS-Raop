@@ -48,7 +48,7 @@ typedef struct sRaopReq {
 	union {
 		u8_t Volume;
 		raop_codec_t Codec;
-		raop_flush_t FlushMode;
+		u64_t FlushTS;
 	} Data;
 } tRaopReq;
 
@@ -62,6 +62,7 @@ typedef struct sMRConfig
 	bool		AutoPlay;
 	int			IdleTimeout;
 	bool		Encryption;
+	int 		ReadAhead;
 } tMRConfig;
 
 
@@ -99,6 +100,8 @@ struct sMR {
 	char *Codecs;
 	char *Crypto;
 	char ActiveRemote[11];
+	u32_t SkipStart;
+	bool SkipDir;
 };
 
 

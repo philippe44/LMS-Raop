@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
 	struct in_addr host_addr;
 	FILE *infile;
 	u8_t *buf;
-	int n;
+	int n = -1;
 	raop_crypto_t crypto;
 
 	for(i=1;i<argc;i++){
@@ -123,8 +123,8 @@ int main(int argc, char *argv[])
 	winsock_init();
 #endif
 
-	//freopen("log.txt", "w", stderr);
-	if ((raopcl = raopcl_create("?", RAOP_ALAC, RAOP_CLEAR, 44100, 16, 2, 50)) == NULL) {
+	if ((raopcl = raopcl_create("?", NULL, NULL, RAOP_ALAC, 352, 1500,
+								RAOP_CLEAR, 44100, 16, 2, 50)) == NULL) {
 		LOG_ERROR("Cannot init RAOP", 0);
 		exit(1);
 	}
@@ -141,31 +141,17 @@ int main(int argc, char *argv[])
 	infile = fopen("test.pcm", "rb");
 	buf = malloc(2000);
 	LOG_INFO( "%s to %s\n", RAOP_CONNECTED, host );
-	raopcl_update_volume(raopcl, 90, true);
 
 	do {
-		u8_t *buffer, *buf2;
+		u8_t *buffer;
 		u32_t timestamp;
-		int i;
 
-		n = fread(buf, 352*4, 1, infile);
-		if (!n) {
-			fseek(infile, 0, SEEK_SET);
+		if (raopcl_avail_frames(raopcl) >= 352) {
 			n = fread(buf, 352*4, 1, infile);
+			pcm_to_alac_fast(buf, 352, &buffer, &size, 352);
+			raopcl_send_chunk(raopcl, buffer, size, &timestamp);
+			free(buffer);
 		}
-		//pcm_to_alac(buf, 352, &buf2, &size, 352, 2, false);
-		pcm_to_alac_fast(buf, 352, &buffer, &size, 352);
-		/*
-		for (i = 0; i < size; i++) {
-			if (buf2[i] != buffer[i]) {
-				printf("error");
-			}
-		}
-		*/
-		// buffer = buf;
-		timestamp = raopcl_send_sample(raopcl, buffer, size, 352, false, 500);
-		free(buffer);
-		//free(buf2);
 	} while (n);
 
  erexit:

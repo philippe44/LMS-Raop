@@ -24,8 +24,7 @@
 
 #include "platform.h"
 
-#define BUFFER 512 //max frames airport can receive
-#define MAX_SAMPLES_IN_CHUNK 352
+#define MAX_SAMPLES_PER_CHUNK 352
 
 typedef struct raopcl_t {__u32 dummy;} raopcl_t;
 
@@ -34,13 +33,13 @@ struct raopcl_s;
 typedef enum raop_codec_s { RAOP_NOCODEC = -1, RAOP_PCM = 0, RAOP_ALAC, RAOP_AAC,
 							RAOP_AAL_ELC } raop_codec_t;
 
-typedef enum raop_cypto_s { RAOP_CLEAR = 0, RAOP_RSA, RAOP_FAIRPLAY, RAOP_MFISAP,
+typedef enum raop_crypto_s { RAOP_CLEAR = 0, RAOP_RSA, RAOP_FAIRPLAY, RAOP_MFISAP,
 							RAOP_FAIRPLAYSAP } raop_crypto_t;
 
 typedef enum raop_states_s { RAOP_DOWN_FULL = 0, RAOP_PEER_DISCONNECT, RAOP_DOWN,
 							 RAOP_FLUSHING, RAOP_FLUSHED, RAOP_STREAMING } raop_state_t;
 
-typedef enum raop_flush_s { RAOP_FLUSH, RAOP_RECLOCK, RAOP_REBUFFER } raop_flush_t;
+typedef enum raop_flush_state_s { RAOP_FAST_FLUSH_REQ, RAOP_FAST_FLUSH_ACK } raop_flush_state_t;
 
 
 typedef struct {
@@ -82,22 +81,28 @@ typedef struct {
 } __attribute__ ((packed)) rtp_audio_pkt_t;
 #endif
 
-struct raopcl_s *raopcl_create(char *local, char *DACP_id, char *active_remote, raop_codec_t codec, raop_crypto_t crypto, int sample_rate, int sample_size, int channels, int volume);
+struct raopcl_s *raopcl_create(char *local, char *DACP_id, char *active_remote,
+							   raop_codec_t codec, int frame_len, int queue_len,
+							   raop_crypto_t crypto,
+							   int sample_rate, int sample_size, int channels, int volume);
 bool	raopcl_destroy(struct raopcl_s *p);
 bool	raopcl_connect(struct raopcl_s *p, struct in_addr host, __u16 destport, raop_codec_t codec);
 bool 	raopcl_reconnect(struct raopcl_s *p);
-bool    raopcl_flush_stream(struct raopcl_s *p, raop_flush_t mode);
+bool    raopcl_flush_stream(struct raopcl_s *p, bool use_mark);
+__u64 	raopcl_mark_flush(struct raopcl_s *p);
 bool 	raopcl_start_stream(struct raopcl_s *p);
 bool 	raopcl_disconnect(struct raopcl_s *p);
 bool 	raopcl_teardown(struct raopcl_s *p);
 bool 	raopcl_close(struct raopcl_s *p);
 bool 	raopcl_update_volume(struct raopcl_s *p, int vol, bool force);
-__u32	raopcl_send_sample(struct raopcl_s *p, __u8 *sample, int size, int frames, bool skip, int read_ahead);
+__u32 	raopcl_avail_frames(struct raopcl_s *p);
+__u32 	raopcl_queue_len(struct raopcl_s *p);
+bool	raopcl_send_chunk(struct raopcl_s *p, __u8 *sample, int size, __u32 *playtime);
 bool 	raopcl_set_content(raopcl_t *p, char* itemname, char* songartist, char* songalbum);
 __u32 	raopcl_get_latency(struct raopcl_s *p);
 bool 	raopcl_is_sane(struct raopcl_s *p);
 __u32 	raopcl_get_timestamp(struct raopcl_s *p);
-bool 	raopcl_progress(struct raopcl_s *p, __u32 start, __u32 now, __u32 end);
+bool 	raopcl_progress(struct raopcl_s *p, __u32 elapsed, __u32 end);
 bool 	raopcl_set_daap(struct raopcl_s *p, int count, ...);
 bool raopcl_set_artwork(struct raopcl_s *p, char *content_type, int size, char *image);
 

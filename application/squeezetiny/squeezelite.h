@@ -197,9 +197,7 @@ struct wake {
 #error can not support u64_t
 #endif
 
-//#define MAX_SILENCE_FRAMES 2048
-#define MAX_SILENCE_FRAMES 352
-#define TIMEGAPS	8
+#define MAX_SILENCE_FRAMES FRAMES_PER_BLOCK 		// 352 for RAOP protocol
 #define FIXED_ONE 0x10000
 
 #define BYTES_PER_FRAME 4
@@ -372,8 +370,6 @@ void resample_end(struct thread_ctx_s *ctx);
 typedef enum { OUTPUT_OFF = -1, OUTPUT_STOPPED = 0, OUTPUT_BUFFER, OUTPUT_RUNNING,
 			   OUTPUT_PAUSE_FRAMES, OUTPUT_SKIP_FRAMES, OUTPUT_START_AT } output_state;
 
-typedef enum { DETECT_IDLE, DETECT_ACQUIRE, DETECT_STARTED } detect_state;
-
 typedef enum { FADE_INACTIVE = 0, FADE_DUE, FADE_ACTIVE } fade_state;
 typedef enum { FADE_UP = 1, FADE_DOWN, FADE_CROSS } fade_dir;
 typedef enum { FADE_NONE = 0, FADE_CROSSFADE, FADE_IN, FADE_OUT, FADE_INOUT } fade_mode;
@@ -387,7 +383,7 @@ struct outputstate {
 	unsigned start_frames;
 	unsigned frames_played;
 	unsigned frames_played_dmp;// frames played at the point delay is measured
-	detect_state start_detect;
+	u32_t device_frames;
 	unsigned current_sample_rate;
 	unsigned default_sample_rate;
 	unsigned supported_rates[2];
@@ -396,7 +392,7 @@ struct outputstate {
 	u32_t track_start_time;
 	u32_t current_replay_gain;
 	// was union
-	struct {
+	union {
 		u32_t pause_frames;
 		u32_t skip_frames;
 		u32_t start_at;
@@ -416,8 +412,6 @@ struct outputstate {
 	int buf_frames;
 	u8_t *buf;
 	u32_t latency;
-	u32_t *timerefs;
-	u16_t  nb_timerefs;
 };
 
 void output_init(const char *device, unsigned output_buf_size, unsigned rates[], struct thread_ctx_s *ctx);
@@ -462,6 +456,7 @@ typedef struct {
 	u32_t current_sample_rate;
 	u32_t last;
 	stream_state stream_state;
+	u32_t device_frames;
 } status_t;
 
 typedef enum {TRACK_STOPPED = 0, TRACK_STARTED, TRACK_PAUSED} track_status_t;
