@@ -121,12 +121,12 @@ static void sendSTAT(const char *event, u32_t server_timestamp, struct thread_ct
 	if (ctx->status.frames_played > ctx->status.device_frames) {
 		ms_played = (u32_t)(((u64_t)(ctx->status.frames_played - ctx->status.device_frames) * (u64_t)1000) / (u64_t)ctx->status.current_sample_rate);
 		if (now > ctx->status.updated) ms_played += (now - ctx->status.updated);
-		LOG_SDEBUG("ms_played: %u (frames_played: %u device_frames: %u)", ms_played, ctx->status.frames_played, ctx->status.device_frames);
+		LOG_SDEBUG("[%p]: ms_played: %u (frames_played: %u device_frames: %u)", ctx, ms_played, ctx->status.frames_played, ctx->status.device_frames);
 	} else if (ctx->status.frames_played && now > ctx->status.stream_start) {
 		ms_played = now - ctx->status.stream_start;
-		LOG_SDEBUG("ms_played: %u using elapsed time (frames_played: %u device_frames: %u)", ms_played, ctx->status.frames_played, ctx->status.device_frames);
+		LOG_SDEBUG("[%p]: ms_played: %u using elapsed time (frames_played: %u device_frames: %u)", ctx, ms_played, ctx->status.frames_played, ctx->status.device_frames);
 	} else {
-		LOG_SDEBUG("ms_played: 0", NULL);
+		LOG_SDEBUG("[%p]: ms_played: 0", ctx);
 		ms_played = 0;
 	}
 
@@ -284,7 +284,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			ctx->output.state = jiffies ? OUTPUT_START_AT : OUTPUT_RUNNING;
 			ctx->output.start_at = jiffies;
 			UNLOCK_O;
-			if (ctx->last_command) != 's') ctx_callback(ctx, SQ_UNPAUSE, NULL, NULL);
+			if (ctx->last_command != 's') ctx_callback(ctx, SQ_UNPAUSE, NULL, NULL);
 			LOG_INFO("unpause at: %u now: %u", jiffies, gettime_ms());
 			sendSTAT("STMr", 0, ctx);
 		}

@@ -22,6 +22,30 @@
 #ifndef __RAOP_CLIENT_H_
 #define __RAOP_CLIENT_H_
 
+/*--------------- SYNCHRO logic explanation ----------------*/
+/* The logic is that, using two user-provided functions
+ - gettime_ms() return a 32 bits ms timer
+ - get_ntp() returns a NTP time
+ The RAOP client automatically binds the NTP time of the player to the NTP time
+ provided by get_ntp.
+ The timestamps of the frames sent to the players are precisely bound to the
+ gettime_ms() time. With that, the user app can be sure that when it wants to
+ play/do something at its local gettime_ms(), the player will do it at the exact
+ same time. Both references and synchronous
+ Because it's needed to send data in advance (buffering), the user app shall use
+ raopcl_avail_frames and raopcl_queue_len to evaluate the empty/fullness of the
+ buffer, not try to guess it (see why below)
+ There is one caveat to the above wrt time binding: AirPlay devices cannot go
+ backward in timestamps, but when flushed and due to the needed buffering, if
+ the player is bound back to the gettime_ms(), the next played frame would be
+ backward to the latest flushed timestamp. To avoid this, the library uses the
+ trick to add an offset that depends on the gap between gettime_ms() and the
+ latest sent frame timestamp. This gap is calculated after each flushing when
+ streaming restarts. As much as possible, offset will be set to 0 if the current
+ gettime_ms() is above the latest sent/flushed frame
+*/
+
+
 #include "platform.h"
 
 #define MAX_SAMPLES_PER_CHUNK 352

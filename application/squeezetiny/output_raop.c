@@ -78,8 +78,6 @@ void output_close(struct thread_ctx_s *ctx)
 /*---------------------------------------------------------------------------*/
 static void *output_raop_thread(struct thread_ctx_s *ctx) {
 	while (ctx->output_running) {
-		u32_t playtime;
-
 		if (raopcl_avail_frames(ctx->output.device) >= FRAMES_PER_BLOCK) {
 			LOCK;
 			// this will internally loop till we have exactly 352 frames
@@ -92,9 +90,11 @@ static void *output_raop_thread(struct thread_ctx_s *ctx) {
 				continue;
 			}
 
+			// only send silence when this is for skipping
 			if (ctx->output.state >= OUTPUT_RUNNING && ctx->output.state != OUTPUT_START_AT) {
 				u8_t *buffer;
 				int size;
+				u32_t playtime;
 
 				pcm_to_alac_fast((u32_t*) ctx->output.buf, ctx->output.buf_frames, &buffer, &size, FRAMES_PER_BLOCK);
 				raopcl_send_chunk(ctx->output.device, buffer, size, &playtime);

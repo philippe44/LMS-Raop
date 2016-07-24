@@ -101,7 +101,7 @@ typedef struct raopcl_s {
 		bool flush_mark;
 	} sync;
 	bool first_pkt;
-	__u64 head_ts;
+	__u64 head_ts, offset_ts;
 	__u16   seq_number;
 	unsigned long ssrc;
 	int latency;
@@ -226,10 +226,14 @@ __u32 raopcl_avail_frames(struct raopcl_s *p)
 
 	if (!p) return 0;
 
+	/*
+	 take into account the offset to calculate the correct queue/buffer size as
+	 the "real" head_ts is a bit below head_ts (see below for explanation)
+	*/
 	now = ((__u64) gettime_ms() * p->sample_rate) / 1000L;
-	if (p->head_ts > now + p->queue_len) return 0;
-	else if (p->head_ts < now) return p->queue_len;
-		 else return p->queue_len - (p->head_ts - now);
+	if (p->head_ts - p->offset_ts > now + p->queue_len) return 0;
+	else if (p->head_ts - p->offset_ts < now) return p->queue_len;
+		 else return p->queue_len - (p->head_ts - p->offset_ts - now);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -291,22 +295,33 @@ bool raopcl_send_chunk(struct raopcl_s *p, __u8 *sample, int size, __u32 *playti
 	if (!p) return false;
 
 	*playtime = (p->head_ts * 1000LL) / p->sample_rate;
-
-	if (*playtime > gettime_ms() + p->queue_len) {
-		LOG_ERROR("too late ... %u %u", p->head_ts, now);
-		return false;
-    }
+	if (*playtime > gettime_ms() + p->queue_len) return false;
 
 	pthread_mutex_lock(&p->mutex);
+
 	p->head_ts += p->chunk_len;
 	now = gettime_ms();
 
 	// first packet after a flush
 	if (p->state == RAOP_FLUSHED) {
-		p->head_ts = ((__u64) now * p->sample_rate) / 1000L;
+		__u64 now_ts = ((__u64) now * p->sample_rate) / 1000L;
+
+		/*
+		 offset_ts is a necessary evil otherwise when a song starts too soon
+		 after a flush, "now" is below the timestamp of the last frame that was
+		 flushed and so most AirPlay devices will not play any of such frames,
+		 leading to the first seconds of the song being muted. When the player
+		 is down for a long time, this problem disapear as "now" moves way above
+		 the latest flushed frame
+		*/
+		if (now_ts > p->head_ts) {
+			p->head_ts = now_ts;
+			p->offset_ts = 0;
+		}
+		else p->offset_ts = p->head_ts - now_ts;
 		p->state = RAOP_STREAMING;
 		p->first_pkt = true;
-		LOG_INFO("[%p]: begining to stream pt:%u n:%u", p, *playtime, now);
+		LOG_INFO("[%p]: begining to stream ts: %Ld (ofs:%Ld) pt:%u n:%u", p, p->head_ts, p->offset_ts, *playtime, now);
 		raopcl_send_sync(p, true);
 	}
 	pthread_mutex_unlock(&p->mutex);
@@ -315,7 +330,6 @@ bool raopcl_send_chunk(struct raopcl_s *p, __u8 *sample, int size, __u32 *playti
 
 	// really send data only if needed
 	if (p->rtp_ports.audio.fd == -1 || p->state != RAOP_STREAMING || now > *playtime || !sample) {
-		LOG_ERROR("too late ... %u %u", p->head_ts, now);
 		return playtime;
 	}
 
@@ -807,7 +821,6 @@ bool raopcl_flush_stream(struct raopcl_s *p, bool use_mark)
 	__u16 seq_number;
 	__u32 timestamp;
 
-
 	if (!p || p->state != RAOP_STREAMING) return false;
 
 	pthread_mutex_lock(&p->mutex);
@@ -817,10 +830,10 @@ bool raopcl_flush_stream(struct raopcl_s *p, bool use_mark)
 	else timestamp = p->head_ts;
 	pthread_mutex_unlock(&p->mutex);
 
-	LOG_INFO("[%p]: flushing up to s:%u ts:%u", p, seq_number, timestamp);
+	LOG_INFO("[%p]: flushing up to s:%u ts:%Lu", p, seq_number, p->head_ts);
 
 	// everything BELOW these values should be FLUSHED
-	rc = rtspcl_flush(p->rtspcl, seq_number + 1, timestamp + 1);
+	rc = rtspcl_flush(p->rtspcl, seq_number, timestamp);
 
 	pthread_mutex_lock(&p->mutex);
 	p->state = RAOP_FLUSHED;
@@ -912,7 +925,7 @@ void raopcl_send_sync(struct raopcl_s *raopcld, bool first)
 	now = gettime_ms();
 
 	// timestamp unit must be number of samples, not in ms. This
-	rsp.rtp_timestamp = ((__u64) now * raopcld->sample_rate) / 1000L;
+	rsp.rtp_timestamp = ((__u64) now * raopcld->sample_rate) / 1000L + raopcld->offset_ts;
 
 	LOG_DEBUG( "[%p]: sync ntp:%u.%u (ts:%lu) (now:%lu-ms)", raopcld, curr_time.seconds,
 			  curr_time.fraction, rsp.rtp_timestamp, now);
