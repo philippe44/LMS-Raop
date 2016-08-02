@@ -1,5 +1,0 @@
-- Build an ALAC silence frame at startup
-- Have the send_sample timer increasing automatically
-- Have squeeze2raop inform squeezelite that connection has been lost so that send_sample timer increases
-- Add MP3 decode
-- Add LIBSOXR for resampling or Speex resampler code

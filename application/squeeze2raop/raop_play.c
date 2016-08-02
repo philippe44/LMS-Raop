@@ -26,6 +26,10 @@
 #include "alac_wrapper.h"
 #include "raop_play.h"
 
+#define SEC(ntp) ((__u32) ((ntp) >> 32))
+#define FRAC(ntp) ((__u32) (ntp))
+#define SECNTP(ntp) SEC(ntp),FRAC(ntp)
+
 log_level	util_loglevel = lINFO;
 log_level	raop_loglevel = lINFO;
 
@@ -34,10 +38,26 @@ log_level *loglevel =&main_log;
 
 static int print_usage(char *argv[])
 {
-	printf("%s [-p port_number] [-v volume(0-100)]"
-			   "[-e no-encrypt-mode] server_ip audio_filename\n",argv[0]);
+	printf("%s [-p port_number] [-v volume(0-100)] "
+			   "[-l AirPlay latency (frames)] [-q player queue (frames)] "
+			   "[-e encrypt-RSA] [-w wait-to-start] "
+			   "server_ip audio_filename\n",argv[0]);
 	return -1;
 }
+
+#if !WIN
+int kbhit()
+{
+	struct timeval tv;
+	fd_set fds;
+	tv.tv_sec = 0;
+	tv.tv_usec = 0;
+	FD_ZERO(&fds);
+	FD_SET(STDIN_FILENO, &fds); //STDIN_FILENO is 0
+	select(STDIN_FILENO+1, &fds, NULL, NULL, &tv);
+	return FD_ISSET(STDIN_FILENO, &fds);
+}
+#endif
 
 u32_t gettime_ms(void) {
 	struct timeval tv;
@@ -59,7 +79,6 @@ u64_t get_ntp(struct ntp_s *ntp)
 	return (((__u64) local.seconds) << 32) + local.fraction;
 }
 
-
 #if WIN
 void winsock_init(void) {
 	WSADATA wsaData;
@@ -73,29 +92,21 @@ void winsock_close(void) {
 }
 #endif
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 	struct raopcl_s *raopcl;
-	char *host=NULL;
-	char *fname=NULL;
-	int port=SERVER_PORT;
-	int rval=-1,i;
-	int size;
-	int volume = 50;
+	char *host, *fname;
+	int port, size;
+	int volume = 50, wait = 0, latency = 0, queue = MS2TS(1000, 44100);
 	struct hostent *host_ip;
 	struct in_addr host_addr;
 	FILE *infile;
 	u8_t *buf;
-	int n = -1;
-	raop_crypto_t crypto;
-	int count = 0;
-	__u64 stamp;
-	__u32 stamp2;
-	bool pause = false;
-	__u64 last = 0;
-	__u32 frames, pause_frames = 0;
+	int i, n = -1;
+	enum {STOPPED, PAUSED, PLAYING } status;
+	raop_crypto_t crypto = RAOP_CLEAR;
+	__u64 last = 0, frames = 0;
 
-	for(i=1;i<argc;i++){
+	for(i = 1; i < argc; i++){
 		if(!strcmp(argv[i],"-p")){
 			port=atoi(argv[++i]);
 			continue;
@@ -104,8 +115,20 @@ int main(int argc, char *argv[])
 			volume=atoi(argv[++i]);
 			continue;
 		}
+		if(!strcmp(argv[i],"-w")){
+			wait=atoi(argv[++i]);
+			continue;
+		}
+		if(!strcmp(argv[i],"-l")){
+			latency=atoi(argv[++i]);
+			continue;
+		}
+		if(!strcmp(argv[i],"-q")){
+			queue=atoi(argv[++i]);
+			continue;
+		}
 		if(!strcmp(argv[i],"-e")){
-			crypto = RAOP_CLEAR;
+			crypto = RAOP_RSA;
 			continue;
 		}
 		if(!strcmp(argv[i],"--help") || !strcmp(argv[i],"-h"))
@@ -120,83 +143,99 @@ int main(int argc, char *argv[])
 	winsock_init();
 #endif
 
-	if ((raopcl = raopcl_create("?", NULL, NULL, RAOP_ALAC, 352, 2000,
-								RAOP_CLEAR, 44100, 16, 2, 50)) == NULL) {
-		LOG_ERROR("Cannot init RAOP", 0);
+	if (!(infile = fopen(fname, "rb"))) {
+		LOG_ERROR("cannot open file %s", fname);
+		exit(0);
+	}
+
+	if ((raopcl = raopcl_create("?", NULL, NULL, RAOP_ALAC, MAX_SAMPLES_PER_CHUNK,
+								queue, latency, crypto, 44100, 16, 2, volume)) == NULL) {
+		LOG_ERROR("Cannot init RAOP %p", raopcl);
 		exit(1);
 	}
 
 	host_ip = gethostbyname(host);
 	memcpy(&host_addr.s_addr, host_ip->h_addr_list[0], host_ip->h_length);
 
-	infile = fopen("compteur.pcm", "rb");
-	buf = malloc(2000);
-
 	if (!raopcl_connect(raopcl, host_addr, port, RAOP_ALAC)) {
+		raopcl_destroy(raopcl);
 		free(raopcl);
 		LOG_ERROR("Cannot connect to AirPlay device %s", host);
 		exit(1);
 	}
 
-	getchar();
-	stamp = get_ntp(NULL);
-	// raopcl_set_start(raopcl, stamp + TS2NTP(11025, 44100));
-	raopcl_set_start(raopcl, stamp + MS2NTP(200));
+	latency = raopcl_latency(raopcl);
 
-	LOG_INFO( "%s to %s\n", RAOP_CONNECTED, host );
+	LOG_INFO( "connected to %s with latency %d(ms)", host, NTP2MS(latency));
 
+	if (wait) {
+		__u64 start = get_ntp(NULL) + MS2NTP(wait) + TS2NTP(latency, raopcl_sample_rate(raopcl));
+
+		LOG_INFO("start at NTP %u:%u", SECNTP(start));
+		raopcl_start_at(raopcl, start);
+	}
+
+	buf = malloc(MAX_SAMPLES_PER_CHUNK*4);
 	do {
-		u8_t *buffer;
-		u64_t timestamp;
+		__u8 *buffer;
+		__u64 playtime, now;
 
-		if (raopcl_avail_frames(raopcl) >= 352) {
-			u64_t now = get_ntp(NULL);
-			if (now - last > MS2NTP(500) && now > stamp) {
-				u64_t elapsed = now - stamp;
-				u32_t elapsed_frames = pause_frames + raopcl_elapsed_frames(raopcl);
-				last = now;
-				LOG_INFO("elapsed from NTP:%Lu from frames:%u (queued: %u)",
-						  (elapsed * 1000) >> 32, (elapsed_frames * 1000) / 44100,
-						  raopcl_queued_frames(raopcl));
-			}
-			if (kbhit()) {
-				pause = !pause;
+		now = get_ntp(NULL);
+		if (now - last > NTP2MS(1000)) {
+			__u64 played = TS2MS64(frames - raoplc_queued_frames(raopcl) -
+						   latency, raoplc_sample_rate(raopcl));
 
-				if (pause) {
-					raopcl_pause_mark(raopcl);
-					raopcl_flush(raopcl);
-					LOG_INFO("Pause: %u", (pause_frames * 1000) / 44100);
-				}
-				else {
-					pause_frames += raopcl_elapsed_frames(raopcl);
-				}
-				getchar();
-			}
-			/*
-			if (count++ < 1) {
-				int i;
-				for (i = 0; i < 352*4; i++) buf[i] = random(65536);
-			}
-			else */
-			if (pause) continue;
-			n = fread(buf, 352*4, 1, infile);
-			pcm_to_alac_fast(buf, 352, &buffer, &size, 352);
-			raopcl_send_chunk(raopcl, buffer, size, &timestamp);
-			frames += 352;
+			last = now;
+			LOG_INFO("at %u.%u, played %u ms", SECNTP(now), played);
+		}
+
+		if (status == PLAYING && raopcl_avail_frames(raopcl) >= MAX_SAMPLES_PER_CHUNK) {
+			n = fread(buf, MAX_SAMPLES_PER_CHUNK*4, 1, infile);
+			pcm_to_alac_fast(buf, MAX_SAMPLES_PER_CHUNK, &buffer, &size, MAX_SAMPLES_PER_CHUNK);
+			raopcl_send_chunk(raopcl, buffer, size, &playtime);
+			frames += MAX_SAMPLES_PER_CHUNK;
 			free(buffer);
 		}
+
+		if (kbhit()) {
+			char c = getchar();
+
+			switch (c) {
+			case 'p':
+				if (status == PLAYING) {
+					raopcl_pause_mark(raopcl);
+					raopcl_flush(raopcl);
+					status = PAUSED;
+					LOG_INFO("Pause at : %u.%u", SECNTP(get_ntp(NULL)));
+				}
+				else status = PAUSED;
+				break;
+			case 's':
+				raopcl_stop(raopcl);
+				raopcl_flush(raopcl);
+				status = STOPPED;
+				LOG_INFO("Stopped at : %u.%u", SECNTP(get_ntp(NULL)));
+				break;
+			case 'r':
+				status = PLAYING;
+				LOG_INFO("Re-started at : %u.%u", SECNTP(get_ntp(NULL)));
+			default: break;
+			}
+		}
+
 	} while (n);
 
-	while (raopcl_elapsed_frames(raopcl) < frames);
+	// finishing
+	while (raopcl_queued_frames(raopcl));
 
-	raopcl_destroy(raopcl);
-
+	//raopcl_disconnect(raopcl};
+	//raopcl_destroy(raopcl);
 	free(buf);
 
 #if WIN
 	winsock_close();
 #endif
-	return rval;
+	return 0;
 }
 
 

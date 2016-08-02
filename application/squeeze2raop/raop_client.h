@@ -98,6 +98,7 @@
 #define RAOP_LATENCY_MIN 11025
 
 #define NTP2MS(ntp) ((__u32) ((((ntp) >> 10) * 1000L) >> 22))
+#define NTP2MS64(ntp) (((((ntp) >> 10) * 1000L) >> 22))
 #define MS2NTP(ms) (((((__u64) (ms)) << 22) / 1000) << 10)
 #define TIME_MS2NTP(time) raopcl_time32_to_ntp(time)
 #define NTP2TS(ntp, rate) ((((ntp) >> 16) * (rate)) >> 16)
