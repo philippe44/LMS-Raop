@@ -103,7 +103,7 @@ sq_dev_param_t glDeviceParam = {
 					SQ_RATE_44100,
 #endif
 					{ 0x00,0x00,0x00,0x00,0x00,0x00 },
-					false,
+					0,
 #if defined(RESAMPLE)
 					true,
 					"",
@@ -201,10 +201,9 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data);
 void 		DelRaopDevice(struct sMR *Device);
 
 /*----------------------------------------------------------------------------*/
-bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, u8_t *cookie, void *param)
+bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, void *param)
 {
 	struct sMR *device = caller;
-	char *p = (char*) param;
 	bool rc = true;
 
 	if (!device)	{
@@ -247,11 +246,20 @@ void 		DelRaopDevice(struct sMR *Device);
 			// will miss the last "buffer time" track position updates on the player
 			device->TrackDuration = -1;
 			break;
-		case SQ_STOP:
+		case SQ_STOP: {
+			tRaopReq *Req = malloc(sizeof(tRaopReq));
+
 			device->TrackDuration = -1;
+			raopcl_stop(device->Raop);
+			strcpy(Req->Type, "FLUSH");
+			QueueInsert(&device->Queue, Req);
+			pthread_cond_signal(&device->Cond);
+			break;
+		}
 		case SQ_PAUSE: {
 			tRaopReq *Req = malloc(sizeof(tRaopReq));
 
+			raopcl_pause(device->Raop);
 			strcpy(Req->Type, "FLUSH");
 			QueueInsert(&device->Queue, Req);
 			pthread_cond_signal(&device->Cond);
@@ -259,6 +267,9 @@ void 		DelRaopDevice(struct sMR *Device);
 		}
 		case SQ_UNPAUSE: {
 			tRaopReq *Req = malloc(sizeof(tRaopReq));
+			if (*((unsigned*) param))
+				raopcl_start_at(device->Raop, TIME_MS2NTP(*((unsigned*) param)) -
+								TS2NTP(raopcl_latency(device->Raop), raopcl_sample_rate(device->Raop)));
 
 			Req->Data.Codec = RAOP_NOCODEC;
 			strcpy(Req->Type, "CONNECT");
@@ -267,7 +278,7 @@ void 		DelRaopDevice(struct sMR *Device);
 			break;
 		}
 		case SQ_VOLUME: {
-			u32_t Volume = *(u16_t*)p;
+			u32_t Volume = *(u16_t*) param;
 			tRaopReq *Req = malloc(sizeof(tRaopReq));
 			int i;
 
@@ -279,7 +290,6 @@ void 		DelRaopDevice(struct sMR *Device);
 			strcpy(Req->Type, "VOLUME");
 			QueueInsert(&device->Queue, Req);
 			pthread_cond_signal(&device->Cond);
-
 			break;
 		}
 		case SQ_CONNECT: {
@@ -303,7 +313,7 @@ void 		DelRaopDevice(struct sMR *Device);
 			device->MetaDataWait = 1;
 			break;
 		case SQ_SETNAME:
-			strcpy(device->sq_config.name, param);
+			strcpy(device->sq_config.name, (char*) param);
 			break;
 		default:
 			break;
@@ -342,7 +352,7 @@ static void *PlayerThread(void *args)
 			}
 
 			if (Device->Config.SendMetaData && Device->TrackDuration != -1) {
-				raopcl_progress(Device->Raop, sq_get_time(Device->SqueezeHandle), Device->TrackDuration);
+				raopcl_set_progress_ms(Device->Raop, sq_get_time(Device->SqueezeHandle), Device->TrackDuration);
 			}
 
 			pthread_mutex_lock(&Device->Mutex);
@@ -390,17 +400,18 @@ static void *PlayerThread(void *args)
 			LOG_INFO("[%p]: flushing ... (%d)", Device);
 			Device->LastFlush = gettime_ms();
 			Device->TearDownWait = true;
-			raopcl_flush_stream(Device->Raop, false);
+			raopcl_flush(Device->Raop);
 		}
 
 		if (!strcasecmp(req->Type, "OFF")) {
 			LOG_INFO("[%p]: processing off", Device);
+			raopcl_sanitize(Device->Raop);
 			raopcl_disconnect(Device->Raop);
 		}
 
 		if (!strcasecmp(req->Type, "VOLUME")) {
 			LOG_INFO("[%p]: processing volume: %d", Device, req->Data.Volume);
-			raopcl_update_volume(Device->Raop, req->Data.Volume, false);
+			raopcl_set_volume(Device->Raop, req->Data.Volume, false);
 		}
 
 		free(req);
@@ -484,10 +495,7 @@ static void *UpdateMRThread(void *args)
 				Device->SqueezeHandle = sq_reserve_device(Device, &sq_callback);
 				if (!*(Device->sq_config.name)) strcpy(Device->sq_config.name, Device->FriendlyName);
 				if (!Device->SqueezeHandle || !sq_run_device(Device->SqueezeHandle,
-					Device->Raop,
-					&Device->sq_config,
-					Device->SampleRate ? atoi(Device->SampleRate) : 44100,
-					Device->SampleSize ? atoi(Device->SampleSize) : 16)) {
+															 Device->Raop, &Device->sq_config)) {
 					sq_release_device(Device->SqueezeHandle);
 					Device->SqueezeHandle = 0;
 					LOG_ERROR("[%p]: cannot create squeezelite instance (%s)", Device, Device->FriendlyName);
@@ -668,7 +676,7 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 
 	Device->Raop = raopcl_create(glInterface, glDACPid, Device->ActiveRemote,
 								 RAOP_ALAC, FRAMES_PER_BLOCK, Device->Config.ReadAhead,
-								 Crypto,
+								 RAOP_LATENCY_MIN, Crypto,
 								 Device->SampleRate ? atoi(Device->SampleRate) : 44100,
 								 Device->SampleSize ? atoi(Device->SampleSize) : 16,
 								 Device->Channels ? atoi(Device->Channels) : 2,

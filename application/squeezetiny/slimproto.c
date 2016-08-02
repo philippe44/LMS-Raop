@@ -25,6 +25,7 @@
 
 #include "squeezelite.h"
 #include "slimproto.h"
+#include "raop_client.h"
 
 #define PORT 3483
 #define MAXBUF 4096
@@ -57,11 +58,11 @@ static u8_t		pcm_channels[] = { 1, 2 };
 
 
 /*---------------------------------------------------------------------------*/
-bool ctx_callback(struct thread_ctx_s *ctx, sq_action_t action, u8_t *cookie, void *param)
+bool ctx_callback(struct thread_ctx_s *ctx, sq_action_t action, void *param)
 {
 	bool rc = false;
 
-	if (ctx->callback) rc = ctx->callback(ctx->self, ctx->MR, action, cookie, param);
+	if (ctx->callback) rc = ctx->callback(ctx->self, ctx->MR, action, param);
 	return rc;
 }
 
@@ -118,13 +119,15 @@ static void sendSTAT(const char *event, u32_t server_timestamp, struct thread_ct
 	u32_t now = gettime_ms();
 	u32_t ms_played;
 
+	// remove 11025
 	if (ctx->status.frames_played > ctx->status.device_frames) {
 		ms_played = (u32_t)(((u64_t)(ctx->status.frames_played - ctx->status.device_frames) * (u64_t)1000) / (u64_t)ctx->status.current_sample_rate);
 		if (now > ctx->status.updated) ms_played += (now - ctx->status.updated);
-		LOG_SDEBUG("[%p]: ms_played: %u (frames_played: %u device_frames: %u)", ctx, ms_played, ctx->status.frames_played, ctx->status.device_frames);
+		//LOG_INFO("[%p]: msplayed from frames:%u from clock:%u ", ctx, ms_played, now - ctx->output.start_at);
+		LOG_INFO("[%p]: ms fr:%u clk:%u (frames_played: %u device_frames: %u)", ctx, ms_played, now - ctx->output.start_at, ctx->status.frames_played, ctx->status.device_frames);
 	} else if (ctx->status.frames_played && now > ctx->status.stream_start) {
 		ms_played = now - ctx->status.stream_start;
-		LOG_SDEBUG("[%p]: ms_played: %u using elapsed time (frames_played: %u device_frames: %u)", ctx, ms_played, ctx->status.frames_played, ctx->status.device_frames);
+		LOG_INFO("[%p]: ms_played: %u using elapsed time (frames_played: %u device_frames: %u)", ctx, ms_played, ctx->status.frames_played, ctx->status.device_frames);
 	} else {
 		LOG_SDEBUG("[%p]: ms_played: 0", ctx);
 		ms_played = 0;
@@ -251,7 +254,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			sendSTAT("STMf", 0, ctx);
 		}
 		buf_flush(ctx->streambuf);
-		if (ctx->last_command != 'q') ctx_callback(ctx, SQ_STOP, NULL, NULL);
+		if (ctx->last_command != 'q') ctx_callback(ctx, SQ_STOP, NULL);
 		break;
 	case 'p':
 		 {
@@ -262,7 +265,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			UNLOCK_O;
 			if (!interval) {
 				sendSTAT("STMp", 0, ctx);
-				ctx_callback(ctx, SQ_PAUSE, NULL, NULL);
+				ctx_callback(ctx, SQ_PAUSE, NULL);
             }
 			LOG_DEBUG("pause interval: %u", interval);
 		}
@@ -280,11 +283,11 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	case 'u':
 		{
 			unsigned jiffies = unpackN(&strm->replay_gain);
+			ctx_callback(ctx, SQ_UNPAUSE, &jiffies);
 			LOCK_O;
-			ctx->output.state = jiffies ? OUTPUT_START_AT : OUTPUT_RUNNING;
+			ctx->output.state = OUTPUT_RUNNING;
 			ctx->output.start_at = jiffies;
 			UNLOCK_O;
-			if (ctx->last_command != 's') ctx_callback(ctx, SQ_UNPAUSE, NULL, NULL);
 			LOG_INFO("unpause at: %u now: %u", jiffies, gettime_ms());
 			sendSTAT("STMr", 0, ctx);
 		}
@@ -327,7 +330,8 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 				break;
 			}
 
-			ctx_callback(ctx, SQ_CONNECT, NULL, &format);
+			// TODO: must be changed if one day direct streaming is enabled
+			ctx_callback(ctx, SQ_CONNECT, &format);
 
 			stream_sock(ip, port, header, header_len, strm->threshold * 1024, ctx->autostart >= 2, ctx);
 
@@ -397,7 +401,7 @@ static void process_aude(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	ctx->on = (aude->enable_spdif) ? true : false;
 	LOG_DEBUG("[%p] on/off using aude %d", ctx, ctx->on);
 	UNLOCK_O;
-	ctx_callback(ctx, SQ_ONOFF, NULL, &ctx->on);
+	ctx_callback(ctx, SQ_ONOFF, &ctx->on);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -417,7 +421,7 @@ static void process_audg(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	if (!ctx->config.player_volume) {
 		ctx->output.gainL = ctx->output.gainR = FIXED_ONE;
 		UNLOCK_O;
-		ctx_callback(ctx, SQ_VOLUME, NULL, (void*) &gain);
+		ctx_callback(ctx, SQ_VOLUME, (void*) &gain);
 	}
 	else {
 		if (ctx->config.player_volume > 0) {
@@ -445,7 +449,7 @@ static void process_setd(u8_t *pkt, int len,struct thread_ctx_s *ctx) {
 			LOG_DEBUG("[%p] set name: %s", ctx, setd->data);
 			// confirm change to server
 			sendSETDName(setd->data, ctx->sock);
-			ctx_callback(ctx, SQ_SETNAME, NULL, (void*) ctx->config.name);
+			ctx_callback(ctx, SQ_SETNAME, (void*) ctx->config.name);
 		}
 	}
 }
@@ -636,7 +640,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 				memcpy(ctx->slim_run.header, ctx->stream.header, header_len);
 				_sendMETA = true;
 				ctx->stream.meta_send = false;
-				ctx_callback(ctx, SQ_METASEND, NULL, NULL);
+				ctx_callback(ctx, SQ_METASEND, NULL);
 			}
 			UNLOCK_S;
 
@@ -652,13 +656,13 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 				_sendSTMs = true;
 				ctx->output.track_started = false;
 				ctx->status.stream_start = ctx->output.track_start_time;
-				ctx_callback(ctx, SQ_STARTED, NULL, &ctx->output.track_start_time);
+				ctx_callback(ctx, SQ_STARTED, &ctx->output.track_start_time);
 			}
 
 			if (ctx->output.state == OUTPUT_RUNNING && !ctx->sentSTMu && ctx->status.output_full == 0 && ctx->status.stream_state <= DISCONNECT) {
 				_sendSTMu = true;
 				ctx->sentSTMu = true;
-				ctx_callback(ctx, SQ_FINISHED, NULL, NULL);
+				ctx_callback(ctx, SQ_FINISHED, NULL);
 			}
 			if (ctx->output.state == OUTPUT_RUNNING && !ctx->sentSTMo && ctx->status.output_full == 0 && ctx->status.stream_state == STREAMING_HTTP) {
 				_sendSTMo = true;

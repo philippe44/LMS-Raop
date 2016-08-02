@@ -83,26 +83,6 @@ frames_t _output_frames(frames_t avail, struct thread_ctx_s *ctx) {
 		}
 	}
 
-	// start at - play silence until jiffies reached
-	if (ctx->output.state == OUTPUT_START_AT) {
-		u32_t now = gettime_ms();
-
-		if (now >= ctx->output.start_at || ctx->output.start_at > now + 10000) {
-			ctx->output.state = OUTPUT_RUNNING;
-		} else {
-			u32_t delta_frames = (ctx->output.start_at - now) * ctx->output.current_sample_rate / 1000;
-			silence = true;
-			frames = min(avail, delta_frames);
-			frames = min(frames, MAX_SILENCE_FRAMES);
-		}
-	}
-
-	// play silence if buffering or no frames
-	if (ctx->output.state <= OUTPUT_BUFFER || frames == 0) {
-		silence = true;
-		frames = min(avail, MAX_SILENCE_FRAMES);
-	}
-
 	LOG_SDEBUG("[%p]: avail: %d frames: %d silence: %d", ctx, avail, frames, silence);
 	frames = min(frames, avail);
 	size = frames;
@@ -117,7 +97,7 @@ frames_t _output_frames(frames_t avail, struct thread_ctx_s *ctx) {
 				LOG_INFO("[%p]: track start sample rate: %u replay_gain: %u", ctx, ctx->output.current_sample_rate, ctx->output.next_replay_gain);
 				ctx->output.frames_played = 0;
 				ctx->output.track_started = true;
-				ctx->output.track_start_time = gettime_ms() + (ctx->output.device_frames * 1000L) / ctx->output.current_sample_rate;
+				ctx->output.detect_start_time = true;
 				if (!(ctx->output.fade == FADE_ACTIVE) || !(ctx->output.fade_mode == FADE_CROSSFADE)) {
 					ctx->output.current_replay_gain = ctx->output.next_replay_gain;
 				}
@@ -322,6 +302,7 @@ void output_init_common(void *device, unsigned outputbuf_size, u32_t sample_rate
 	ctx->output.fade = FADE_INACTIVE;
 	ctx->output.device = device;
 	ctx->output.error_opening = false;
+	ctx->output.detect_start_time = false;
 
 	ctx->output.current_sample_rate = ctx->output.default_sample_rate = sample_rate;
 	ctx->output.supported_rates[0] = sample_rate;

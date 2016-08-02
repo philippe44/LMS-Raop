@@ -39,7 +39,7 @@ typedef	sq_action_t sq_event_t;
 #define FRAMES_PER_BLOCK			352
 #define MAX_SUPPORTED_SAMPLERATES 	2
 
-#define STREAMBUF_SIZE 				(2 * 1024 * 1024)
+#define STREAMBUF_SIZE 				(2 * 1024 * 1024)
 #define OUTPUTBUF_SIZE 				(44100 * 4 * 10)
 
 typedef enum { SQ_RATE_384000 = 384000, SQ_RATE_352000 = 352000,
@@ -96,14 +96,12 @@ typedef struct
 
 struct raopcl_s;
 
-typedef bool (*sq_callback_t)(sq_dev_handle_t handle, void *caller_id, sq_action_t action, u8_t *cookie, void *param);
+typedef bool (*sq_callback_t)(sq_dev_handle_t handle, void *caller_id, sq_action_t action, void *param);
 
 void				sq_init(void);
 void				sq_end(void);
 
-// only name cannot be NULL
-bool			 	sq_run_device(sq_dev_handle_t handle, struct raopcl_s *raopcl,
-								  sq_dev_param_t *param, u32_t sample_rate, u8_t sample_size);
+bool			 	sq_run_device(sq_dev_handle_t handle, struct raopcl_s *raopcl, sq_dev_param_t *param);
 void				sq_delete_device(sq_dev_handle_t);
 sq_dev_handle_t		sq_reserve_device(void *caller_id, sq_callback_t callback);
 void				sq_release_device(sq_dev_handle_t);

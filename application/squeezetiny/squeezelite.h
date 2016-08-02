@@ -19,7 +19,7 @@
  *
  */
 
-// make may define: SELFPIPE, RESAMPLE, RESAMPLE_MP, VISEXPORT, DSD, LINKALL to influence build
+// make may define: SELFPIPE, RESAMPLE, RESAMPLE_MP, LINKALL to influence build
 
 // build detection
 #include "squeezedefs.h"
@@ -368,7 +368,7 @@ void resample_end(struct thread_ctx_s *ctx);
 
 // output.c output_pack.c
 typedef enum { OUTPUT_OFF = -1, OUTPUT_STOPPED = 0, OUTPUT_BUFFER, OUTPUT_RUNNING,
-			   OUTPUT_PAUSE_FRAMES, OUTPUT_SKIP_FRAMES, OUTPUT_START_AT } output_state;
+			   OUTPUT_PAUSE_FRAMES, OUTPUT_SKIP_FRAMES } output_state;
 
 typedef enum { FADE_INACTIVE = 0, FADE_DUE, FADE_ACTIVE } fade_state;
 typedef enum { FADE_UP = 1, FADE_DOWN, FADE_CROSS } fade_dir;
@@ -398,6 +398,7 @@ struct outputstate {
 		u32_t start_at;
 	};
 	u8_t  *track_start;        // set in decode thread
+	bool  detect_start_time;   // use in audio extractor
 	u32_t gainL;               // set by slimproto
 	u32_t gainR;               // set by slimproto
 	u32_t next_replay_gain;    // set by slimproto
@@ -411,7 +412,6 @@ struct outputstate {
 	bool delay_active;
 	int buf_frames;
 	u8_t *buf;
-	u32_t latency;
 };
 
 void output_init(const char *device, unsigned output_buf_size, unsigned rates[], struct thread_ctx_s *ctx);
@@ -424,7 +424,7 @@ void wake_output(struct thread_ctx_s *ctx);
 
 // output_raop.c
 void output_init_common(void *device, unsigned output_buf_size, u32_t sample_rate, struct thread_ctx_s *ctx);
-void output_raop_thread_init(struct raopcl_s *raopcl, unsigned output_buf_size, u32_t sample_rate, u8_t sample_size, struct thread_ctx_s *ctx);
+void output_raop_thread_init(struct raopcl_s *raopcl, unsigned output_buf_size, struct thread_ctx_s *ctx);
 void output_close_common(struct thread_ctx_s *ctx);
 
 // output_pack.c

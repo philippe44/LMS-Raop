@@ -80,12 +80,25 @@ bool rtspcl_is_connected(struct rtspcl_s *p)
 	pfds.fd = p->fd;
 	pfds.events = POLLOUT;
 
+	if (p->fd == -1) return false;
+
+	return rtspcl_is_sane(p);
+}
+
+
+/*----------------------------------------------------------------------------*/
+bool rtspcl_is_sane(struct rtspcl_s *p)
+{
+	int n;
+	struct pollfd pfds;
+
+	pfds.fd = p->fd;
+	pfds.events = POLLOUT;
+
 	if (p->fd == -1) return true;
 
 	n = poll(&pfds, 1, 0);
-	if (n == - 1 || (pfds.revents & POLLERR) || (pfds.revents & POLLHUP)) {
-	return false;
-	}
+	if (n == - 1 || (pfds.revents & POLLERR) || (pfds.revents & POLLHUP)) return false;
 
 	return true;
 }
