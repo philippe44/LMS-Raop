@@ -7,9 +7,10 @@ all other LMS goodies. AirPLay remotes can be used as well
 
 Pre-packaged versions for Windows Linux (x86, x64 and ARM) and OSX can be found 
 
-here https://sourceforge.net/projects/lms-to-raop/ and 
+here https://sourceforge.net/projects/lms-to-raop and 
 
 here https://sourceforge.net/projects/lms-plugins-philippe44
+
 ======================================================================================
 To re-compile, use makefile (none available for Windows, I use Embarcadero IDE) and add
 
@@ -21,7 +22,7 @@ HTTP download: https://github.com/philippe44/HTTP-Fetcher
 
 libupnp: https://sourceforge.net/projects/pupnp (you just need the libixml part of libupnp)
 
-pthread for Windows: https://www.sourceware.org/pthreads-win32/
+pthread for Windows: https://www.sourceware.org/pthreads-win32
  
 Use also faad, limad, mpg123 and libflac, libsoxr (use headers only if you do shared libs, 
 full library if you want static link)
