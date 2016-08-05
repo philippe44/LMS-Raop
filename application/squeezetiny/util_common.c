@@ -59,59 +59,11 @@
 #endif
 
 #include "util_common.h"
+#include "log_util.h"
 
 
 extern log_level 	util_loglevel;
 //static log_level 	*loglevel = &util_loglevel;
-
-// logging functions
-const char *logtime(void) {
-	static char buf[100];
-#if WIN
-	SYSTEMTIME lt;
-	GetLocalTime(&lt);
-	sprintf(buf, "[%02d:%02d:%02d.%03d]", lt.wHour, lt.wMinute, lt.wSecond, lt.wMilliseconds);
-#else
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	strftime(buf, sizeof(buf), "[%T.", localtime(&tv.tv_sec));
-	sprintf(buf+strlen(buf), "%06ld]", (long)tv.tv_usec);
-#endif
-	return buf;
-}
-
-/*---------------------------------------------------------------------------*/
-void logprint(const char *fmt, ...) {
-	va_list args;
-
-	va_start(args, fmt);
-	vfprintf(stderr, fmt, args);
-	fflush(stderr);
-}
-
-/*---------------------------------------------------------------------------*/
-log_level debug2level(char *level)
-{
-	if (!strcmp(level, "error")) return lERROR;
-	if (!strcmp(level, "warn")) return lWARN;
-	if (!strcmp(level, "info")) return lINFO;
-	if (!strcmp(level, "debug")) return lDEBUG;
-	if (!strcmp(level, "sdebug")) return lSDEBUG;
-	return lWARN;
-}
-
-/*---------------------------------------------------------------------------*/
-char *level2debug(log_level level)
-{
-	switch (level) {
-	case lERROR: return "error";
-	case lWARN: return "warn";
-	case lINFO: return "info";
-	case lDEBUG: return "debug";
-	case lSDEBUG: return "debug";
-	default: return "warn";
-	}
-}
 
 /*---------------------------------------------------------------------------*/
 #if 0
@@ -212,13 +164,23 @@ char *strlwr(char *str)
 /*---------------------------------------------------------------------------*/
 u32_t hash32(char *str)
 {
+	if (!str) return 0;
+
+	return hash32_buf(str, strlen(str));
+}
+
+/*---------------------------------------------------------------------------*/
+u32_t hash32_buf(char *str, size_t len)
+{
 	u32_t hash = 5381;
 	s32_t c;
 
 	if (!str) return 0;
 
-	while ((c = *str++) != 0)
+	while (len--) {
+		c = *str++;
 		hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+	}
 
 	return hash;
 }

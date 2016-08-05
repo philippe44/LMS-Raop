@@ -20,6 +20,9 @@
  */
 
 #include "squeezelite.h"
+#include <fcntl.h>
+
+#include "log_util.h"
 
 #if LINUX || OSX || FREEBSD
 #include <sys/ioctl.h>
@@ -48,10 +51,11 @@
 #include <sys/time.h>
 #endif
 
-#include <fcntl.h>
 
 extern log_level 	util_loglevel;
-//static log_level 	*loglevel = &util_loglevel;
+#if WIN
+static log_level 	*loglevel = &util_loglevel;
+#endif
 
 // cmdline parsing
 char *next_param(char *src, char c) {
@@ -420,7 +424,7 @@ void winsock_init(void) {
 	WORD wVersionRequested = MAKEWORD(2, 2);
     int WSerr = WSAStartup(wVersionRequested, &wsaData);
     if (WSerr != 0) {
-        LOG_ERROR("Bad winsock version", NULL);
+		LOG_ERROR("Bad winsock version", NULL);
         exit(1);
     }
 }

@@ -357,12 +357,6 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 
 	sq_default_metadata(metadata, false);
 
-	LOG_INFO("[%p]: idx %d\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\tduration:%d.%03d\n\tsize:%d\n\tcover:%s", ctx, idx,
-				metadata->artist, metadata->album, metadata->title,
-				metadata->genre, div(metadata->duration, 1000).quot,
-				div(metadata->duration,1000).rem, metadata->file_size,
-				metadata->artwork ? metadata->artwork : "");
-
 	return true;
 }
 

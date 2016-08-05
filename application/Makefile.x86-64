@@ -1,9 +1,9 @@
 CFLAGS  ?= -Wall -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES)
 LDFLAGS ?= -lgomp -lpthread -lssl -lcrypto -ldl -lm -lrt -lz -L. 
 
-OBJ					= bin/x86
-EXECUTABLE 			= bin/squeeze2raop-x86
-EXECUTABLE_STATIC 	= bin/squeeze2raop-x86-static
+OBJ					= bin/x86-64
+EXECUTABLE 			= bin/squeeze2raop-x86-64
+EXECUTABLE_STATIC 	= bin/squeeze2raop-x86-64-static
 
 include Makefile
 

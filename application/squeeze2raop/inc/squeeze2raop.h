@@ -95,7 +95,8 @@ struct sMR {
 	u32_t			TearDownTO;
 	u32_t			TrackStartTime;
 	s32_t			TrackDuration;
-	u8_t			MetaDataWait;
+	u8_t			MetadataWait;
+	u32_t			MetadataHash;
 	char *SampleSize;
 	char *SampleRate;
 	char *Channels;

@@ -1,0 +1,11 @@
+CFLAGS  ?= -Wall -fPIC -O2 $(OPTS) $(INCLUDE) $(DEFINES)
+LDFLAGS ?= -lgomp -lpthread -lssl -lcrypto -ldl -lm -lrt -lz -L. 
+
+# for LD debug -s
+
+OBJ					= bin/armv6hf
+EXECUTABLE 			= bin/squeeze2raop-armv6hf
+EXECUTABLE_STATIC 	= bin/squeeze2raop-armv6hf-static
+
+include Makefile
+

@@ -147,6 +147,7 @@
 #include <sys/stat.h>
 
 #include "squeezeitf.h"
+#include "log_util.h"
 #include "util_common.h"
 
 #if !defined(MSG_NOSIGNAL)

@@ -84,6 +84,7 @@ $RECYCLE.BIN/
 *.z
 *.local
 __history
+*.$$$
 tests
 Win32
 *.res
@@ -105,3 +106,4 @@ _backup/
 application - */
 test/
 cov-int/
+*.pcm

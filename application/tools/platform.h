@@ -1,5 +1,5 @@
 /*
- *  Squeeze2raop - LMS to Raop gateway
+ *  platform setting definition
  *
  *  (c) Philippe, philippe_44@outlook.com
  *

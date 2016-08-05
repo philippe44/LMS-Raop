@@ -25,7 +25,6 @@
 
 #include "squeezelite.h"
 #include "slimproto.h"
-#include "raop_client.h"
 
 #define PORT 3483
 #define MAXBUF 4096

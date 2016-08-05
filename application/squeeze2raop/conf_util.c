@@ -21,6 +21,7 @@
 #include <stdarg.h>
 
 #include "conf_util.h"
+#include "log_util.h"
 
 /*----------------------------------------------------------------------------*/
 /* globals */

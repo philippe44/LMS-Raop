@@ -32,6 +32,7 @@
 #include "squeeze2raop.h"
 #include "conf_util.h"
 #include "util_common.h"
+#include "log_util.h"
 #include "util.h"
 
 #include "mdnssd-itf.h"
@@ -306,11 +307,12 @@ void 		DelRaopDevice(struct sMR *Device);
 			break;
 		}
 		case SQ_METASEND:
-			device->MetaDataWait = 5;
+			device->MetadataWait = 5;
 			break;
 		case SQ_STARTED:
 			device->TrackStartTime = *((u32_t*) param);
-			device->MetaDataWait = 1;
+			device->MetadataWait = 1;
+			device->MetadataHash = 0;
 			break;
 		case SQ_SETNAME:
 			strcpy(device->sq_config.name, (char*) param);
@@ -356,28 +358,46 @@ static void *PlayerThread(void *args)
 			}
 
 			pthread_mutex_lock(&Device->Mutex);
-			if (Device->MetaDataWait && !--Device->MetaDataWait && Device->Config.SendMetaData) {
+			if (Device->MetadataWait && !--Device->MetadataWait && Device->Config.SendMetaData) {
 				sq_metadata_t metadata;
+				u32_t hash;
 
 				pthread_mutex_unlock(&Device->Mutex);
-				LOG_INFO("[%p]: getting metadata", Device);
 				sq_get_metadata(Device->SqueezeHandle, &metadata, false);
-				Device->TrackDuration = metadata.duration;
-				raopcl_set_daap(Device->Raop, 5, "minm", 's', metadata.title,
-												 "asar", 's', metadata.artist,
-												 "asal", 's', metadata.album,
-												 "asgn", 's', metadata.genre,
-												 "astn", 'i', (int) metadata.track);
-				// TODO: check that it's JPEG
-				if (metadata.artwork && Device->Config.SendCoverArt) {
-					char *image = NULL, *contentType = NULL;
-					int size = http_fetch(metadata.artwork, &contentType, &image);
+				hash = hash32(metadata.title) ^ hash32(metadata.artwork);
 
-					if (size != -1) raopcl_set_artwork(Device->Raop, contentType, size - 1, image);
+				if (Device->MetadataHash != hash) {
+					Device->TrackDuration = metadata.duration;
+					raopcl_set_daap(Device->Raop, 5, "minm", 's', metadata.title,
+													 "asar", 's', metadata.artist,
+													 "asal", 's', metadata.album,
+													 "asgn", 's', metadata.genre,
+													 "astn", 'i', (int) metadata.track);
+					// TODO: check that it's JPEG
+					if (metadata.artwork && Device->Config.SendCoverArt) {
+						char *image = NULL, *contentType = NULL;
+						int size = http_fetch(metadata.artwork, &contentType, &image);
 
-					NFREE(image);
-					NFREE(contentType);
+						if (size != -1) raopcl_set_artwork(Device->Raop, contentType, size - 1, image);
+
+						NFREE(image);
+						NFREE(contentType);
+					}
+
+					Device->MetadataHash = hash;
+
+					LOG_INFO("[%p]: idx %d\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n"
+									"\tgenre:%s\n\tduration:%d.%03d\n\tsize:%d\n\tcover:%s",
+									 Device, metadata.index, metadata.artist,
+									 metadata.album, metadata.title, metadata.genre,
+									 div(metadata.duration, 1000).quot,
+									 div(metadata.duration,1000).rem, metadata.file_size,
+									 metadata.artwork ? metadata.artwork : "");
+
 				}
+
+				if (metadata.remote && !metadata.duration) Device->MetadataWait = 5;
+
 				sq_free_metadata(&metadata);
 			}
 			else pthread_mutex_unlock(&Device->Mutex);
@@ -675,7 +695,8 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 		Crypto = RAOP_CLEAR;
 
 	Device->Raop = raopcl_create(glInterface, glDACPid, Device->ActiveRemote,
-								 RAOP_ALAC, FRAMES_PER_BLOCK, Device->Config.ReadAhead,
+								 RAOP_ALAC, FRAMES_PER_BLOCK,
+								 (u32_t) MS2TS(Device->Config.ReadAhead, Device->SampleRate ? atoi(Device->SampleRate) : 44100),
 								 RAOP_LATENCY_MIN, Crypto,
 								 Device->SampleRate ? atoi(Device->SampleRate) : 44100,
 								 Device->SampleSize ? atoi(Device->SampleSize) : 16,
