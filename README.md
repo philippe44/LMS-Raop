@@ -16,6 +16,6 @@ mDNS announce: https://github.com/philippe44/TinySVCmDNS
 HTTP download: https://github.com/philippe44/HTTP-Fetcher
 libupnp: https://sourceforge.net/projects/pupnp (you just need the libixml part of libupnp)
 pthread for Windows: https://www.sourceware.org/pthreads-win32/
-
+ 
 Use also faad, limad, mpg123 and libflac, libsoxr (use headers only if you do shared libs, 
 full library if you want static link)
