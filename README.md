@@ -1,9 +1,9 @@
 # LMS-to-Raop
 LMS to AirPlay bridge
 
-Allow AirPlay players to be used by Logitech Media Server, as a normal Logitech Hardware. 
-It provides synchronisation, replaygain, gapless,fade in/out/cross and all other LMS goodies
-AirPLay remotes can be used
+Allow AirPlay players to be used by Logitech Media Server, as a normal Logitech 
+Hardware. It provides synchronisation, replaygain, gapless,fade in/out/cross and 
+all other LMS goodies. AirPLay remotes can be used as well
 
 Pre-packaged versions for Windows Linux (x86, x64 and ARM) and OSX can be found 
 here https://sourceforge.net/projects/lms-to-raop/ and 
