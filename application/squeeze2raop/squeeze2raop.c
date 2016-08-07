@@ -44,10 +44,10 @@
 /*----------------------------------------------------------------------------*/
 /* globals initialized */
 /*----------------------------------------------------------------------------*/
-char				glInterface[16] = "?";
 #if LINUX || FREEBSD
 bool				glDaemonize = false;
 #endif
+char 				glInterface[16] = "?";
 bool				glInteractive = true;
 char				*glLogFile;
 s32_t				glLogLimit = -1;
@@ -74,9 +74,9 @@ tMRConfig			glMRConfig = {
 							false,
 							30,
 							false,
-							60,
+							30,
 							false,
-							3000,
+							1000,
 					};
 
 static u8_t LMSVolumeMap[101] = {
@@ -121,6 +121,7 @@ static bool			glDiscovery = false;
 u32_t				glScanInterval = SCAN_INTERVAL;
 u32_t				glScanTimeout = SCAN_TIMEOUT;
 struct sMR			glMRDevices[MAX_RENDERERS];
+static struct in_addr glHost;
 
 /*----------------------------------------------------------------------------*/
 /* local types */
@@ -243,7 +244,7 @@ void 		DelRaopDevice(struct sMR *Device);
 	switch (action) {
 		case SQ_FINISHED:
 			device->LastFlush = gettime_ms();
-			device->TearDownWait = true;
+			device->DiscWait = true;
 			// will miss the last "buffer time" track position updates on the player
 			device->TrackDuration = -1;
 			break;
@@ -341,13 +342,15 @@ static void *PlayerThread(void *args)
 			u32_t now = gettime_ms();
 
 			LOG_DEBUG("[%p]: tick %u", Device, now);
-			if (Device->TearDownWait && now > Device->LastFlush + Device->Config.IdleTimeout * 1000) {
-				LOG_INFO("[%p]: Tear down connection %u", Device, now);
+
+			if (Device->DiscWait && now > Device->LastFlush + Device->Config.IdleTimeout * 1000) {
+				LOG_INFO("[%p]: Disconnecting %u", Device, now);
 				raopcl_disconnect(Device->Raop);
-				Device->TearDownWait = false;
+				Device->DiscWait = false;
 			}
 
-			if (!raopcl_is_sane(Device->Raop)) {
+			Device->Sane = raopcl_is_sane(Device->Raop) ? 0 : Device->Sane + 1;
+			if (Device->Sane > 3) {
 				LOG_ERROR("[%p]: broken connection, attempting reset", Device);
 				raopcl_disconnect(Device->Raop);
 				raopcl_reconnect(Device->Raop);
@@ -361,9 +364,10 @@ static void *PlayerThread(void *args)
 			if (Device->MetadataWait && !--Device->MetadataWait && Device->Config.SendMetaData) {
 				sq_metadata_t metadata;
 				u32_t hash;
+				bool valid;
 
 				pthread_mutex_unlock(&Device->Mutex);
-				sq_get_metadata(Device->SqueezeHandle, &metadata, false);
+				valid = sq_get_metadata(Device->SqueezeHandle, &metadata, false);
 				hash = hash32(metadata.title) ^ hash32(metadata.artwork);
 
 				if (Device->MetadataHash != hash) {
@@ -373,7 +377,7 @@ static void *PlayerThread(void *args)
 													 "asal", 's', metadata.album,
 													 "asgn", 's', metadata.genre,
 													 "astn", 'i', (int) metadata.track);
-					// TODO: check that it's JPEG
+					// TODO: convert when it's not JPEG
 					if (metadata.artwork && Device->Config.SendCoverArt) {
 						char *image = NULL, *contentType = NULL;
 						int size = http_fetch(metadata.artwork, &contentType, &image);
@@ -396,7 +400,7 @@ static void *PlayerThread(void *args)
 
 				}
 
-				if (metadata.remote && !metadata.duration) Device->MetadataWait = 5;
+				if (!valid || (metadata.remote && !metadata.duration)) Device->MetadataWait = 5;
 
 				sq_free_metadata(&metadata);
 			}
@@ -408,7 +412,7 @@ static void *PlayerThread(void *args)
 		if (!strcasecmp(req->Type, "CONNECT")) {
 			LOG_INFO("[%p]: raop connecting ...", Device);
 			if (raopcl_connect(Device->Raop, Device->PlayerIP, Device->PlayerPort, req->Data.Codec)) {
-				Device->TearDownWait = false;
+				Device->DiscWait = false;
 				LOG_INFO("[%p]: raop connected", Device);
 			}
 			else {
@@ -417,16 +421,23 @@ static void *PlayerThread(void *args)
 		}
 
 		if (!strcasecmp(req->Type, "FLUSH")) {
-			LOG_INFO("[%p]: flushing ... (%d)", Device);
-			Device->LastFlush = gettime_ms();
-			Device->TearDownWait = true;
-			raopcl_flush(Device->Raop);
+			if (Device->DiscWait) {
+				LOG_INFO("[%p]: disconnecting ... (%d)", Device);
+				Device->DiscWait = false;
+				raopcl_disconnect(Device->Raop);
+			}
+			else {
+				LOG_INFO("[%p]: flushing ... (%d)", Device);
+				Device->LastFlush = gettime_ms();
+				Device->DiscWait = true;
+				raopcl_flush(Device->Raop);
+			}
 		}
 
 		if (!strcasecmp(req->Type, "OFF")) {
 			LOG_INFO("[%p]: processing off", Device);
-			raopcl_sanitize(Device->Raop);
 			raopcl_disconnect(Device->Raop);
+			raopcl_sanitize(Device->Raop);
 		}
 
 		if (!strcasecmp(req->Type, "VOLUME")) {
@@ -657,7 +668,7 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	Device->VolumeStamp = 0;
 	Device->PlayerIP = data->addr;
 	Device->PlayerPort = data->port;
-	Device->TearDownWait = false;
+	Device->DiscWait = false;
 	Device->TrackDuration = -1;
 	sprintf(Device->ActiveRemote, "%d", hash32(Device->UDN));
 	strcpy(Device->FriendlyName, data->hostname);
@@ -667,7 +678,7 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	LOG_INFO("[%p]: adding renderer (%s)", Device, Device->FriendlyName);
 
 	if (!memcmp(Device->sq_config.mac, "\0\0\0\0\0\0", mac_size)) {
-		if (SendARP(*((in_addr_t*) &Device->PlayerIP), INADDR_ANY, Device->sq_config.mac, &mac_size)) {
+		if (SendARP(Device->PlayerIP.s_addr, INADDR_ANY, (u32_t*) Device->sq_config.mac, &mac_size)) {
 			u32_t hash = hash32(Device->UDN);
 
 			LOG_ERROR("[%p]: cannot get mac %s, creating fake %x", Device, Device->FriendlyName, hash);
@@ -694,7 +705,7 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	else
 		Crypto = RAOP_CLEAR;
 
-	Device->Raop = raopcl_create(glInterface, glDACPid, Device->ActiveRemote,
+	Device->Raop = raopcl_create(glHost, glDACPid, Device->ActiveRemote,
 								 RAOP_ALAC, FRAMES_PER_BLOCK,
 								 (u32_t) MS2TS(Device->Config.ReadAhead, Device->SampleRate ? atoi(Device->SampleRate) : 44100),
 								 RAOP_LATENCY_MIN, Crypto,
@@ -771,7 +782,10 @@ static void *ActiveRemoteThread(void *args)
 {
 	int n;
 	char buf[1024], command[20], ActiveRemote[11];
-	char response[] = "HTTP/1.1 204 No Content\r\nDate: %s,%02d %s %4d %02d:%02d:%02d GMT\r\nDAAP-Server: iTunes/7.6.2 (Windows; N;)\r\nContent-Type: application/x-dmap-tagged\r\nContent-Length: 0\r\n\r\n";
+	char response[] = "HTTP/1.1 204 No Content\r\nDate: %s,%02d %s %4d %02d:%02d:%02d "
+					  "GMT\r\nDAAP-Server: iTunes/7.6.2 (Windows; N;)\r\nContent-Type: "
+					  "application/x-dmap-tagged\r\nContent-Length: 0\r\n"
+					  "Connection: close\r\n\r\n";
 	char *day[] = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
 	char *month[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sept", "Oct", "Nov", "Dec" };
 
@@ -823,24 +837,33 @@ static void *ActiveRemoteThread(void *args)
 
 		LOG_INFO("[%p]: remote command %s", Device, command);
 
-		if (strstr(command, "pause")) sq_notify(Device->SqueezeHandle, Device, SQ_PAUSE, NULL, NULL);
-		if (strstr(command, "play")) sq_notify(Device->SqueezeHandle, Device, SQ_PLAY, NULL, NULL);
-		if (strstr(command, "playpause")) sq_notify(Device->SqueezeHandle, Device, SQ_PLAY_PAUSE, NULL, NULL);
-		if (strstr(command, "stop")) sq_notify(Device->SqueezeHandle, Device, SQ_STOP, NULL, NULL);
-		if (strstr(command, "mutetoggle")) sq_notify(Device->SqueezeHandle, Device, SQ_MUTE_TOGGLE, NULL, NULL);
-		if (strstr(command, "nextitem")) sq_notify(Device->SqueezeHandle, Device, SQ_NEXT, NULL, NULL);
-		if (strstr(command, "previtem")) sq_notify(Device->SqueezeHandle, Device, SQ_PREVIOUS, NULL, NULL);
-		if (strstr(command, "volumeup")) sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, "up");
-		if (strstr(command, "volumedown")) sq_notify(Device->SqueezeHandle, Device, SQ_PREVIOUS, NULL, "down");
-		if (strstr(command, "shuffle_songs")) sq_notify(Device->SqueezeHandle, Device, SQ_SHUFFLE, NULL, NULL);
-		if (strstr(command, "beginff") || strstr(command, "beginrew")) {
+		if (!strcasecmp(command, "pause")) sq_notify(Device->SqueezeHandle, Device, SQ_PAUSE, NULL, NULL);
+		if (!strcasecmp(command, "play")) sq_notify(Device->SqueezeHandle, Device, SQ_PLAY, NULL, NULL);
+		if (!strcasecmp(command, "playpause")) sq_notify(Device->SqueezeHandle, Device, SQ_PLAY_PAUSE, NULL, NULL);
+		if (!strcasecmp(command, "stop")) sq_notify(Device->SqueezeHandle, Device, SQ_STOP, NULL, NULL);
+		if (!strcasecmp(command, "mutetoggle")) sq_notify(Device->SqueezeHandle, Device, SQ_MUTE_TOGGLE, NULL, NULL);
+		if (!strcasecmp(command, "nextitem")) sq_notify(Device->SqueezeHandle, Device, SQ_NEXT, NULL, NULL);
+		if (!strcasecmp(command, "previtem")) sq_notify(Device->SqueezeHandle, Device, SQ_PREVIOUS, NULL, NULL);
+		if (!strcasecmp(command, "volumeup")) sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, "up");
+		if (!strcasecmp(command, "volumedown")) sq_notify(Device->SqueezeHandle, Device, SQ_PREVIOUS, NULL, "down");
+		if (!strcasecmp(command, "shuffle_songs")) sq_notify(Device->SqueezeHandle, Device, SQ_SHUFFLE, NULL, NULL);
+		if (!strcasecmp(command, "beginff") || !strcasecmp(command, "beginrew")) {
 			Device->SkipStart = gettime_ms();
-			Device->SkipDir = strstr(command, "beginff") ? true : false;
+			Device->SkipDir = !strcasecmp(command, "beginff") ? true : false;
 		}
-		if (strstr(command, "playresume")) {
+		if (!strcasecmp(command, "playresume")) {
 			s32_t gap = gettime_ms() - Device->SkipStart;
 			gap = (gap + 3) * (gap + 3) * (Device->SkipDir ? 1 : -1);
 			sq_notify(Device->SqueezeHandle, Device, SQ_FF_REW, NULL, &gap);
+		}
+
+		// handle DMCP commands
+		if (stristr(command, "setproperty?dmcp.device")) {
+			// player is switched to something else, so require immediate disc
+			if (stristr(command, "prevent-playback=1")) {
+				Device->DiscWait = true;
+				sq_notify(Device->SqueezeHandle, Device, SQ_STOP, NULL, NULL);
+			}
 		}
 
 		// send pre-made response
@@ -849,6 +872,11 @@ static void *ActiveRemoteThread(void *args)
 								gmt.tm_year + 1900, gmt.tm_hour, gmt.tm_min, gmt.tm_sec);
 		n = send(sd, buf, strlen(buf), 0);
 
+#if WIN
+		shutdown(sd, SD_BOTH);
+#else
+		shutdown(sd, SHUT_RDWR);
+#endif
 		close(sd);
 	}
 
@@ -856,7 +884,7 @@ static void *ActiveRemoteThread(void *args)
 }
 
 /*----------------------------------------------------------------------------*/
-void StartActiveRemote(u32_t host)
+void StartActiveRemote(struct in_addr host)
 {
 	struct mdns_service *svc;
 	struct sockaddr_in my_addr;
@@ -877,7 +905,7 @@ void StartActiveRemote(u32_t host)
 	}
 
 	memset(&my_addr, 0, sizeof(my_addr));
-	my_addr.sin_addr.s_addr = host;
+	my_addr.sin_addr.s_addr = host.s_addr;
 	my_addr.sin_family = AF_INET;
 	my_addr.sin_port = 0;
 
@@ -934,13 +962,14 @@ static bool Start(void)
 
 	memset(&glMRDevices, 0, sizeof(glMRDevices));
 
-	if (strstr(glInterface, "?")) get_local_hostname(glInterface, 16);
+	if (strstr(glInterface, "?")) glHost.s_addr = get_localhost();
+	else glHost.s_addr = inet_addr(glInterface);
 
 	// init mDNS
-	gl_mDNSId = init_mDNS(false, inet_addr(glInterface));
+	gl_mDNSId = init_mDNS(false, glHost);
 
 	// Start the ActiveRemote server
-	StartActiveRemote(inet_addr(glInterface));
+	StartActiveRemote(glHost);
 
 	/* start the main thread */
 	pthread_attr_init(&attr);

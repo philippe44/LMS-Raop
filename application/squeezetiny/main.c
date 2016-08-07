@@ -249,7 +249,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 	char *rsp, *p;
 	u16_t idx;
 
-	if (!handle || !ctx->cli_sock) {
+	if (!handle || !ctx->cli_sock || !ctx->in_use) {
 		LOG_ERROR("[%p]: no handle or CLI socket %d", ctx, handle);
 		sq_default_metadata(metadata, true);
 		return false;
@@ -380,7 +380,7 @@ u32_t sq_get_time(sq_dev_handle_t handle)
 	char *rsp;
 	u32_t time = 0;
 
-	if (!handle || !ctx->cli_sock) {
+	if (!handle || !ctx->cli_sock || !ctx->in_use) {
 		LOG_ERROR("[%p]: no handle or CLI socket %d", ctx, handle);
 		return 0;
 	}
@@ -407,7 +407,7 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 	LOG_SDEBUG("[%p] notif %d", ctx, event);
 
 	// squeezelite device has not started yet or is off ...
-	if (!ctx->running || !ctx->on || !handle) return;
+	if (!ctx->running || !ctx->on || !handle || !ctx->in_use) return;
 
 	switch (event) {
 		case SQ_PLAY_PAUSE: {
@@ -419,7 +419,12 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 			break;
 		}
 		case SQ_PAUSE: {
-			sprintf(cmd, "%s pause 1", ctx->cli_id);
+			sprintf(cmd, "%s mode", ctx->cli_id);
+			rsp = cli_send_cmd(cmd, true, true, ctx);
+			if (rsp && *rsp)
+				sprintf(cmd, "%s pause %d", ctx->cli_id, strstr(rsp, "pause") ? 0 : 1);
+			else
+				sprintf(cmd, "%s pause", ctx->cli_id);
 			break;
 		}
 		case SQ_STOP: {

@@ -91,8 +91,8 @@ struct sMR {
 	pthread_cond_t	Cond;
 	tQueue			Queue;
 	u32_t 			LastFlush;
-	bool			TearDownWait;
-	u32_t			TearDownTO;
+	bool			DiscWait;
+	int				Sane;
 	u32_t			TrackStartTime;
 	s32_t			TrackDuration;
 	u8_t			MetadataWait;

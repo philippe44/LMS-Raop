@@ -122,8 +122,7 @@ static void sendSTAT(const char *event, u32_t server_timestamp, struct thread_ct
 	if (ctx->status.frames_played > ctx->status.device_frames) {
 		ms_played = (u32_t)(((u64_t)(ctx->status.frames_played - ctx->status.device_frames) * (u64_t)1000) / (u64_t)ctx->status.current_sample_rate);
 		if (now > ctx->status.updated) ms_played += (now - ctx->status.updated);
-		//LOG_INFO("[%p]: msplayed from frames:%u from clock:%u ", ctx, ms_played, now - ctx->output.start_at);
-		LOG_INFO("[%p]: ms fr:%u clk:%u (frames_played: %u device_frames: %u)", ctx, ms_played, now - ctx->output.start_at, ctx->status.frames_played, ctx->status.device_frames);
+		LOG_DEBUG("[%p]: ms fr:%u clk:%u (frames_played: %u device_frames: %u)", ctx, ms_played, now - ctx->output.start_at, ctx->status.frames_played, ctx->status.device_frames);
 	} else if (ctx->status.frames_played && now > ctx->status.stream_start) {
 		ms_played = now - ctx->status.stream_start;
 		LOG_INFO("[%p]: ms_played: %u using elapsed time (frames_played: %u device_frames: %u)", ctx, ms_played, ctx->status.frames_played, ctx->status.device_frames);

@@ -11,7 +11,7 @@ MDNSSD		= $(BASE)/mdnssd
 FETCHER		= $(BASE)/http_fetcher
 TINYMDNS	= $(BASE)/tinysvcmdns
 
-DEFINES 	= -DHAVE_STDINT_H -DRESAMPLE
+DEFINES 	= -DHAVE_STDINT_H -DRESAMPLE -DNDEBUG
 
 vpath %.c $(TOOLS):$(SRC):$(RAOP)/src:$(SQUEEZETINY):$(MDNSSD):$(FETCHER)/src:$(TINYMDNS)
 

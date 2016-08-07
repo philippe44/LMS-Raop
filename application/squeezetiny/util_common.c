@@ -242,107 +242,33 @@ char *toxml(char *src)
 	return res;
 }
 
-#if LINUX || OSX || BSD
-bool get_interface(struct in_addr *addr)
-{
-	struct ifreq *ifreq;
-	struct ifconf ifconf;
-	char buf[512];
-	unsigned i, nb;
-	int fd;
-	bool valid = false;
 
-	fd = socket(AF_INET, SOCK_DGRAM, 0);
-
-	ifconf.ifc_len = sizeof(buf);
-	ifconf.ifc_buf = buf;
-
-	if (ioctl(fd, SIOCGIFCONF, &ifconf)!=0) return false;
-
-	ifreq = ifconf.ifc_req;
-	nb = ifconf.ifc_len / sizeof(struct ifreq);
-
-	for (i = 0; i < nb; i++) {
-		ioctl(fd, SIOCGIFFLAGS, &ifreq[i]);
-		//!(ifreq[i].ifr_flags & IFF_POINTTOPOINT);
-		if ((ifreq[i].ifr_flags & IFF_UP) &&
-			!(ifreq[i].ifr_flags & IFF_LOOPBACK) &&
-			ifreq[i].ifr_flags & IFF_MULTICAST) {
-				*addr = ((struct sockaddr_in *) &(ifreq[i].ifr_addr))->sin_addr;
-				valid = true;
-				break;
-		 }
-	}
-
-	close(fd);
-	return valid;
-}
-#endif
-
-
-#if WIN
-bool get_interface(struct in_addr *addr)
-{
-	INTERFACE_INFO ifList[20];
-	unsigned bytes;
-	int i, nb;
-	bool valid = false;
-	int fd;
-
-	memset(addr, 0, sizeof(struct in_addr));
-	fd = socket(AF_INET, SOCK_DGRAM, 0);
-
-	if (WSAIoctl(fd, SIO_GET_INTERFACE_LIST, 0, 0, (void*) &ifList, sizeof(ifList), (void*) &bytes, 0, 0) == SOCKET_ERROR) return false;
-
-	nb = bytes / sizeof(INTERFACE_INFO);
-	for (i = 0; i < nb; i++) {
-		if ((ifList[i].iiFlags & IFF_UP) &&
-			!(ifList[i].iiFlags & IFF_POINTTOPOINT) &&
-			!(ifList[i].iiFlags & IFF_LOOPBACK) &&
-			(ifList[i].iiFlags & IFF_MULTICAST)) {
-				*addr = ((struct sockaddr_in *) &(ifList[i].iiAddress))->sin_addr;
-				valid = true;
-			break;
-		}
-	}
-
-	close(fd);
-	return valid;
-}
-#endif
-
-
-
+/*---------------------------------------------------------------------------*/
 #define MAX_INTERFACES 256
 #define DEFAULT_INTERFACE 1
-#if !WIN
+#if !defined(WIN32)
 #define INVALID_SOCKET (-1)
 #endif
-bool get_local_hostname(char *out, size_t out_len)
+in_addr_t get_localhost(void)
 {
-	bool ret = true;
-	char tempstr[INET_ADDRSTRLEN];
-	const char *p = NULL;
-
-#if WIN
+#ifdef WIN32
+	char buf[INET_ADDRSTRLEN];
 	struct hostent *h = NULL;
 	struct sockaddr_in LocalAddr;
 
 	memset(&LocalAddr, 0, sizeof(LocalAddr));
 
-	gethostname(out, out_len);
-	h = gethostbyname(out);
+	gethostname(buf, INET_ADDRSTRLEN);
+	h = gethostbyname(buf);
 	if (h != NULL) {
 		memcpy(&LocalAddr.sin_addr, h->h_addr_list[0], 4);
-		p = inet_ntop(AF_INET, &LocalAddr.sin_addr, tempstr, sizeof(tempstr));
-		if (p) strncpy(out, p, out_len);
-		else return false;
+		return LocalAddr.sin_addr.s_addr;
 	}
-	else return false;
-#elif OSX || FREEBSD
+	else return INADDR_ANY;
+#elif defined (__APPLE__) || defined(__FreeBSD__)
 	struct ifaddrs *ifap, *ifa;
 
-	if (getifaddrs(&ifap) != 0) return false;
+	if (getifaddrs(&ifap) != 0) return INADDR_ANY;
 
 	/* cycle through available interfaces */
 	for (ifa = ifap; ifa != NULL; ifa = ifa->ifa_next) {
@@ -359,17 +285,13 @@ bool get_local_hostname(char *out, size_t out_len)
 				htonl(INADDR_LOOPBACK)) {
 				continue;
 			}
-			p = inet_ntop(AF_INET,
-				&((struct sockaddr_in *)(ifa->ifa_addr))->sin_addr,
-				tempstr, sizeof(tempstr));
-			if (p) strncpy(out, p, out_len);
-			else return false;
+			return ((struct sockaddr_in *)(ifa->ifa_addr))->sin_addr.s_addr;
 			break;
 		}
 	}
 	freeifaddrs(ifap);
 
-	ret = ifa ? true : false;
+	return INADDR_ANY;
 #else
 	char szBuffer[MAX_INTERFACES * sizeof (struct ifreq)];
 	struct ifconf ifConf;
@@ -395,7 +317,7 @@ bool get_local_hostname(char *out, size_t out_len)
 	nResult = ioctl(LocalSock, SIOCGIFCONF, &ifConf);
 	if (nResult < 0) {
 		close(LocalSock);
-		return false;
+		return INADDR_ANY;
 	}
 
 	/* Cycle through the list of interfaces looking for IP addresses. */
@@ -431,12 +353,11 @@ bool get_local_hostname(char *out, size_t out_len)
 	}
 	close(LocalSock);
 
-	p = inet_ntop(AF_INET, &LocalAddr.sin_addr, tempstr, sizeof(tempstr));
-	if (p) strncpy(out, p, out_len);
-	else return false;
+	return LocalAddr.sin_addr.s_addr;
 #endif
-	return ret;
 }
+
+
 
 
 

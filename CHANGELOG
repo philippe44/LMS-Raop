@@ -3,6 +3,8 @@
  - gettime_ms was not returning correct position (missing EPOCH)
  - re-wrote synchronization mechanism
  - update when changing metadata on live stream
+ - check that device is still in use on sq_xxx functions
+ - make sure sq2r will not try to re-take control of AirPlay device when changing source
  
 0.1.3.0
  - Added coverart
