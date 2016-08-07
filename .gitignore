@@ -95,9 +95,9 @@ config.xml
 *.bat
 *-idx*
 *.save*
+*.xml
 tests/
 misc/
-bin/
 bin.old/
 /repo*.xml
 /package*.*
@@ -107,3 +107,6 @@ application - */
 test/
 cov-int/
 *.pcm
+*.
+*.obj
+/bin
