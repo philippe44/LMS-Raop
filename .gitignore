@@ -92,7 +92,7 @@ Win32
 *.map
 *.tds
 config.xml
-application/bin/
+bin/
 *.bat
 *-idx*
 *.save*
