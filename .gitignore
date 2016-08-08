@@ -79,33 +79,24 @@ $RECYCLE.BIN/
 *.lnk
 
 # C++ builder related
+test/
+misc/
+bin
+__history
+/repo*.xml
+/package*.*
+_backup/
+*.pcm
 *.*proj
 *.zip
 *.z
 *.local
-__history
 *.$$$
-tests
-Win32
 *.res
 *.i??
 *.map
 *.tds
-config.xml
-bin/
-*.bat
+*.xml
 *-idx*
 *.save*
 *.xml
-tests/
-misc/
-bin.old/
-/repo*.xml
-/package*.*
-alpha/
-_backup/
-application - */
-test/
-cov-int/
-*.pcm
-*.
