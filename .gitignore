@@ -92,7 +92,7 @@ Win32
 *.map
 *.tds
 config.xml
-bin/
+application/bin/
 *.bat
 *-idx*
 *.save*
@@ -109,4 +109,3 @@ test/
 cov-int/
 *.pcm
 *.
-*.obj
