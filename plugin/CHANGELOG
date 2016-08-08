@@ -1,20 +1,23 @@
 0.2.0.0
+ - re-wrote synchronization mechanism
  - cli_decode could return wrongly transcoded char (<< 4)
  - gettime_ms was not returning correct position (missing EPOCH)
- - re-wrote synchronization mechanism
  - update when changing metadata on live stream
  - check that device is still in use on sq_xxx functions
- - make sure sq2r will not try to re-take control of AirPlay device when changing source
+ - do not try to re-take control of AirPlay device when it's changing source
+ - (windows) : pthread_detach was missing on slimprotostop
+ - setname was not working when device was powered off
+ - re-connect if CLI socket is closed
  
 0.1.3.0
- - Added coverart
+ - added coverart
+ - added airplay remote control support
  - Time was still counting when track was paused
  - Time was wrong when repositioning (simplifed calculation, ahead by <read_ahad>)
  - DAAP parameters where missing mlit & mikd fields
  - Normal end of tracks was not flushing the connection
  - Improved network interface address detection
- - Added remote control
-   
+    
 0.1.2.2
  - Metadata was always sent even if disabled (only elapsed time was filtered)
  - NTP port log was wrong

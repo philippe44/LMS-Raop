@@ -530,11 +530,14 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 	u32_t now;
 	event_handle ehandles[2];
 	int timeouts = 0;
+	struct pollfd pfds;
+
+	pfds.fd = ctx->cli_sock;
+	pfds.events = POLLOUT | POLLIN;
 
 	set_readwake_handles(ehandles, ctx->sock, ctx->wake_e);
 
 	while (ctx->running && !ctx->new_server) {
-
 		bool wake = false;
 		event_type ev;
 
@@ -584,6 +587,13 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 
 			if (ev == EVENT_WAKE) {
 				wake = true;
+			}
+
+			if (ctx->cli_sock > 0 && (poll(&pfds, 1, 0) < 0 ||
+				(pfds.revents & POLLERR) || (pfds.revents & POLLHUP) ||
+				(pfds.revents & POLLNVAL))) {
+				LOG_ERROR("[%p] FATAL: cli socket closed", ctx);
+				return;
 			}
 
 			timeouts = 0;
@@ -861,6 +871,7 @@ static void slimproto(struct thread_ctx_s *ctx) {
 
 			if (connect_timeout(ctx->cli_sock, (struct sockaddr *) &cli_addr, sizeof(cli_addr), 1) != 0) {
 				LOG_ERROR("[%p] unable to connect to server with cli %u", ctx, failed_connect);
+				ctx->cli_sock = -1;
 			}
 
 			slimproto_run(ctx);

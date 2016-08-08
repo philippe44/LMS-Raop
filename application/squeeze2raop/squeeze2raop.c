@@ -233,7 +233,7 @@ void 		DelRaopDevice(struct sMR *Device);
 		LOG_DEBUG("[%p]: device set on/off %d", caller, device->on);
 	}
 
-	if (!device->on) {
+	if (!device->on && action != SQ_SETNAME) {
 		LOG_DEBUG("[%p]: device off or not controlled by LMS", caller);
 		return false;
 	}
