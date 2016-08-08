@@ -81,7 +81,7 @@ $RECYCLE.BIN/
 # C++ builder related
 test/
 misc/
-**/bin
+application/bin
 __history
 /repo*.xml
 /package*.*
