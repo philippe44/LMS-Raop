@@ -94,7 +94,9 @@ struct sMR {
 	bool			DiscWait;
 	int				Sane;
 	u32_t			TrackStartTime;
-	s32_t			TrackDuration;
+	u32_t			TrackDuration;
+	u32_t			TrackElapsed;
+	bool			TrackRunning;
 	u8_t			MetadataWait;
 	u32_t			MetadataHash;
 	char *SampleSize;

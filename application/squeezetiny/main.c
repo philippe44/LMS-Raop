@@ -181,7 +181,10 @@ static char *cli_decode(char *str) {
 		int k;
 		usleep(10000);
 		k = recv(ctx->cli_sock, packet + len, CLI_LEN-1 - len, 0);
-		if (k < 0) continue;
+		if (k < 0) {
+			if (last_error() == ERROR_WOULDBLOCK) continue;
+			else break;
+		}
 		len += k;
 		packet[len] = '\0';
 		if (strchr(packet, '\n') && stristr(packet, cmd)) {
@@ -249,7 +252,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 	char *rsp, *p;
 	u16_t idx;
 
-	if (!handle || !ctx->cli_sock || !ctx->in_use) {
+	if (!handle || (ctx->cli_sock <= 0) || !ctx->in_use) {
 		LOG_ERROR("[%p]: no handle or CLI socket %d", ctx, handle);
 		sq_default_metadata(metadata, true);
 		return false;
@@ -380,7 +383,7 @@ u32_t sq_get_time(sq_dev_handle_t handle)
 	char *rsp;
 	u32_t time = 0;
 
-	if (!handle || !ctx->cli_sock || !ctx->in_use) {
+	if (!handle || (ctx->cli_sock <= 0) || !ctx->in_use) {
 		LOG_ERROR("[%p]: no handle or CLI socket %d", ctx, handle);
 		return 0;
 	}

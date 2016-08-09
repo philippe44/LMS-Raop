@@ -233,7 +233,7 @@ void 		DelRaopDevice(struct sMR *Device);
 		LOG_DEBUG("[%p]: device set on/off %d", caller, device->on);
 	}
 
-	if (!device->on && action != SQ_SETNAME) {
+	if (!device->on && action != SQ_SETNAME && action != SQ_SETSERVER) {
 		LOG_DEBUG("[%p]: device off or not controlled by LMS", caller);
 		return false;
 	}
@@ -245,13 +245,14 @@ void 		DelRaopDevice(struct sMR *Device);
 		case SQ_FINISHED:
 			device->LastFlush = gettime_ms();
 			device->DiscWait = true;
-			// will miss the last "buffer time" track position updates on the player
-			device->TrackDuration = -1;
+			device->TrackRunning = false;
+			device->TrackDuration = 0;
 			break;
 		case SQ_STOP: {
 			tRaopReq *Req = malloc(sizeof(tRaopReq));
 
-			device->TrackDuration = -1;
+			device->TrackRunning = false;
+			device->TrackDuration = 0;
 			raopcl_stop(device->Raop);
 			strcpy(Req->Type, "FLUSH");
 			QueueInsert(&device->Queue, Req);
@@ -261,6 +262,7 @@ void 		DelRaopDevice(struct sMR *Device);
 		case SQ_PAUSE: {
 			tRaopReq *Req = malloc(sizeof(tRaopReq));
 
+			device->TrackRunning = false;
 			raopcl_pause(device->Raop);
 			strcpy(Req->Type, "FLUSH");
 			QueueInsert(&device->Queue, Req);
@@ -269,6 +271,8 @@ void 		DelRaopDevice(struct sMR *Device);
 		}
 		case SQ_UNPAUSE: {
 			tRaopReq *Req = malloc(sizeof(tRaopReq));
+
+			device->TrackRunning = true;
 			if (*((unsigned*) param))
 				raopcl_start_at(device->Raop, TIME_MS2NTP(*((unsigned*) param)) -
 								TS2NTP(raopcl_latency(device->Raop), raopcl_sample_rate(device->Raop)));
@@ -312,11 +316,16 @@ void 		DelRaopDevice(struct sMR *Device);
 			break;
 		case SQ_STARTED:
 			device->TrackStartTime = *((u32_t*) param);
+			device->TrackRunning = true;
+			device->TrackElapsed = 0;
 			device->MetadataWait = 1;
 			device->MetadataHash = 0;
 			break;
 		case SQ_SETNAME:
 			strcpy(device->sq_config.name, (char*) param);
+			break;
+		case SQ_SETSERVER:
+			strcpy(device->sq_config.server, inet_ntoa(*(struct in_addr*) param));
 			break;
 		default:
 			break;
@@ -356,8 +365,19 @@ static void *PlayerThread(void *args)
 				raopcl_reconnect(Device->Raop);
 			}
 
-			if (Device->Config.SendMetaData && Device->TrackDuration != -1) {
-				raopcl_set_progress_ms(Device->Raop, sq_get_time(Device->SqueezeHandle), Device->TrackDuration);
+			// after that, only check what's needed when running
+			if (!Device->TrackRunning) continue;
+
+			if (Device->Config.SendMetaData) {
+				u32_t Time;
+
+				if (!(Device->TrackElapsed % 5) && ((Time = sq_get_time(Device->SqueezeHandle)) != 0)) {
+					Device->TrackElapsed = Time / 1000;
+				}
+				else Device->TrackElapsed++;
+
+				raopcl_set_progress_ms(Device->Raop, Device->TrackElapsed * 1000,
+									   Device->TrackDuration);
 			}
 
 			pthread_mutex_lock(&Device->Mutex);
@@ -367,7 +387,19 @@ static void *PlayerThread(void *args)
 				bool valid;
 
 				pthread_mutex_unlock(&Device->Mutex);
+
 				valid = sq_get_metadata(Device->SqueezeHandle, &metadata, false);
+
+				// not a valid metadata, nothing to update
+				if (!valid) {
+					Device->MetadataWait = 5;
+					sq_free_metadata(&metadata);
+					continue;
+				}
+
+				// on live stream, gather metadata every 5 seconds
+				if (metadata.remote && !metadata.duration) Device->MetadataWait = 5;
+
 				hash = hash32(metadata.title) ^ hash32(metadata.artwork);
 
 				if (Device->MetadataHash != hash) {
@@ -397,10 +429,7 @@ static void *PlayerThread(void *args)
 									 div(metadata.duration, 1000).quot,
 									 div(metadata.duration,1000).rem, metadata.file_size,
 									 metadata.artwork ? metadata.artwork : "");
-
-				}
-
-				if (!valid || (metadata.remote && !metadata.duration)) Device->MetadataWait = 5;
+				}
 
 				sq_free_metadata(&metadata);
 			}
@@ -669,7 +698,9 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	Device->PlayerIP = data->addr;
 	Device->PlayerPort = data->port;
 	Device->DiscWait = false;
-	Device->TrackDuration = -1;
+	Device->TrackDuration = 0;
+	Device->TrackRunning = false;
+	Device->TrackElapsed = 0;
 	sprintf(Device->ActiveRemote, "%d", hash32(Device->UDN));
 	strcpy(Device->FriendlyName, data->hostname);
 	p = stristr(Device->FriendlyName, ".local");

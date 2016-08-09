@@ -8,6 +8,10 @@
  - (windows) : pthread_detach was missing on slimprotostop
  - setname was not working when device was powered off
  - re-connect if CLI socket is closed
+ - (dev-2) only send updated metadata if they are valid
+ - (dev-2) use coarse position to avoid overloading LMS with time position request
+ - (dev-2) cli_send_cmd returns immediately in case of socket error (no wait)
+ - (dev-2) server address is memorized on LMS change
  
 0.1.3.0
  - added coverart

@@ -468,7 +468,7 @@ static void process_serv(u8_t *pkt, int len,struct thread_ctx_s *ctx) {
 	LOG_INFO("[%p] switch server", ctx);
 
 	ctx->new_server = serv->server_ip;
-
+	
 	if (len - sizeof(struct serv_packet) == 10) {
 		if (!ctx->new_server_cap) {
 			ctx->new_server_cap = malloc(SYNC_CAP_LEN + 10 + 1);
@@ -482,6 +482,8 @@ static void process_serv(u8_t *pkt, int len,struct thread_ctx_s *ctx) {
 			ctx->new_server_cap = NULL;
 		}
 	}
+	
+	ctx_callback(ctx, SQ_SETSERVER, (void*) &ctx->new_server);
 }
 
 /*---------------------------------------------------------------------------*/
