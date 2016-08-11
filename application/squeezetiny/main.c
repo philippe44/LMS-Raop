@@ -265,7 +265,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 	sprintf(cmd, "%s playlist index", ctx->cli_id);
 	rsp = cli_send_cmd(cmd, true, true, ctx);
 
-	if (!rsp || (rsp && !*rsp)) {
+	if (!rsp || !*rsp) {
 		LOG_ERROR("[%p]: missing index", ctx);
 		NFREE(rsp);
 		sq_default_metadata(metadata, true);
@@ -287,7 +287,15 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 	}
 
 	sprintf(cmd, "%s playlist path %d", ctx->cli_id, idx);
-	metadata->path = cli_send_cmd(cmd, true, true, ctx);
+	rsp = cli_send_cmd(cmd, true, true, ctx);
+	if (!rsp || !*rsp) {
+		LOG_ERROR("[%p]: missing path", ctx);
+		NFREE(rsp);
+		sq_default_metadata(metadata, true);
+		return false;
+	}
+
+	metadata->path = rsp;
 	metadata->track_hash = hash32(metadata->path);
 
 	sprintf(cmd, "%s playlist remote %d", ctx->cli_id, idx);
