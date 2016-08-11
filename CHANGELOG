@@ -12,6 +12,9 @@
  - (dev-2) use coarse position to avoid overloading LMS with time position request
  - (dev-2) cli_send_cmd returns immediately in case of socket error (no wait)
  - (dev-2) server address is memorized on LMS change
+ - (dev-3) audio UDP socket *must* be non-blocking to maintain realtime even if bridge is loaded
+ - (dev-3) remote command buffer was too short
+ - (dev-3) CLI commands can return empty string !
  
 0.1.3.0
  - added coverart

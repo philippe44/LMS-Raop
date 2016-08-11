@@ -67,6 +67,9 @@ frames_t _output_frames(frames_t avail, struct thread_ctx_s *ctx) {
 				_buf_inc_readp(ctx->outputbuf, cont_frames * BYTES_PER_FRAME);
 			}
 		}
+		else {
+   			LOG_INFO("[%p]: skip but no frames avail", ctx);
+        }
 		ctx->output.state = OUTPUT_RUNNING;
 	}
 

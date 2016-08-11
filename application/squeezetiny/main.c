@@ -175,6 +175,8 @@ static char *cli_decode(char *str) {
 	else len = sprintf(packet, "%s\n", cmd);
 	send_packet((u8_t*) packet, len, ctx->cli_sock);
 
+	LOG_SDEBUG("[%p]: cmd %s", ctx, packet);
+
 	// first receive the tag and then point to the last '\n'
 	len = 0;
 	while (wait--)	{
@@ -197,7 +199,9 @@ static char *cli_decode(char *str) {
 		LOG_WARN("[%p]: Timeout waiting for CLI reponse (%s)", ctx, cmd);
 	}
 
-	if (rsp) {
+	LOG_SDEBUG("[%p]: rsp %s", ctx, rsp);
+
+	if (rsp && *rsp) {
 		for (rsp += strlen(cmd); *rsp == ' '; rsp++);
 		if (decode) rsp = cli_decode(rsp);
 		else rsp = strdup(rsp);
@@ -360,6 +364,14 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 
 	sq_default_metadata(metadata, false);
 
+	LOG_DEBUG("[%p]: idx %d\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n"
+			 "\tgenre:%s\n\tduration:%d.%03d\n\tsize:%d\n\tcover:%s",
+			  ctx, metadata->index, metadata->artist,
+			  metadata->album, metadata->title, metadata->genre,
+			  div(metadata->duration, 1000).quot,
+			  div(metadata->duration,1000).rem, metadata->file_size,
+			  metadata->artwork ? metadata->artwork : "");
+
 	return true;
 }
 
@@ -436,7 +448,8 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 		}
 		case SQ_VOLUME: {
 			if (strstr(param, "up")) sprintf(cmd, "%s mixer volume +5", ctx->cli_id);
-			else sprintf(cmd, "%s mixer volume -5", ctx->cli_id);
+			else if (strstr(param, "down")) sprintf(cmd, "%s mixer volume +5", ctx->cli_id);
+				 else sprintf(cmd, "%s mixer volume %s", ctx->cli_id, (char*) param);
 			break;
 		}
 		case SQ_MUTE_TOGGLE: {

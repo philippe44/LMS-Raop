@@ -451,12 +451,12 @@ static void *PlayerThread(void *args)
 
 		if (!strcasecmp(req->Type, "FLUSH")) {
 			if (Device->DiscWait) {
-				LOG_INFO("[%p]: disconnecting ... (%d)", Device);
+				LOG_INFO("[%p]: disconnecting ...", Device);
 				Device->DiscWait = false;
 				raopcl_disconnect(Device->Raop);
 			}
 			else {
-				LOG_INFO("[%p]: flushing ... (%d)", Device);
+				LOG_INFO("[%p]: flushing ...", Device);
 				Device->LastFlush = gettime_ms();
 				Device->DiscWait = true;
 				raopcl_flush(Device->Raop);
@@ -812,7 +812,7 @@ void DelRaopDevice(struct sMR *Device)
 static void *ActiveRemoteThread(void *args)
 {
 	int n;
-	char buf[1024], command[20], ActiveRemote[11];
+	char buf[1024], command[128], ActiveRemote[11];
 	char response[] = "HTTP/1.1 204 No Content\r\nDate: %s,%02d %s %4d %02d:%02d:%02d "
 					  "GMT\r\nDAAP-Server: iTunes/7.6.2 (Windows; N;)\r\nContent-Type: "
 					  "application/x-dmap-tagged\r\nContent-Length: 0\r\n"
@@ -891,10 +891,20 @@ static void *ActiveRemoteThread(void *args)
 		// handle DMCP commands
 		if (stristr(command, "setproperty?dmcp.device")) {
 			// player is switched to something else, so require immediate disc
-			if (stristr(command, "prevent-playback=1")) {
+			if (stristr(command, "-prevent-playback=1")) {
 				Device->DiscWait = true;
 				sq_notify(Device->SqueezeHandle, Device, SQ_STOP, NULL, NULL);
 			}
+			if (stristr(command, "-volume=")) {
+				double volume;
+				char vol[10];
+
+				sscanf(command, "%*[^=]=%lf", &volume);
+				if (volume == -144.0) strcpy(vol, "0");
+				else snprintf(vol, 10, "%u", abs((int) (volume * 100) / 30));
+				//sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, vol);
+			}
+
 		}
 
 		// send pre-made response

@@ -76,11 +76,11 @@ void send_packet(u8_t *packet, size_t len, sockfd sock) {
 		n = send(sock, ptr, len, MSG_NOSIGNAL);
 		if (n <= 0) {
 			if (n < 0 && last_error() == ERROR_WOULDBLOCK && try < 10) {
-				LOG_DEBUG("retrying (%d) writing to socket", ++try);
+				LOG_DEBUG("[%d]: retrying (%d) writing to socket", sock, ++try);
 				usleep(1000);
 				continue;
 			}
-			LOG_WARN("failed writing to socket: %s", strerror(last_error()));
+			LOG_WARN("[%d]: failed writing to socket: %s", sock, strerror(last_error()));
 			return;
 		}
 		ptr += n;
@@ -171,7 +171,7 @@ static void sendDSCO(disconnect_code disconnect, sockfd sock) {
 	pkt.length = htonl(sizeof(pkt) - 8);
 	pkt.reason = disconnect & 0xFF;
 
-	LOG_DEBUG("DSCO: %d", disconnect);
+	LOG_DEBUG("[%d]: DSCO: %d", sock, disconnect);
 
 	send_packet((u8_t *)&pkt, sizeof(pkt), sock);
 }
@@ -184,7 +184,7 @@ static void sendRESP(const char *header, size_t len, sockfd sock) {
 	memcpy(&pkt_header.opcode, "RESP", 4);
 	pkt_header.length = htonl(sizeof(pkt_header) + len - 8);
 
-	LOG_DEBUG("RESP", NULL);
+	LOG_DEBUG("[%d]: RESP", sock);
 
 	send_packet((u8_t *)&pkt_header, sizeof(pkt_header), sock);
 	send_packet((u8_t *)header, len, sock);
@@ -198,7 +198,7 @@ static void sendMETA(const char *meta, size_t len, sockfd sock) {
 	memcpy(&pkt_header.opcode, "META", 4);
 	pkt_header.length = htonl(sizeof(pkt_header) + len - 8);
 
-	LOG_DEBUG("META", NULL);
+	LOG_DEBUG("[%d]: META", sock);
 
 	send_packet((u8_t *)&pkt_header, sizeof(pkt_header), sock);
 	send_packet((u8_t *)meta, len, sock);
@@ -214,7 +214,7 @@ static void sendSETDName(const char *name, sockfd sock) {
 	pkt_header.id = 0; // id 0 is playername S:P:Squeezebox2
 	pkt_header.length = htonl(sizeof(pkt_header) + strlen(name) + 1 - 8);
 
-	LOG_DEBUG("set playername: %s", name);
+	LOG_DEBUG("[%d]: set playername: %s", sock, name);
 
 	send_packet((u8_t *)&pkt_header, sizeof(pkt_header), sock);
 	send_packet((u8_t *)name, strlen(name) + 1, sock);
@@ -265,7 +265,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 				sendSTAT("STMp", 0, ctx);
 				ctx_callback(ctx, SQ_PAUSE, NULL);
             }
-			LOG_DEBUG("pause interval: %u", interval);
+			LOG_DEBUG("[%p]: pause interval: %u", ctx, interval);
 		}
 		break;
 	case 'a':
@@ -275,7 +275,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			ctx->output.skip_frames = interval * ctx->status.current_sample_rate / 1000;
 			ctx->output.state = OUTPUT_SKIP_FRAMES;
 			UNLOCK_O;
-			LOG_INFO("skip ahead interval: %u", interval);
+			LOG_INFO("[%p]: skip ahead interval: %u", interval);
 		}
 		break;
 	case 'u':
@@ -286,7 +286,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			ctx->output.state = OUTPUT_RUNNING;
 			ctx->output.start_at = jiffies;
 			UNLOCK_O;
-			LOG_INFO("unpause at: %u now: %u", jiffies, gettime_ms());
+			LOG_INFO("[%p]: unpause at: %u now: %u", ctx, jiffies, gettime_ms());
 			sendSTAT("STMr", 0, ctx);
 		}
 		break;
