@@ -122,6 +122,7 @@ u32_t				glScanInterval = SCAN_INTERVAL;
 u32_t				glScanTimeout = SCAN_TIMEOUT;
 struct sMR			glMRDevices[MAX_RENDERERS];
 static struct in_addr glHost;
+char				*glHostName;
 
 /*----------------------------------------------------------------------------*/
 /* local types */
@@ -360,9 +361,8 @@ static void *PlayerThread(void *args)
 
 			Device->Sane = raopcl_is_sane(Device->Raop) ? 0 : Device->Sane + 1;
 			if (Device->Sane > 3) {
-				LOG_ERROR("[%p]: broken connection, attempting reset", Device);
-				raopcl_disconnect(Device->Raop);
-				raopcl_reconnect(Device->Raop);
+				LOG_ERROR("[%p]: broken connection, attempting repair", Device);
+				raopcl_repair(Device->Raop);
 			}
 
 			// after that, only check what's needed when running
@@ -670,6 +670,7 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	raop_crypto_t Crypto;
 	char *p;
 	u32_t mac_size = 6;
+	char *am = GetmDNSAttribute(data, "am");
 
 	// read parameters from default then config file
 	memset(Device, 0, sizeof(struct sMR));
@@ -678,6 +679,14 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	LoadMRConfig(glConfigID, data->name, &Device->Config, &Device->sq_config);
 
 	if (!Device->Config.Enabled) return false;
+
+	// don't create virtual players of devices created by shairtunes2 ...
+	if (am && !strcasecmp(am, "shairtunes2")) {
+		LOG_DEBUG("[%p]: skipping shairtunes2 player", Device);
+		NFREE(am);
+		return false;
+	}
+	NFREE(am);
 
 #if 0
 	if (!stristr(data->name, "JBL")) {
@@ -963,7 +972,7 @@ void StartActiveRemote(struct in_addr host)
 		LOG_ERROR("mdnsd responder start error", NULL);
 	}
 
-	mdnsd_set_hostname(gl_mDNSResponder, "airplay_bridge.local", host);
+	mdnsd_set_hostname(gl_mDNSResponder, glHostName, host);
 	sprintf(buf, "iTunes_Ctrl_%s", glDACPid);
 	svc = mdnsd_register_svc(gl_mDNSResponder, buf, "_dacp._tcp.local", port, NULL, txt);
 	mdns_service_destroy(svc);
@@ -1003,7 +1012,7 @@ static bool Start(void)
 
 	memset(&glMRDevices, 0, sizeof(glMRDevices));
 
-	if (strstr(glInterface, "?")) glHost.s_addr = get_localhost();
+	if (strstr(glInterface, "?")) glHost.s_addr = get_localhost(&glHostName);
 	else glHost.s_addr = inet_addr(glInterface);
 
 	// init mDNS
@@ -1040,6 +1049,8 @@ static bool Stop(void)
 
 	LOG_DEBUG("terminate main thread ...", NULL);
 	pthread_join(glMainThread, NULL);
+
+	free(glHostName);
 
 	return true;
 }
