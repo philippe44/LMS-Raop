@@ -15,7 +15,7 @@ use Slim::Utils::Log;
 my $prefs = preferences('plugin.raopbridge');
 my $log   = logger('plugin.raopbridge');
 my @xmlmain = qw(interface scan_interval scan_timeout log_limit);
-my @xmldevice = qw(name mac codecs enabled remove_count send_metadata send_coverart player_volume idle_timeout read_ahead encryption server);
+my @xmldevice = qw(name mac codecs enabled remove_count send_metadata send_coverart player_volume idle_timeout read_ahead encryption server volume_feedback volume_mode volume_mapping);
 
 sub name { 'PLUGIN_RAOPBRIDGE' }
 

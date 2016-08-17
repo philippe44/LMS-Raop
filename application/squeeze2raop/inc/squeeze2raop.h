@@ -48,7 +48,7 @@
 typedef struct sRaopReq {
 	char Type[20];
 	union {
-		u8_t Volume;
+		float Volume;
 		raop_codec_t Codec;
 		u64_t FlushTS;
 	} Data;
@@ -65,6 +65,10 @@ typedef struct sMRConfig
 	int			IdleTimeout;
 	bool		Encryption;
 	int 		ReadAhead;
+	int			VolumeMode;
+	int			Volume;
+	bool		VolumeFeedback;
+	char		VolumeMapping[SQ_STR_LENGTH];
 } tMRConfig;
 
 
@@ -81,6 +85,7 @@ struct sMR {
 	int	 			SqueezeHandle;
 	u8_t			Volume;
 	u32_t			VolumeStamp;
+	float 			VolumeMapping[101];
 	int				MissingCount;
 	bool			Running;
 	struct raopcl_s	*Raop;

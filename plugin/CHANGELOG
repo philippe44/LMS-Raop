@@ -19,7 +19,9 @@
  - (dev-4) cli_cmd parser checks for exact sent string as LMS seems to send garbage at the beginning from time to time
  - (dev-5) exclude shairtunes created players
  - (dev-5) change modelname to "Squeeze2Raop" for ShairTunes2 co-existence
- 
+ - (dev-6) volume was not translated from LMS 0..128 to 0..100
+ - (dev-6) feedback remote volume changes
+  
 0.1.3.0
  - added coverart
  - added airplay remote control support

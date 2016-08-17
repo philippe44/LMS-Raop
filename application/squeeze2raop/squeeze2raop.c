@@ -77,6 +77,10 @@ tMRConfig			glMRConfig = {
 							30,
 							false,
 							1000,
+							2,
+							-1,
+							true,
+							"-30:1, -15:50, 0:100",
 					};
 
 static u8_t LMSVolumeMap[101] = {
@@ -98,15 +102,13 @@ sq_dev_param_t glDeviceParam = {
 					"flc,pcm,aif,aac,mp3",
 					"?",
 					"",
+					false,
+					{ 0x00,0x00,0x00,0x00,0x00,0x00 },
+					true,
 #if defined(RESAMPLE)
 					SQ_RATE_96000,
 #else
 					SQ_RATE_44100,
-#endif
-					{ 0x00,0x00,0x00,0x00,0x00,0x00 },
-					0,
-#if defined(RESAMPLE)
-					true,
 					"",
 #endif
 				} ;
@@ -125,12 +127,10 @@ static struct in_addr glHost;
 char				*glHostName;
 
 /*----------------------------------------------------------------------------*/
-/* local types */
+/* locals */
 /*----------------------------------------------------------------------------*/
+enum { VOLUME_IGNORE = 0, VOLUME_SOFT, VOLUME_HARD };
 
-/*----------------------------------------------------------------------------*/
-/* locals variables */
-/*----------------------------------------------------------------------------*/
 extern log_level	main_loglevel;
 static log_level 	*loglevel = &main_loglevel;
 
@@ -284,21 +284,22 @@ void 		DelRaopDevice(struct sMR *Device);
 			pthread_cond_signal(&device->Cond);
 			break;
 		}
-		case SQ_VOLUME: {
-			u32_t Volume = *(u16_t*) param;
-			tRaopReq *Req = malloc(sizeof(tRaopReq));
-			int i;
+		case SQ_VOLUME:
+			if (device->Config.VolumeMode == VOLUME_HARD &&	gettime_ms() > device->VolumeStamp + 1000) {
+				u32_t Volume = *(u16_t*) param;
+				tRaopReq *Req = malloc(sizeof(tRaopReq));
+				int i;
 
-			for (i = 100; Volume < LMSVolumeMap[i] && i; i--);
-			device->Volume = i;
-			if (Volume > 100) Volume = 100;
+				// first convert to 0..100 value
+				for (i = 100; Volume < LMSVolumeMap[i] && i; i--);
+				device->Volume = i;
 
-			Req->Data.Volume = Volume;
-			strcpy(Req->Type, "VOLUME");
-			QueueInsert(&device->Queue, Req);
-			pthread_cond_signal(&device->Cond);
+				Req->Data.Volume = device->VolumeMapping[device->Volume];
+				strcpy(Req->Type, "VOLUME");
+				QueueInsert(&device->Queue, Req);
+				pthread_cond_signal(&device->Cond);
+			}
 			break;
-		}
 		case SQ_CONNECT: {
 			sq_format_t *p = (sq_format_t*) param;
 			tRaopReq *Req = malloc(sizeof(tRaopReq));
@@ -470,8 +471,8 @@ static void *PlayerThread(void *args)
 		}
 
 		if (!strcasecmp(req->Type, "VOLUME")) {
-			LOG_INFO("[%p]: processing volume: %d", Device, req->Data.Volume);
-			raopcl_set_volume(Device->Raop, req->Data.Volume, false);
+			LOG_INFO("[%p]: processing volume: %d (%.2f)", Device, Device->Volume, req->Data.Volume);
+			raopcl_set_volume(Device->Raop, req->Data.Volume);
 		}
 
 		free(req);
@@ -552,6 +553,7 @@ static void *UpdateMRThread(void *args)
 
 			if (AddRaopDevice(Device, p) && !glSaveConfigFile) {
 				// create a new slimdevice
+				Device->sq_config.soft_volume = (Device->Config.VolumeMode == VOLUME_SOFT);
 				Device->SqueezeHandle = sq_reserve_device(Device, &sq_callback);
 				if (!*(Device->sq_config.name)) strcpy(Device->sq_config.name, Device->FriendlyName);
 				if (!Device->SqueezeHandle || !sq_run_device(Device->SqueezeHandle,
@@ -664,6 +666,37 @@ static void *MainThread(void *args)
 
 
 /*----------------------------------------------------------------------------*/
+void SetVolumeMapping(struct sMR *Device)
+{
+	char *p;
+	int i = 1;
+	float a1 = 1, b1 = -30, a2 = 0, b2 = 0;
+
+	Device->VolumeMapping[0] = -144.0;
+	p = Device->Config.VolumeMapping;
+	do {
+		if (!p || !sscanf(p, "%f:%f", &b2, &a2)) {
+			LOG_ERROR("[%p]: wrong volume mapping table", Device, p);
+			break;
+		}
+		p = strchr(p, ',');
+		if (p) p++;
+
+		while (i <= a2) {
+			Device->VolumeMapping[i] = (a1 == a2) ? b1 :
+									   i*(b1-b2)/(a1-a2) + b1 - a1*(b1-b2)/(a1-a2);
+			i++;
+		}
+
+		a1 = a2;
+		b1 = b2;
+	} while (i <= 100);
+
+	for (; i <= 100; i++) Device->VolumeMapping[i] = Device->VolumeMapping[i-1];
+}
+
+
+/*----------------------------------------------------------------------------*/
 static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 {
 	pthread_attr_t attr;
@@ -703,7 +736,8 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	Device->SqueezeHandle = 0;
 	Device->Running = true;
 	Device->InUse = true;
-	Device->VolumeStamp = 0;
+	// make sure that 1st volume is not missed
+	Device->VolumeStamp = gettime_ms() - 2000;
 	Device->PlayerIP = data->addr;
 	Device->PlayerPort = data->port;
 	Device->DiscWait = false;
@@ -714,6 +748,7 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	strcpy(Device->FriendlyName, data->hostname);
 	p = stristr(Device->FriendlyName, ".local");
 	if (p) *p = '\0';
+	SetVolumeMapping(Device);
 
 	LOG_INFO("[%p]: adding renderer (%s)", Device, Device->FriendlyName);
 
@@ -752,7 +787,7 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 								 Device->SampleRate ? atoi(Device->SampleRate) : 44100,
 								 Device->SampleSize ? atoi(Device->SampleSize) : 16,
 								 Device->Channels ? atoi(Device->Channels) : 2,
-								 abs(Device->sq_config.player_volume));
+								 raopcl_float_volume(Device->Config.Volume));
 
 	if (!Device->Raop) {
 		LOG_ERROR("[%p]: cannot create raop device", Device);
@@ -904,16 +939,19 @@ static void *ActiveRemoteThread(void *args)
 				Device->DiscWait = true;
 				sq_notify(Device->SqueezeHandle, Device, SQ_STOP, NULL, NULL);
 			}
-			if (stristr(command, "-volume=")) {
-				double volume;
+			if (Device->Config.VolumeMode != VOLUME_SOFT &&
+				Device->Config.VolumeFeedback && stristr(command, "-volume=")) {
+				float volume;
 				char vol[10];
+				int i;
 
-				sscanf(command, "%*[^=]=%lf", &volume);
-				if (volume == -144.0) strcpy(vol, "0");
-				else snprintf(vol, 10, "%u", abs((int) (volume * 100) / 30));
-				//sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, vol);
+				Device->VolumeStamp = gettime_ms();
+                sscanf(command, "%*[^=]=%f", &volume);
+				for (i = 0; i < 100 && volume > Device->VolumeMapping[i]; i++ );
+				sprintf(vol, "%d", i);
+				LOG_INFO("[%p]: volume feedback %s (%.2f)", Device, vol, volume);
+				sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, vol);
 			}
-
 		}
 
 		// send pre-made response

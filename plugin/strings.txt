@@ -158,15 +158,38 @@ PLUGIN_RAOPBRIDGE_CODECS
 	EN	Codecs
 
 PLUGIN_RAOPBRIDGE_AUDIOPARAM_DESC
-	EN	<b>Codecs</b>: Several codecs are supported by an AirPlay player. They will be reported to LMS to decide when to do transcoding. 
-	EN	Currently only 'pcm' is supported
-	EN	<br><b>Volume</b>: Most AirPlay devices can have their volume set by the bridge directly but a few fails on this command and playback is
-	EN	interrupted at each volume change. Set this to a value between 1..100 to try to set only once the player's volume and then
-	EN	apply volume digitally on each sample (This requires much more CPU processing). Set this to a negative value -1..-100 to fix the player's
-	EN	volume and ignore LMS commands (-100 = loudest). Set to 0 for normal mode
+	EN	Several codecs are supported by an AirPlay player. They will be reported to LMS that will decide 
+	EN	when to do transcoding. 
+
+PLUGIN_RAOPBRIDGE_VOLUMEMGMT
+	EN	Volume management
+
+PLUGIN_RAOPBRIDGE_VOLUMEMGMT_DESC
+	EN	<b>Volume</b>: Set the initial volume value when the bridge connects to the player. This will be over-ridden by 
+	EN	LMS if authorized by "mode" parameter. Set to -1 to disable it
+	EN	<br><b>Mode</b>: Sets how LMS volume commands are handled
+	EN	<br>- <i>ignore</i>: LMS cannot control volume (only the "Volume" command will be send if set at connection)
+	EN	<br>- <i>software</i>: LMS volume is rendered by applying gain on digital samples. Note that volume feedback is disabled
+	EN	<br>- <i>hardware</i>: LMS volume is transcoded into AirPlay commands
+	EN	<br><b>Feedback</b>: Allows device's remote control to change LMS volume. See the "Mapping" parameter as well
+	EN  <br><b>Mapping</b>: Defines a few matching points between AirPlay volume (-30...0) and LMS volume (1..100). 
+	EN	This is a comma-separated set of pairs like "avol1:lvol1, avol2:lvol2 ... avoln:lvoln" (avol=AirPlay, lvol=LMS).
+	EN	This is needed for players whose volume scale 1..100 is not proportional to AirPlay scale -30..0 in which case
+	EN	the volume feedback will be incorrect (eg: -17.5 on an AirPlay scale is 50). Set a few matching point and the
+	EN	bridge will compute missing values. Note that LMS volume 0 is mute and is by default translated to -144.0, so
+	EN	do *not* add this matching point
 	
 PLUGIN_RAOPBRIDGE_PLAYERVOLUME
-	EN	Fix analogue volume at
+	EN	Default
+
+PLUGIN_RAOPBRIDGE_VOLUMEMODE
+	EN	Mode
+
+PLUGIN_RAOPBRIDGE_VOLUMEFEEDBACK
+	EN	Feedback
+
+PLUGIN_RAOPBRIDGE_VOLUMEMAPPING
+	EN	Mapping
 
 PLUGIN_RAOPBRIDGE_SERVER
 	EN	LMS Server

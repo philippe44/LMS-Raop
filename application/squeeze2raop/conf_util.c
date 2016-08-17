@@ -99,7 +99,10 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, common, "resample", "%d", (int) glDeviceParam.resample);
 	XMLUpdateNode(doc, common, "resample_options", glDeviceParam.resample_options);
 #endif
-	XMLUpdateNode(doc, common, "player_volume", "%d", (int) glDeviceParam.player_volume);
+	XMLUpdateNode(doc, common, "player_volume", "%d", (int) glMRConfig.Volume);
+	XMLUpdateNode(doc, common, "volume_mapping", glMRConfig.VolumeMapping);
+	XMLUpdateNode(doc, common, "volume_feedback", "%d", (int) glMRConfig.VolumeFeedback);
+	XMLUpdateNode(doc, common, "volume_mode", "%d", (int) glMRConfig.VolumeMode);
 	XMLUpdateNode(doc, common, "send_metadata", "%d", (int) glMRConfig.SendMetaData);
 	XMLUpdateNode(doc, common, "send_coverart", "%d", (int) glMRConfig.SendCoverArt);
 	XMLUpdateNode(doc, common, "remove_count", "%d", (u32_t) glMRConfig.RemoveCount);
@@ -185,7 +188,6 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 
 	if (!strcmp(name, "streambuf_size")) sq_conf->stream_buf_size = atol(val);
 	if (!strcmp(name, "output_size")) sq_conf->output_buf_size = atol(val);
-	if (!strcmp(name, "player_volume")) sq_conf->player_volume = atol(val);
 	if (!strcmp(name, "codecs")) strcpy(sq_conf->codecs, val);
 	if (!strcmp(name, "sample_rate")) sq_conf->sample_rate = atol(val);
 	if (!strcmp(name, "name")) strcpy(sq_conf->name, val);
@@ -210,6 +212,10 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "send_metadata")) Conf->SendMetaData = atol(val);
 	if (!strcmp(name, "send_coverart")) Conf->SendCoverArt = atol(val);
 	if (!strcmp(name, "friendly_name")) strcpy(Conf->Name, val);
+	if (!strcmp(name, "player_volume")) Conf->Volume = atol(val);
+	if (!strcmp(name, "volume_mapping")) strcpy(Conf->VolumeMapping, val);
+	if (!strcmp(name, "volume_feedback")) Conf->VolumeFeedback = atol(val);
+	if (!strcmp(name, "volume_mode")) Conf->VolumeMode = atol(val);
 }
 
 /*----------------------------------------------------------------------------*/
