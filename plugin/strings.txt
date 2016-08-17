@@ -173,11 +173,11 @@ PLUGIN_RAOPBRIDGE_VOLUMEMGMT_DESC
 	EN	<br>- <i>hardware</i>: LMS volume is transcoded into AirPlay commands
 	EN	<br><b>Feedback</b>: Allows device's remote control to change LMS volume. See the "Mapping" parameter as well
 	EN  <br><b>Mapping</b>: Defines a few matching points between AirPlay volume (-30...0) and LMS volume (1..100). 
-	EN	This is a comma-separated set of pairs like "avol1:lvol1, avol2:lvol2 ... avoln:lvoln" (avol=AirPlay, lvol=LMS).
+	EN	This is a comma-separated set of pairs like "a1:l1, a2:l2 ... an:ln" (a=AirPlay, l=LMS).
 	EN	This is needed for players whose volume scale 1..100 is not proportional to AirPlay scale -30..0 in which case
-	EN	the volume feedback will be incorrect (eg: -17.5 on an AirPlay scale is 50). Set a few matching point and the
-	EN	bridge will compute missing values. Note that LMS volume 0 is mute and is by default translated to -144.0, so
-	EN	do *not* add this matching point
+	EN	the volume feedback will be incorrect (eg: -17.5 on an AirPlay scale is 50 on LMS scale). Set a few matching point 
+	EN	and the bridge will compute missing values. Note that LMS volume 0 is mute and is by default translated to -144.0, 
+	EN	so do *not* add this matching point
 	
 PLUGIN_RAOPBRIDGE_PLAYERVOLUME
 	EN	Default
