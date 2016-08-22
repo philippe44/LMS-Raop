@@ -20,6 +20,8 @@ mDNS announce: https://github.com/philippe44/TinySVCmDNS
 
 HTTP download: https://github.com/philippe44/HTTP-Fetcher
 
+RAOP client library: https://github.com/philippe44/RAOP-Player
+
 libupnp: https://sourceforge.net/projects/pupnp (you just need the libixml part of libupnp)
 
 pthread for Windows: https://www.sourceware.org/pthreads-win32
