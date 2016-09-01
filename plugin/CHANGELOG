@@ -1,5 +1,6 @@
 0.2.0.1
  - Move back strings.txt to unix format
+ - Codec check should incldue ALAC and PCM, not only PCM
  
 0.2.0.0
  - re-wrote synchronization mechanism
