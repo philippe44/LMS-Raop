@@ -769,8 +769,8 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	Device->Codecs = GetmDNSAttribute(data, "cn");
 	Device->Crypto = GetmDNSAttribute(data, "et");
 
-	if (!strchr(Device->Codecs, '0')) {
-		LOG_ERROR("[%p]: incompatible codec", Device->Codecs);
+	if (!strchr(Device->Codecs, '0') && !strchr(Device->Codecs, '1')) {
+		LOG_ERROR("[%p]: incompatible codec %s", Device, Device->Codecs);
 		return false;
 	}
 
