@@ -1,5 +1,6 @@
 0.2.0.2
- - Codec check should include ALAC and PCM, not only PCM
+ - Codec check should include ALAC not PCM
+ - Do not fail if ALAC not in codecs, just warn
 
 0.2.0.1
  - Move back strings.txt to unix format
