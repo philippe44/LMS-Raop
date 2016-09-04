@@ -23,7 +23,7 @@
 #ifndef __SQUEEZEDEFS_H
 #define __SQUEEZEDEFS_H
 
-#define VERSION "v0.2.0.2-dev-2"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.0.2-dev-4"" ("__DATE__" @ "__TIME__")"
 
 #include <pthread.h>
 #include "platform.h"
@@ -36,6 +36,7 @@
 #define mutex_type pthread_mutex_t
 #define mutex_create(m) pthread_mutex_init(&m, NULL)
 #define mutex_lock(m) pthread_mutex_lock(&m)
+#define mutex_trylock(m) pthread_mutex_trylock(&m)
 #define mutex_unlock(m) pthread_mutex_unlock(&m)
 #define mutex_destroy(m) pthread_mutex_destroy(&m)
 #define thread_type pthread_t

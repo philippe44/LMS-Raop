@@ -1,3 +1,6 @@
+0.2.0.3
+ - too many CLI socket were consumed when all bridges were opened - open on demand and close after 10sec
+	
 0.2.0.2
  - Codec check should include ALAC not PCM
  - Do not fail if ALAC not in codecs, just warn

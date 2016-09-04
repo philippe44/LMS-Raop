@@ -1,4 +1,4 @@
-BASE		= ../..
+BASE		= ..
 
 TOOLS		= ./tools
 SRC			= ./squeeze2raop
@@ -72,5 +72,5 @@ $(OBJ)/%-static.o : %.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -DLINKALL $< -c -o $(OBJ)/$*-static.o	
 	
 clean:
-	rm -f $(OBJECTS) $(EXECUTABLE) 
+	rm -f $(OBJECTS) $(OBJECTS_STATIC) $(EXECUTABLE) $(EXECUTABLE_STATIC)
 
