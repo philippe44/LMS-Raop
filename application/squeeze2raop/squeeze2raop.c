@@ -721,6 +721,11 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	}
 	NFREE(am);
 
+	if (stristr(data->name, "AirSonos")) {
+		LOG_DEBUG("[%p]: skipping AirSonos player (please use uPnPBridge)", Device);
+		return false;
+	}
+
 #if 0
 	if (!stristr(data->name, "JBL")) {
 		printf("ONLY JBL %s\n", data->name);
