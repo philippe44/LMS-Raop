@@ -3,6 +3,7 @@
  - Do not fail if ALAC not in codecs, just warn
  - too many CLI socket were consumed when all bridges were opened - open on demand and close after 10sec
  - ignore AirSonos devices
+ - (dev-5) cli test was made before opening socket in get metadata
 
 0.2.0.1
  - Move back strings.txt to unix format

@@ -186,6 +186,29 @@ u32_t hash32_buf(char *str, size_t len)
 }
 
 /*---------------------------------------------------------------------------*/
+u64_t hash64(char *str)
+{
+	if (!str) return 0;
+
+	return hash64_buf(str, strlen(str));
+}
+
+/*---------------------------------------------------------------------------*/
+u64_t hash64_buf(char *str, size_t len)
+{
+	u64_t h = 0, high;
+
+	while (len--)
+	{
+		h = ( h << 8 ) + *str++;
+		if ( (high = h & 0xFF00000000000000LL) != 0 )
+			h ^= high >> 48;
+		h &= ~high;
+	}
+	return h;
+}
+
+/*---------------------------------------------------------------------------*/
 char *stristr(char *s1, char *s2)
 {
  char *s1_lwr = strlwr(strdup(s1));

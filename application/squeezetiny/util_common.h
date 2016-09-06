@@ -33,6 +33,8 @@ char *stristr(char *s1, char *s2);
 char *toxml(char *src);
 u32_t hash32(char *str);
 u32_t hash32_buf(char *str, size_t len);
+u64_t hash64(char *str);
+u64_t hash64_buf(char *str, size_t len);
 in_addr_t get_localhost(char **name);
 
 #endif
