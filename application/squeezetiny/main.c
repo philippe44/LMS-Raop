@@ -437,7 +437,7 @@ u32_t sq_get_time(sq_dev_handle_t handle)
 	char *rsp;
 	u32_t time = 0;
 
-	if (!handle || (ctx->cli_sock <= 0) || !ctx->in_use) {
+	if (!handle || !ctx->in_use) {
 		LOG_ERROR("[%p]: no handle or CLI socket %d", ctx, handle);
 		return 0;
 	}
