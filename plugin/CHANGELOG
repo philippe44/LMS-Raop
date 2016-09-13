@@ -4,6 +4,7 @@
  - too many CLI socket were consumed when all bridges were opened - open on demand and close after 10sec
  - ignore AirSonos devices
  - (dev-5) cli test was made before opening socket in get metadata
+ - (dev-6) do not remove player if connected, even if missing count is 0
 
 0.2.0.1
  - Move back strings.txt to unix format

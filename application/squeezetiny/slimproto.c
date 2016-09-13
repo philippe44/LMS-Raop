@@ -275,7 +275,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			ctx->output.skip_frames = interval * ctx->status.current_sample_rate / 1000;
 			ctx->output.state = OUTPUT_SKIP_FRAMES;
 			UNLOCK_O;
-			LOG_INFO("[%p]: skip ahead interval: %u", interval);
+			LOG_INFO("[%p]: skip ahead interval: %u", ctx, interval);
 		}
 		break;
 	case 'u':

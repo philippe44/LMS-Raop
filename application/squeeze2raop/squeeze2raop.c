@@ -586,7 +586,7 @@ static void *UpdateMRThread(void *args)
 		Device = &glMRDevices[i];
 		if (!Device->InUse) continue;
 		if (Device->TimeOut && Device->MissingCount) Device->MissingCount--;
-		if (Device->MissingCount) continue;
+		if (raopcl_is_connected(Device->Raop) || Device->MissingCount) continue;
 
 		LOG_INFO("[%p]: removing renderer (%s)", Device, Device->FriendlyName);
 		if (Device->SqueezeHandle) sq_delete_device(Device->SqueezeHandle);
