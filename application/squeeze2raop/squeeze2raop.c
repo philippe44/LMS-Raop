@@ -749,7 +749,7 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	Device->TrackDuration = 0;
 	Device->TrackRunning = false;
 	Device->TrackElapsed = 0;
-	sprintf(Device->ActiveRemote, "%d", hash32(Device->UDN));
+	sprintf(Device->ActiveRemote, "%u", hash32(Device->UDN));
 	strcpy(Device->FriendlyName, data->hostname);
 	p = stristr(Device->FriendlyName, ".local");
 	if (p) *p = '\0';

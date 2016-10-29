@@ -1,3 +1,6 @@
+0.2.0.3
+ - ActiveRemote must be unsigned int
+ 
 0.2.0.2
  - Codec check should include ALAC not PCM
  - Do not fail if ALAC not in codecs, just warn
