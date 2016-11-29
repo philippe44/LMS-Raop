@@ -37,7 +37,7 @@ sub binaries {
 	}
 	
 	if ($os->{'os'} eq 'Darwin') {
-		return qw(squeeze2raop-osx-multi);
+		return qw(squeeze2raop-osx-multi squeeze2raop-osx-multi-static);
 	}
 	
 	if ($os->{'os'} eq 'Windows') {
@@ -72,7 +72,7 @@ sub bin {
 		}
 	}
 
-	return $binaries[0] =~ /squeeze2raop-osx/ ? $binaries[0] : undef;
+	return undef;
 }
 
 sub start {

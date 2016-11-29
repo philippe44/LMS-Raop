@@ -1,3 +1,6 @@
+0.2.0.4
+ - Add static build for OSX (only static codecs)
+
 0.2.0.3
  - ActiveRemote must be unsigned int
  

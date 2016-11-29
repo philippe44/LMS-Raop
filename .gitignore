@@ -100,3 +100,4 @@ _backup/
 *-idx*
 *.save*
 *.xml
+*.pcm
