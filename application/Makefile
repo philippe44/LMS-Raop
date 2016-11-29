@@ -1,4 +1,11 @@
 BASE		= ..
+OS 			:= $(shell uname)
+
+ifeq ($(OS),Darwin)
+LINKSTATIC	=
+else
+LINKSTATIC 	= -static
+endif
 
 TOOLS		= ./tools
 SRC			= ./squeeze2raop
@@ -11,7 +18,7 @@ MDNSSD		= $(BASE)/mdnssd
 FETCHER		= $(BASE)/http_fetcher
 TINYMDNS	= $(BASE)/tinysvcmdns
 
-DEFINES 	?= -DHAVE_STDINT_H -DRESAMPLE -DNDEBUG
+DEFINES 	+= -DHAVE_STDINT_H -DRESAMPLE -DNDEBUG
 
 vpath %.c $(TOOLS):$(SRC):$(RAOP)/src:$(SQUEEZETINY):$(MDNSSD):$(FETCHER)/src:$(TINYMDNS)
 
@@ -55,7 +62,7 @@ $(EXECUTABLE): $(OBJECTS)
 	$(CC) $(OBJECTS) $(LIBRARY) $(LDFLAGS) -o $@
 
 $(EXECUTABLE_STATIC): $(OBJECTS_STATIC)
-	$(CC) $(OBJECTS_STATIC) $(LIBRARY_STATIC) $(LDFLAGS) -static -o $@	
+	$(CC) $(OBJECTS_STATIC) $(LIBRARY_STATIC) $(LDFLAGS) $(LINKSTATIC) -o $@	
 
 $(OBJECTS): $(DEPS) | bin $(OBJ)
 
