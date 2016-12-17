@@ -1,5 +1,7 @@
 0.2.0.4
  - Add static build for OSX (only static codecs)
+ - glHostName was not set when network interface was set to "?"
+ - DACP name was not ".local"
 
 0.2.0.3
  - ActiveRemote must be unsigned int
