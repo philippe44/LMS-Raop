@@ -982,7 +982,7 @@ void StartActiveRemote(struct in_addr host)
 	struct sockaddr_in my_addr;
 	socklen_t nlen = sizeof(struct sockaddr);
 	int port;
-	char buf[128];
+	char buf[256];
 	const char *txt[] = {
 		"txtvers=1",
 		"Ver=1",
@@ -1014,7 +1014,8 @@ void StartActiveRemote(struct in_addr host)
 		LOG_ERROR("mdnsd responder start error", NULL);
 	}
 
-	mdnsd_set_hostname(gl_mDNSResponder, glHostName, host);
+	sprintf(buf, "%s.local", glHostName);
+	mdnsd_set_hostname(gl_mDNSResponder, buf, host);
 	sprintf(buf, "iTunes_Ctrl_%s", glDACPid);
 	svc = mdnsd_register_svc(gl_mDNSResponder, buf, "_dacp._tcp.local", port, NULL, txt);
 	mdns_service_destroy(svc);
@@ -1054,8 +1055,8 @@ static bool Start(void)
 
 	memset(&glMRDevices, 0, sizeof(glMRDevices));
 
-	if (strstr(glInterface, "?")) glHost.s_addr = get_localhost(&glHostName);
-	else glHost.s_addr = inet_addr(glInterface);
+	glHost.s_addr = get_localhost(&glHostName);
+	if (!strstr(glInterface, "?")) glHost.s_addr = inet_addr(glInterface);
 
 	// init mDNS
 	gl_mDNSId = init_mDNS(false, glHost);
