@@ -1330,6 +1330,12 @@ int main(int argc, char *argv[])
 			output_loglevel = debug2level(level);
 		}
 
+		if (!strcmp(resp, "decodedbg"))	{
+			char level[20];
+			i = scanf("%s", level);
+			decode_loglevel = debug2level(level);
+		}
+
 		if (!strcmp(resp, "slimprotodbg"))	{
 			char level[20];
 			i = scanf("%s", level);

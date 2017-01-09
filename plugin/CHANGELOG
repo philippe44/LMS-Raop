@@ -1,3 +1,11 @@
+0.2.1.0
+ - Cross-compile toolchain
+ - add "decodedbg" comamnd line
+ 
+0.2.0.5
+ - clean armv6 compilation flags
+ - remove armv5hf build (was not float)
+ 
 0.2.0.4
  - Add static build for OSX (only static codecs)
  - glHostName was not set when network interface was set to "?"
