@@ -1,6 +1,9 @@
+0.2.1.1 
+ - re-introduce armv5te with softfp (used FPU if available)
+
 0.2.1.0
  - Cross-compile toolchain
- - add "decodedbg" comamnd line
+ - add "decodedbg" command line
  
 0.2.0.5
  - clean armv6 compilation flags
