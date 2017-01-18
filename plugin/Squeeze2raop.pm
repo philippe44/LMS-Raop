@@ -28,8 +28,11 @@ sub binaries {
 		if ($os->{'binArch'} =~ /i386/) {
 			return qw(squeeze2raop-x86 squeeze2raop-x86-static);
 		}
+		if ($os->{'binArch'} =~ /armhf/) {
+			return qw(squeeze2raop-armv6hf squeeze2raop-armv6hf-static);
+		}
 		if ($os->{'binArch'} =~ /arm/) {
-			return qw(squeeze2raop-armv6hf squeeze2raop-armv6hf-static squeeze2raop-armv5te squeeze2raop-armv5te-static);
+			return qw(squeeze2raop-armv5te squeeze2raop-armv5te-static);
 		}
 		
 		# fallback to offering all linux options for case when architecture detection does not work
