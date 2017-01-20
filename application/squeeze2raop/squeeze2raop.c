@@ -146,6 +146,7 @@ static char usage[] =
 		   "See -t for license terms\n"
 		   "Usage: [options]\n"
 		   "  -s <server>[:<port>]\tConnect to specified server, otherwise uses autodiscovery to find server\n"
+		   "  -b <address>]\tNetwork address to bind to\n"
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
 		   "  -i <config file>\tdiscover players, save <config file> and exit\n"
 		   "  -I \t\t\tauto save config at every network scan\n"
@@ -1130,7 +1131,7 @@ bool ParseArgs(int argc, char **argv) {
 
 	while (optind < argc && strlen(argv[optind]) >= 2 && argv[optind][0] == '-') {
 		char *opt = argv[optind] + 1;
-		if (strstr("stxdfpi", opt) && optind < argc - 1) {
+		if (strstr("stxdfpib", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
 		} else if (strstr("tzZIk"
@@ -1149,6 +1150,9 @@ bool ParseArgs(int argc, char **argv) {
 		switch (opt[0]) {
 		case 's':
 			strcpy(glDeviceParam.server, optarg);
+			break;
+		case 'b':
+			strcpy(glInterface, optarg);
 			break;
 #if defined(RESAMPLE)
 		case 'u':

@@ -138,10 +138,14 @@ PLUGIN_RAOPBRIDGE_SCAN_DESC
 
 PLUGIN_RAOPBRIDGE_INTERFACE
 	EN	Network interface 
+	
+PLUGIN_RAOPBRIDGE_USELMSSOCKET
+	EN	Use LMS' network interface
 
 PLUGIN_RAOPBRIDGE_INTERFACE_DESC
 	EN	The network interface (ip address in format xxx.xxx.xxx.xxx) used by the bridge. This is especially useful if you have a
-	EN	 computer with multiple network interfaces. Use "?" (without ") to let the bridge decide
+	EN	computer with multiple network interfaces. Use ? to let the bridge decide or check "use LMS' network
+	EN	interface" to make sure the Bridge uses the same network as LMS
 	
 PLUGIN_RAOPBRIDGE_SCANINTERVAL
 	EN	Scan for AirPlay devices every

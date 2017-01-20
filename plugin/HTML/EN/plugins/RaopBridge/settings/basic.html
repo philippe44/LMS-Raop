@@ -65,7 +65,8 @@
 	[% END %]
 	
 	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_INTERFACE" desc="PLUGIN_RAOPBRIDGE_INTERFACE_DESC" %]
-		<input type="text" class="stdedit" name="interface" id="interface" value="[% interface %]" size="20">
+		<input [% IF useLMSsocket %] disabled [% END %] type="text" class="stdedit" name="interface" id="interface" value="[% interface %]" size="20">
+		&nbsp<input name="useLMSsocket" type="checkbox" [% IF useLMSsocket %] checked [% END %]>&nbsp[% "PLUGIN_RAOPBRIDGE_USELMSSOCKET" | string %]
 	[% END %]
 	
 	<hr>
