@@ -651,7 +651,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			UNLOCK_S;
 
 			LOCK_O;
-			ctx->status.output_full = _buf_used(ctx->outputbuf);
+			ctx->status.output_full = min(_buf_used(ctx->outputbuf) + ctx->output.device_frames * BYTES_PER_FRAME, ctx->outputbuf->size);
 			ctx->status.output_size = ctx->outputbuf->size;
 			ctx->status.frames_played = ctx->output.frames_played_dmp;
 			ctx->status.current_sample_rate = ctx->output.current_sample_rate;
