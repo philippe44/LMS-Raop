@@ -382,6 +382,12 @@ static void *PlayerThread(void *args)
 									   Device->TrackDuration);
 			}
 
+			// Some players do not take immediately volume into account
+			if (Device->VolumeWait && !--Device->VolumeWait) {
+				LOG_INFO("[%p]: processing delayed volume: %d (%.2f)", Device, Device->Volume, Device->VolumeMapping[Device->Volume]);
+				raopcl_set_volume(Device->Raop, Device->VolumeMapping[Device->Volume]);
+			}
+
 			pthread_mutex_lock(&Device->Mutex);
 			if (Device->MetadataWait && !--Device->MetadataWait && Device->Config.SendMetaData) {
 				sq_metadata_t metadata;
@@ -444,6 +450,7 @@ static void *PlayerThread(void *args)
 			LOG_INFO("[%p]: raop connecting ...", Device);
 			if (raopcl_connect(Device->Raop, Device->PlayerIP, Device->PlayerPort, req->Data.Codec)) {
 				Device->DiscWait = false;
+				Device->VolumeWait = 1;
 				LOG_INFO("[%p]: raop connected", Device);
 			}
 			else {
@@ -750,6 +757,7 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	Device->TrackDuration = 0;
 	Device->TrackRunning = false;
 	Device->TrackElapsed = 0;
+	Device->VolumeWait = 0;
 	sprintf(Device->ActiveRemote, "%u", hash32(Device->UDN));
 	strcpy(Device->FriendlyName, data->hostname);
 	p = stristr(Device->FriendlyName, ".local");

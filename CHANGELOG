@@ -1,6 +1,6 @@
 0.2.1.2
  - output fullness now takes into account device_frames to avoid telling LMS that buffer is empty when its in fact all in the AirPlay device
- - do not set volume if RAOP_NOCODEC is used in raopcl_connect (i.e connection after unpause)
+ - re-send a volume command 1s after CONNECT (1st volume feedback was already ignored)
  
 0.2.1.1 
  - re-introduce armv5te with soft floating only

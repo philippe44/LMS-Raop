@@ -104,6 +104,7 @@ struct sMR {
 	bool			TrackRunning;
 	u8_t			MetadataWait;
 	u32_t			MetadataHash;
+	u8_t			VolumeWait;
 	char *SampleSize;
 	char *SampleRate;
 	char *Channels;
