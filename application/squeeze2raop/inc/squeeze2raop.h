@@ -84,6 +84,7 @@ struct sMR {
 	bool			TimeOut;
 	int	 			SqueezeHandle;
 	u8_t			Volume;
+	bool			Muted;
 	u32_t			VolumeStamp;
 	float 			VolumeMapping[101];
 	int				MissingCount;
@@ -104,7 +105,6 @@ struct sMR {
 	bool			TrackRunning;
 	u8_t			MetadataWait;
 	u32_t			MetadataHash;
-	u8_t			VolumeWait;
 	char *SampleSize;
 	char *SampleRate;
 	char *Channels;

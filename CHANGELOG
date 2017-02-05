@@ -1,6 +1,6 @@
 0.2.1.2
  - output fullness now takes into account device_frames to avoid telling LMS that buffer is empty when its in fact all in the AirPlay device
- - re-send a volume command 1s after CONNECT (1st volume feedback was already ignored)
+ - memorize volume before pause and re-send if before reconnect with a small increase to force some player to make a change
  
 0.2.1.1 
  - re-introduce armv5te with soft floating only

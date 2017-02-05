@@ -293,9 +293,12 @@ void 		DelRaopDevice(struct sMR *Device);
 
 				// first convert to 0..100 value
 				for (i = 100; Volume < LMSVolumeMap[i] && i; i--);
-				device->Volume = i;
+				if (Volume) {
+					device->Volume = i;
+					device->Muted = false;
+				} else device->Muted = true;
 
-				Req->Data.Volume = device->VolumeMapping[device->Volume];
+				Req->Data.Volume = (device->Muted) ? -144 : device->VolumeMapping[device->Volume];
 				strcpy(Req->Type, "VOLUME");
 				QueueInsert(&device->Queue, Req);
 				pthread_cond_signal(&device->Cond);
@@ -382,12 +385,6 @@ static void *PlayerThread(void *args)
 									   Device->TrackDuration);
 			}
 
-			// Some players do not take immediately volume into account
-			if (Device->VolumeWait && !--Device->VolumeWait) {
-				LOG_INFO("[%p]: processing delayed volume: %d (%.2f)", Device, Device->Volume, Device->VolumeMapping[Device->Volume]);
-				raopcl_set_volume(Device->Raop, Device->VolumeMapping[Device->Volume]);
-			}
-
 			pthread_mutex_lock(&Device->Mutex);
 			if (Device->MetadataWait && !--Device->MetadataWait && Device->Config.SendMetaData) {
 				sq_metadata_t metadata;
@@ -447,10 +444,16 @@ static void *PlayerThread(void *args)
 		}
 
 		if (!strcasecmp(req->Type, "CONNECT")) {
+
+			if (req->Data.Codec == RAOP_NOCODEC) {
+				LOG_INFO("[%p]: forcing volume: %d (%.2f)", Device, (Device->Muted) ? 0 : Device->Volume, Device->VolumeMapping[Device->Volume] + 0.5);
+				raopcl_set_volume(Device->Raop, Device->VolumeMapping[Device->Volume] + 0.5);
+			}
+
 			LOG_INFO("[%p]: raop connecting ...", Device);
+
 			if (raopcl_connect(Device->Raop, Device->PlayerIP, Device->PlayerPort, req->Data.Codec)) {
 				Device->DiscWait = false;
-				Device->VolumeWait = 1;
 				LOG_INFO("[%p]: raop connected", Device);
 			}
 			else {
@@ -479,7 +482,7 @@ static void *PlayerThread(void *args)
 		}
 
 		if (!strcasecmp(req->Type, "VOLUME")) {
-			LOG_INFO("[%p]: processing volume: %d (%.2f)", Device, Device->Volume, req->Data.Volume);
+			LOG_INFO("[%p]: processing volume: %d (%.2f)", Device, (Device->Muted) ? 0 : Device->Volume, req->Data.Volume);
 			raopcl_set_volume(Device->Raop, req->Data.Volume);
 		}
 
@@ -757,7 +760,6 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	Device->TrackDuration = 0;
 	Device->TrackRunning = false;
 	Device->TrackElapsed = 0;
-	Device->VolumeWait = 0;
 	sprintf(Device->ActiveRemote, "%u", hash32(Device->UDN));
 	strcpy(Device->FriendlyName, data->hostname);
 	p = stristr(Device->FriendlyName, ".local");
