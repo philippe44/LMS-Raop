@@ -103,6 +103,7 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, common, "volume_mapping", glMRConfig.VolumeMapping);
 	XMLUpdateNode(doc, common, "volume_feedback", "%d", (int) glMRConfig.VolumeFeedback);
 	XMLUpdateNode(doc, common, "volume_mode", "%d", (int) glMRConfig.VolumeMode);
+	XMLUpdateNode(doc, common, "mute_on_pause", "%d", (int) glMRConfig.MuteOnPause);
 	XMLUpdateNode(doc, common, "send_metadata", "%d", (int) glMRConfig.SendMetaData);
 	XMLUpdateNode(doc, common, "send_coverart", "%d", (int) glMRConfig.SendCoverArt);
 	XMLUpdateNode(doc, common, "remove_count", "%d", (u32_t) glMRConfig.RemoveCount);
@@ -216,6 +217,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "volume_mapping")) strcpy(Conf->VolumeMapping, val);
 	if (!strcmp(name, "volume_feedback")) Conf->VolumeFeedback = atol(val);
 	if (!strcmp(name, "volume_mode")) Conf->VolumeMode = atol(val);
+	if (!strcmp(name, "mute_on_pause")) Conf->MuteOnPause = atol(val);
 }
 
 /*----------------------------------------------------------------------------*/

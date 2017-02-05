@@ -69,6 +69,7 @@ typedef struct sMRConfig
 	int			Volume;
 	bool		VolumeFeedback;
 	char		VolumeMapping[SQ_STR_LENGTH];
+	bool		MuteOnPause;
 } tMRConfig;
 
 
@@ -83,8 +84,7 @@ struct sMR {
 	char			ContentType[SQ_STR_LENGTH];		// a bit patchy ... to buffer next URI
 	bool			TimeOut;
 	int	 			SqueezeHandle;
-	u8_t			Volume;
-	bool			Muted;
+	u8_t			Volume, PrevVolume;
 	u32_t			VolumeStamp;
 	float 			VolumeMapping[101];
 	int				MissingCount;
