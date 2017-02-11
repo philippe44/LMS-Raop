@@ -292,16 +292,13 @@ void 		DelRaopDevice(struct sMR *Device);
 			pthread_cond_signal(&device->Cond);
 			break;
 		}
-		case SQ_VOLUME:
-			if (device->Config.VolumeMode == VOLUME_HARD &&	gettime_ms() > device->VolumeStamp + 1000) {
-				u32_t Volume = *(u16_t*) param;
+		case SQ_VOLUME: {
+			u32_t Volume = *(u16_t*) param;
+
+			if (device->Config.VolumeMode == VOLUME_HARD &&	gettime_ms() > device->VolumeStamp + 1000 &&
+				(Volume || device->Config.MuteOnPause || sq_get_mode(device->SqueezeHandle) == device->sqState)) {
 				tRaopReq *Req = malloc(sizeof(tRaopReq));
 				int i;
-
-				if (!Volume && !device->Config.MuteOnPause) {
-					sq_action_t mode = sq_get_mode(device->SqueezeHandle);
-					if (mode == SQ_PAUSE || (mode == SQ_PLAY && device->sqState == SQ_PAUSE)) break;
-				}
 
 				// first convert to 0..100 value
 				for (i = 100; Volume < LMSVolumeMap[i] && i; i--);
@@ -313,6 +310,7 @@ void 		DelRaopDevice(struct sMR *Device);
 				pthread_cond_signal(&device->Cond);
 			}
 			break;
+		}
 		case SQ_CONNECT: {
 			sq_format_t *p = (sq_format_t*) param;
 			tRaopReq *Req = malloc(sizeof(tRaopReq));
