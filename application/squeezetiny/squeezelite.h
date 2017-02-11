@@ -384,7 +384,7 @@ struct outputstate {
 	unsigned start_frames;
 	unsigned frames_played;
 	unsigned frames_played_dmp;// frames played at the point delay is measured
-	u32_t device_frames;
+	u32_t device_frames, device_true_frames;
 	unsigned current_sample_rate;
 	unsigned default_sample_rate;
 	unsigned supported_rates[2];

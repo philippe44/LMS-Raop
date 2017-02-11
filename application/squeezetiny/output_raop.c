@@ -116,7 +116,8 @@ static void *output_raop_thread(struct thread_ctx_s *ctx) {
 		ctx->output.updated = gettime_ms();
 		// check that later: shall we change queued_frames when not running?
 		// or a keep-alive when no frame sent
-		ctx->output.device_frames = raopcl_queued_frames(ctx->output.device) + raopcl_latency(ctx->output.device);;
+		ctx->output.device_frames = raopcl_queued_frames(ctx->output.device) + raopcl_latency(ctx->output.device);
+		ctx->output.device_true_frames = raopcl_queued_frames(ctx->output.device);
 		ctx->output.frames_played_dmp = ctx->output.frames_played;
 		UNLOCK;
 

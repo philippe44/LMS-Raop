@@ -118,7 +118,6 @@ static void sendSTAT(const char *event, u32_t server_timestamp, struct thread_ct
 	u32_t now = gettime_ms();
 	u32_t ms_played;
 
-	// remove 11025
 	if (ctx->status.frames_played > ctx->status.device_frames) {
 		ms_played = (u32_t)(((u64_t)(ctx->status.frames_played - ctx->status.device_frames) * (u64_t)1000) / (u64_t)ctx->status.current_sample_rate);
 		if (now > ctx->status.updated) ms_played += (now - ctx->status.updated);
@@ -651,7 +650,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			UNLOCK_S;
 
 			LOCK_O;
-			ctx->status.output_full = min(_buf_used(ctx->outputbuf) + ctx->output.device_frames * BYTES_PER_FRAME, ctx->outputbuf->size);
+			ctx->status.output_full = min(_buf_used(ctx->outputbuf) + ctx->output.device_true_frames * BYTES_PER_FRAME, ctx->outputbuf->size);
 			ctx->status.output_size = ctx->outputbuf->size;
 			ctx->status.frames_played = ctx->output.frames_played_dmp;
 			ctx->status.current_sample_rate = ctx->output.current_sample_rate;
