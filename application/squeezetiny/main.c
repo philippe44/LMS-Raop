@@ -287,6 +287,29 @@ void sq_default_metadata(sq_metadata_t *metadata, bool init)
 	*/
 }
 
+/*--------------------------------------------------------------------------*/
+sq_action_t sq_get_mode(sq_dev_handle_t handle)
+{
+	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
+	char cmd[1024];
+	char *rsp;
+
+	if (!handle || !ctx->in_use) {
+		LOG_ERROR("[%p]: no handle %d", ctx, handle);
+		return true;
+	}
+
+	sprintf(cmd, "%s mode", ctx->cli_id);
+	rsp  = cli_send_cmd(cmd, true, false, ctx);
+
+	if (!rsp) return SQ_NONE;
+	if (!strcasecmp(rsp, "play")) return SQ_PLAY;
+	if (!strcasecmp(rsp, "pause")) return SQ_PAUSE;
+	if (!strcasecmp(rsp, "stop")) return SQ_STOP;
+
+	return SQ_NONE;
+}
+
 
 /*--------------------------------------------------------------------------*/
 bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)

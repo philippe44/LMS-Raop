@@ -84,7 +84,8 @@ struct sMR {
 	char			ContentType[SQ_STR_LENGTH];		// a bit patchy ... to buffer next URI
 	bool			TimeOut;
 	int	 			SqueezeHandle;
-	u8_t			Volume, PrevVolume;
+	sq_action_t		sqState;
+	u8_t			Volume;
 	u32_t			VolumeStamp;
 	float 			VolumeMapping[101];
 	int				MissingCount;

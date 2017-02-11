@@ -27,7 +27,7 @@
 
 #define SQ_STR_LENGTH	256
 
-typedef enum { SQ_PLAY, SQ_PAUSE, SQ_UNPAUSE, SQ_STOP, SQ_SEEK,
+typedef enum { SQ_NONE, SQ_PLAY, SQ_PAUSE, SQ_UNPAUSE, SQ_STOP, SQ_SEEK,
 			  SQ_VOLUME, SQ_ONOFF, SQ_NEXT, SQ_CONNECT, SQ_STARTED,
 			  SQ_METASEND, SQ_SETNAME, SQ_SETSERVER, SQ_FINISHED, SQ_PLAY_PAUSE,
 			  SQ_MUTE_TOGGLE, SQ_PREVIOUS, SQ_SHUFFLE,
@@ -112,6 +112,7 @@ bool				sq_get_metadata(sq_dev_handle_t handle, struct sq_metadata_s *metadata, 
 void				sq_default_metadata(struct sq_metadata_s *metadata, bool init);
 void 				sq_free_metadata(struct sq_metadata_s *metadata);
 u32_t 				sq_get_time(sq_dev_handle_t handle);
+sq_action_t 		sq_get_mode(sq_dev_handle_t handle);
 
 #endif
 
