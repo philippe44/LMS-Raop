@@ -81,6 +81,9 @@ typedef	struct sq_dev_param_s {
 	bool		resample;
 	char		resample_options[SQ_STR_LENGTH];
 #endif
+	struct {
+		char 	server[SQ_STR_LENGTH];
+	} dynamic;
 } sq_dev_param_t;
 
 

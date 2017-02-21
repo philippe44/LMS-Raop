@@ -112,6 +112,7 @@ sq_dev_param_t glDeviceParam = {
 					SQ_RATE_44100,
 					"",
 #endif
+					{ "" },
 				} ;
 
 /*----------------------------------------------------------------------------*/
@@ -308,6 +309,8 @@ void 		DelRaopDevice(struct sMR *Device);
 				strcpy(Req->Type, "VOLUME");
 				QueueInsert(&device->Queue, Req);
 				pthread_cond_signal(&device->Cond);
+			} else {
+            	LOG_INFO("[%p]: volume ignored %u", device, Volume);
 			}
 			break;
 		}
@@ -338,7 +341,7 @@ void 		DelRaopDevice(struct sMR *Device);
 			strcpy(device->sq_config.name, (char*) param);
 			break;
 		case SQ_SETSERVER:
-			strcpy(device->sq_config.server, inet_ntoa(*(struct in_addr*) param));
+			strcpy(device->sq_config.dynamic.server, inet_ntoa(*(struct in_addr*) param));
 			break;
 		default:
 			break;
@@ -956,6 +959,7 @@ static void *ActiveRemoteThread(void *args)
 				Device->DiscWait = true;
 				sq_notify(Device->SqueezeHandle, Device, SQ_STOP, NULL, NULL);
 			}
+			// volume remote command
 			if (Device->Config.VolumeMode != VOLUME_SOFT &&
 				Device->Config.VolumeFeedback && stristr(command, "-volume=")) {
 				float volume;
@@ -963,7 +967,7 @@ static void *ActiveRemoteThread(void *args)
 				int i;
 
 				Device->VolumeStamp = gettime_ms();
-                sscanf(command, "%*[^=]=%f", &volume);
+				sscanf(command, "%*[^=]=%f", &volume);
 				for (i = 0; i < 100 && volume > Device->VolumeMapping[i]; i++ );
 				sprintf(vol, "%d", i);
 				LOG_INFO("[%p]: volume feedback %s (%.2f)", Device, vol, volume);

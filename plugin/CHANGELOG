@@ -1,7 +1,11 @@
+0.2.1.3
+ - when IP address of <common> was set, all devices were forced we the same address
+ - correct XML updating of <name>
+
 0.2.1.2
  - output fullness now takes into account device_frames to avoid telling LMS that buffer is empty when its in fact all in the AirPlay device
  - add <mute_on_pause> to restore volume (un-mute) when LMS pauses
- - (dev-8) change in reporting output fulness broke end of track report
+ - (dev-8) change in reporting output fullness broke end of track report
  
 0.2.1.1 
  - re-introduce armv5te with soft floating only
