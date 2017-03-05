@@ -682,8 +682,8 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 				ctx->status.last = now;
 			}
 
-			if ((ctx->status.stream_state == STREAMING_HTTP || ctx->status.stream_state == STREAMING_FILE) && !ctx->sentSTMl
-				&& ctx->decode.state == DECODE_READY) {
+			if ((ctx->status.stream_state == STREAMING_HTTP || ctx->status.stream_state == STREAMING_FILE || ctx->stream.disconnect == DISCONNECT_OK)
+				&& !ctx->sentSTMl && ctx->decode.state == DECODE_READY) {
 				if (ctx->autostart == 0) {
 					ctx->decode.state = DECODE_RUNNING;
 					_sendSTMl = true;
