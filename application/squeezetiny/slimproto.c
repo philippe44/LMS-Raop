@@ -313,6 +313,10 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			else
 				format.sample_size = strm->pcm_sample_size;
 			format.sample_rate = (strm->pcm_sample_rate != '?') ? pcm_sample_rate[strm->pcm_sample_rate - '0'] : 0xff;
+			if (format.sample_rate > ctx->config.sample_rate) {
+				 LOG_WARN("[%p]: Sample rate %u error suspected, forcing to %u", ctx, format.sample_rate, ctx->config.sample_rate);
+				 format.sample_rate = ctx->config.sample_rate;
+			 }
 			format.channels = (strm->pcm_channels != '?') ? pcm_channels[strm->pcm_channels - '1'] : 0xff;
 			format.endianness = (strm->pcm_endianness != '?') ? strm->pcm_endianness - '0' : 0xff;
 			format.codec = strm->format;
