@@ -1,3 +1,7 @@
+0.2.1.4
+ - when raopcl_connect failed, call to disconnect did not happen (RAOP_DOWN state)
+ - when remove_count was set to 0, player was still removed when missing
+
 0.2.1.3
  - when IP address of <common> was set, all devices were forced we the same address
  - correct XML updating of <name>
