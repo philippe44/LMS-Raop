@@ -15,7 +15,7 @@ use Slim::Utils::Log;
 my $prefs = preferences('plugin.raopbridge');
 my $log   = logger('plugin.raopbridge');
 my @xmlmain = qw(interface scan_interval scan_timeout log_limit);
-my @xmldevice = qw(name mac codecs enabled remove_count send_metadata send_coverart player_volume idle_timeout read_ahead encryption server volume_feedback volume_mode volume_mapping mute_on_pause);
+my @xmldevice = qw(name mac codecs enabled remove_count send_metadata send_coverart player_volume idle_timeout read_ahead encryption server volume_feedback volume_mode volume_mapping mute_on_pause alac_encode);
 
 sub name { 'PLUGIN_RAOPBRIDGE' }
 
@@ -246,7 +246,7 @@ sub handler2 {
 	if ($xmlconfig) {
 	
 		$params->{'devices'} = \@{$xmlconfig->{'device'}};
-		unshift(@{$params->{'devices'}}, {'name' => '[default parameters]', 'udn' => '.common.'});
+		unshift(@{$params->{'devices'}}, {'name' => '[common parameters]', 'udn' => '.common.'});
 		
 		$log->info("reading config: ", $params->{'seldevice'});
 		$log->debug(Dumper($params->{'devices'}));

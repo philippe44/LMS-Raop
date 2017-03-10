@@ -1,4 +1,7 @@
-0.2.1.4
+0.2.2.0
+ - add option to re-encode audio using ALAC
+ 
+0.2.1.4 (not published)
  - when raopcl_connect failed, call to disconnect did not happen (RAOP_DOWN state)
  - when remove_count was set to 0, player was still removed when missing
  - (dev-2) handle very small files where decode_running state could be missed

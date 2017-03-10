@@ -109,6 +109,7 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, common, false, "remove_count", "%d", (u32_t) glMRConfig.RemoveCount);
 	XMLUpdateNode(doc, common, false, "auto_play", "%d", (int) glMRConfig.AutoPlay);
 	XMLUpdateNode(doc, common, false, "idle_timeout", "%d", (int) glMRConfig.IdleTimeout);
+	XMLUpdateNode(doc, common, false, "alac_encode", "%d", (int) glMRConfig.AlacEncode);
 
 	XMLUpdateNode(doc, common, false, "encryption", "%d", (int) glMRConfig.Encryption);
 	XMLUpdateNode(doc, common, false, "read_ahead", "%d", (int) glMRConfig.ReadAhead);
@@ -205,6 +206,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "volume_feedback")) Conf->VolumeFeedback = atol(val);
 	if (!strcmp(name, "volume_mode")) Conf->VolumeMode = atol(val);
 	if (!strcmp(name, "mute_on_pause")) Conf->MuteOnPause = atol(val);
+	if (!strcmp(name, "alac_encode")) Conf->AlacEncode = atol(val);
 }
 
 /*----------------------------------------------------------------------------*/

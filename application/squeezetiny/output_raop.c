@@ -23,7 +23,6 @@
 
 #include "squeezelite.h"
 #include "raop_client.h"
-#include "alac_wrapper.h"
 
 extern log_level	output_loglevel;
 static log_level 	*loglevel = &output_loglevel;
@@ -82,8 +81,6 @@ static void *output_raop_thread(struct thread_ctx_s *ctx) {
 
 		// proceed only if room in queue *and* running
 		if (ctx->output.state >= OUTPUT_BUFFER && raopcl_accept_frames(ctx->output.device) >= FRAMES_PER_BLOCK) {
-			u8_t *buffer;
-			int size;
 			u64_t playtime;
 
 			LOCK;
@@ -93,9 +90,7 @@ static void *output_raop_thread(struct thread_ctx_s *ctx) {
 
 			// nothing to do, sleep
 			if (ctx->output.buf_frames) {
-				pcm_to_alac_fast((u32_t*) ctx->output.buf, ctx->output.buf_frames, &buffer, &size, FRAMES_PER_BLOCK);
-				raopcl_send_chunk(ctx->output.device, buffer, size, &playtime);
-				NFREE(buffer);
+				raopcl_send_chunk(ctx->output.device, ctx->output.buf, ctx->output.buf_frames, &playtime);
 
 				// current block is a track start, set the value
 				if (ctx->output.detect_start_time) {

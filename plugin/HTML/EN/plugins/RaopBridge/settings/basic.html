@@ -136,6 +136,12 @@
 			<option [% IF entry.1 == encryption %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
 		[% END %]
 		</select>
+		&nbsp&nbsp[% "PLUGIN_RAOPBRIDGE_ALACENCODE" | string %]
+		<select class="stdedit" name="alac_encode" id="alac_encode">
+		[% FOREACH entry IN YESNOBOX %] 
+			<option [% IF entry.1 == alac_encode %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+		[% END %]
+		</select>
 		&nbsp&nbsp[% "PLUGIN_RAOPBRIDGE_IDLETIMEOUT" | string %]
 		<input type="text" class="stdedit" name="idle_timeout" id="idle_timeout" value="[% idle_timeout %]" size="2">
 		[% "PLUGIN_RAOPBRIDGE_IDLETIMEOUT_2" | string %]

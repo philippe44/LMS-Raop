@@ -93,6 +93,11 @@ char *GetTempPath(u16_t size, char *path);
 #include <io.h>
 #include <sys/timeb.h>
 
+#ifdef __cplusplus
+#define min(a,b) (((a) < (b)) ? (a) : (b))
+#define max(a,b) (((a) > (b)) ? (a) : (b))
+#endif
+
 typedef unsigned __int8  u8_t;
 typedef unsigned __int16 u16_t;
 typedef unsigned __int32 u32_t;

@@ -82,6 +82,7 @@ tMRConfig			glMRConfig = {
 							true,
 							"-30:1, -15:50, 0:100",
 							true,
+							false,
 					};
 
 static u8_t LMSVolumeMap[101] = {
@@ -801,7 +802,7 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 		Crypto = RAOP_CLEAR;
 
 	Device->Raop = raopcl_create(glHost, glDACPid, Device->ActiveRemote,
-								 RAOP_ALAC, FRAMES_PER_BLOCK,
+								 RAOP_ALAC, Device->Config.AlacEncode, FRAMES_PER_BLOCK,
 								 (u32_t) MS2TS(Device->Config.ReadAhead, Device->SampleRate ? atoi(Device->SampleRate) : 44100),
 								 RAOP_LATENCY_MIN, Crypto,
 								 Device->SampleRate ? atoi(Device->SampleRate) : 44100,
