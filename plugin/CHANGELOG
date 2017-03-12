@@ -1,5 +1,5 @@
 0.2.2.1
- - default parameters intialization was wrong
+ - default parameters intialization was wrong (sample_rate)
  
 0.2.2.0
  - option to re-encode audio to ALAC

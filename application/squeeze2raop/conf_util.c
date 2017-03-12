@@ -115,6 +115,9 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, common, false, "read_ahead", "%d", (int) glMRConfig.ReadAhead);
 	XMLUpdateNode(doc, common, false, "server", glDeviceParam.server);
 
+	// correct some buggy parameters
+	if (glDeviceParam.sample_rate < 44100) XMLUpdateNode(doc, common, true, "sample_rate", "%d", 96000);
+
 	for (i = 0; i < MAX_RENDERERS; i++) {
 		IXML_Node *dev_node;
 
