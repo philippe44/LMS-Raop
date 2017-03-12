@@ -260,8 +260,8 @@ PLUGIN_RAOPBRIDGE_PLAYEROPTIONS_DESC
 	EN	<br><b>Audio buffer</b>: Sets the number of milliseconds of audio buffer in the player. This is important to absorb network throughput jitter
 	EN	Note that the resume after pause will be skipping that amount of time and volume changes will be delayed by the same amount, when
 	EN	using digital volume
-	EN	<br><b>Encryption</b>: Use encryption if available (not recommended)
-	EN	<br><b>ALAC</b>: Re-encode audio using ALAC (saves network bandwidth but uses CPU)
+	EN	<br><b>Encrypt</b>: Use encryption if available (needed for ShairTunes)
+	EN	<br><b>Compress</b>: Re-encode audio using ALAC (saves network bandwidth but uses CPU)
 
 PLUGIN_RAOPBRIDGE_READAHEAD
 	EN	Audio buffer (ms)	 
@@ -273,10 +273,10 @@ PLUGIN_RAOPBRIDGE_IDLETIMEOUT_2
 	EN	(s)
 
 PLUGIN_RAOPBRIDGE_ENCRYPTION
-	EN	Encryption
+	EN	Encrypt
 
 PLUGIN_RAOPBRIDGE_ALACENCODE
-	EN	ALAC
+	EN	Compress
 	
 PLUGIN_RAOPBRIDGE_PLAYERLIST
 	EN	List of players currently in configuration file - Note that more devices might have been discovered

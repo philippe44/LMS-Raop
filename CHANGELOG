@@ -1,3 +1,8 @@
+0.2.2.0
+ - option to re-encode audio to ALAC
+ - during initial play, set volume to 0 was ignored because state was not set to play (worked after play/pause)
+ - correct user guide on volume feedback
+ 
 0.2.1.4
  - when raopcl_connect failed, call to disconnect did not happen (RAOP_DOWN state)
  - when remove_count was set to 0, player was still removed when missing

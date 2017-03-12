@@ -319,6 +319,8 @@ void 		DelRaopDevice(struct sMR *Device);
 			sq_format_t *p = (sq_format_t*) param;
 			tRaopReq *Req = malloc(sizeof(tRaopReq));
 
+			device->sqState = SQ_PLAY;
+
 			Req->Data.Codec = RAOP_ALAC;
 			strcpy(Req->Type, "CONNECT");
 			QueueInsert(&device->Queue, Req);
@@ -960,6 +962,7 @@ static void *ActiveRemoteThread(void *args)
 				Device->DiscWait = true;
 				sq_notify(Device->SqueezeHandle, Device, SQ_STOP, NULL, NULL);
 			}
+
 			// volume remote command
 			if (Device->Config.VolumeMode != VOLUME_SOFT &&
 				Device->Config.VolumeFeedback && stristr(command, "-volume=")) {
