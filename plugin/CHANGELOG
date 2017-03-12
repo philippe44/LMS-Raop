@@ -1,3 +1,6 @@
+0.2.2.1
+ - default parameters intialization was wrong
+ 
 0.2.2.0
  - option to re-encode audio to ALAC
  - during initial play, set volume to 0 was ignored because state was not set to play (worked after play/pause)

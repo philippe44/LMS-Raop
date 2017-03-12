@@ -104,17 +104,18 @@ sq_dev_param_t glDeviceParam = {
 					"flc,pcm,aif,aac,mp3",
 					"?",
 					"",
-					false,
 					{ 0x00,0x00,0x00,0x00,0x00,0x00 },
-					true,
+					false,
 #if defined(RESAMPLE)
-					SQ_RATE_96000,
-#else
-					SQ_RATE_44100,
+					96000,
+					true,
 					"",
+#else
+					44100,
 #endif
 					{ "" },
 				} ;
+
 
 /*----------------------------------------------------------------------------*/
 /* globals */

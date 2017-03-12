@@ -74,9 +74,9 @@ typedef	struct sq_dev_param_s {
 	char		codecs[SQ_STR_LENGTH];
 	char 		server[SQ_STR_LENGTH];
 	char 		name[SQ_STR_LENGTH];
-	u32_t		sample_rate;
 	u8_t		mac[6];
 	bool		soft_volume;
+	u32_t		sample_rate;
 #if defined(RESAMPLE)
 	bool		resample;
 	char		resample_options[SQ_STR_LENGTH];
