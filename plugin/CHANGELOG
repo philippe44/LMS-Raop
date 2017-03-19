@@ -1,3 +1,6 @@
+0.2.2.2
+ - just increment version to solve update problem
+ 
 0.2.2.1
  - default parameters intialization was wrong (sample_rate)
  
