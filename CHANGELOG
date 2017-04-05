@@ -1,3 +1,6 @@
+0.2.2.3
+- When using LMS as image proxy, artwork_url must be prefixed with http://<server>:<port>
+
 0.2.2.2
  - just increment version to solve update problem
  
