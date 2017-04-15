@@ -112,7 +112,7 @@ struct sMR {
 	char *Channels;
 	char *Codecs;
 	char *Crypto;
-	char ActiveRemote[11];
+	char ActiveRemote[16];
 	u32_t SkipStart;
 	bool SkipDir;
 };

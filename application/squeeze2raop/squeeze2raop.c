@@ -880,7 +880,7 @@ void DelRaopDevice(struct sMR *Device)
 static void *ActiveRemoteThread(void *args)
 {
 	int n;
-	char buf[1024], command[128], ActiveRemote[11];
+	char buf[1024], command[128], ActiveRemote[16];
 	char response[] = "HTTP/1.1 204 No Content\r\nDate: %s,%02d %s %4d %02d:%02d:%02d "
 					  "GMT\r\nDAAP-Server: iTunes/7.6.2 (Windows; N;)\r\nContent-Type: "
 					  "application/x-dmap-tagged\r\nContent-Length: 0\r\n"
@@ -913,14 +913,19 @@ static void *ActiveRemoteThread(void *args)
 
 		// receive data, all should be in a single receive, hopefully
 		n = recv(sd, (void*) buf, 1024, 0);
-
-		// a pretty basic reading of command
 		buf[n] = '\0';
 		strlwr(buf);
+
+		LOG_INFO("raw command: %s", buf);
+
+		// a pretty basic reading of command
 		p = strstr(buf, "active-remote:");
-		sscanf(p, "active-remote:%s", ActiveRemote);
+		if (p) sscanf(p, "active-remote:%15s", ActiveRemote);
+		ActiveRemote[sizeof(ActiveRemote) - 1] = '\0';
+
 		p = strstr(buf, "/ctrl-int/1/");
-		sscanf(p, "/ctrl-int/1/%s", command);
+		if (p) sscanf(p, "/ctrl-int/1/%127s", command);
+		command[sizeof(command) - 1] = '\0';
 
 		for (i = 0; i < MAX_RENDERERS; i++) {
 			if (glMRDevices[i].InUse && !strcmp(glMRDevices[i].ActiveRemote, ActiveRemote)) {
