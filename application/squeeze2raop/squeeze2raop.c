@@ -758,9 +758,9 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	Device->TimeOut = false;
 	Device->MissingCount = Device->Config.RemoveCount;
 	Device->on = false;
+	Device->InUse = true;
 	Device->SqueezeHandle = 0;
 	Device->Running = true;
-	Device->InUse = true;
 	// make sure that 1st volume is not missed
 	Device->VolumeStamp = gettime_ms() - 2000;
 	Device->PlayerIP = data->addr;
@@ -787,7 +787,9 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 		memset(Device->sq_config.mac, 0xaa, 2);
 	}
 
-	// gather RAOP device capabilities, to be macthed mater
+	MakeMacUnique(Device);
+
+	// gather RAOP device capabilities, to be matched mater
 	Device->SampleSize = GetmDNSAttribute(data, "ss");
 	Device->SampleRate = GetmDNSAttribute(data, "sr");
 	Device->Channels = GetmDNSAttribute(data, "ch");

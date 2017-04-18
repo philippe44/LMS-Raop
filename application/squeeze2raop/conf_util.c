@@ -40,7 +40,25 @@ extern log_level	raop_loglevel;
 /*----------------------------------------------------------------------------*/
 /* locals */
 /*----------------------------------------------------------------------------*/
-//static log_level 	*loglevel = &util_loglevel;
+extern log_level	util_loglevel;
+static log_level 	*loglevel = &util_loglevel;
+
+/*----------------------------------------------------------------------------*/
+void MakeMacUnique(struct sMR *Device)
+{
+	int i;
+
+	for (i = 0; i < MAX_RENDERERS; i++) {
+		if (!glMRDevices[i].InUse || Device == &glMRDevices[i]) continue;
+		if (!memcmp(&glMRDevices[i].sq_config.mac, &Device->sq_config.mac, 6)) {
+			u32_t hash = hash32(Device->UDN);
+
+			LOG_INFO("[%p]: duplicated mac ... updating", Device);
+			memset(&Device->sq_config.mac[0], 0xcc, 2);
+			memcpy(&Device->sq_config.mac[0] + 2, &hash, 4);
+		}
+	}
+}
 
 /*----------------------------------------------------------------------------*/
 void SaveConfig(char *name, void *ref, bool full)
