@@ -32,6 +32,7 @@ extern log_level 	decode_loglevel;
 static log_level 	*loglevel = &decode_loglevel;
 
 #if !WIN
+#undef LINKALL
 #define LINKALL 1
 #endif
 

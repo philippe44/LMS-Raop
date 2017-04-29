@@ -1,3 +1,6 @@
+0.2.2.5
+ - undefine LINKALL for non-WIN version in resample
+ 
 0.2.2.4
  - make sure MAC is unique across devices
  - early AirPort report an active-remote above 11 char that caused a crash
