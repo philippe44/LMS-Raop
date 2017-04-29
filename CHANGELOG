@@ -1,12 +1,8 @@
-0.2.2.4.3
+0.2.2.4
  - make sure MAC is unique across devices
- 
-0.2.2.4.2
  - early AirPort report an active-remote above 11 char that caused a crash
-
-0.2.2.4.1
-- on Windows, retry sending on CLI command socket as it fails with ENOTCONN sometimes at first send after opening ...
-- development versions now have an extra digit to enable auto-update
+ - on Windows, retry sending on CLI command socket as it fails with ENOTCONN sometimes at first send after opening ...
+ - development versions now have an extra digit to enable auto-update
 
 0.2.2.3
 - When using LMS as image proxy, artwork_url must be prefixed with http://<server>:<port>
