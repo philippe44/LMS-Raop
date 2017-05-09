@@ -83,6 +83,7 @@ tMRConfig			glMRConfig = {
 							"-30:1, -15:50, 0:100",
 							true,
 							false,
+							false,			// VolumeTrigger
 					};
 
 static u8_t LMSVolumeMap[101] = {
@@ -373,6 +374,7 @@ static void *PlayerThread(void *args)
 			LOG_DEBUG("[%p]: tick %u", Device, now);
 
 			if (Device->DiscWait && now > Device->LastFlush + Device->Config.IdleTimeout * 1000) {
+				Device->VolumeReady = !Device->Config.VolumeTrigger;
 				LOG_INFO("[%p]: Disconnecting %u", Device, now);
 				raopcl_disconnect(Device->Raop);
 				Device->DiscWait = false;
@@ -474,6 +476,7 @@ static void *PlayerThread(void *args)
 			if (Device->DiscWait) {
 				LOG_INFO("[%p]: disconnecting ...", Device);
 				Device->DiscWait = false;
+				Device->VolumeReady = !Device->Config.VolumeTrigger;
 				raopcl_disconnect(Device->Raop);
 			}
 			else {
@@ -486,11 +489,12 @@ static void *PlayerThread(void *args)
 
 		if (!strcasecmp(req->Type, "OFF")) {
 			LOG_INFO("[%p]: processing off", Device);
+			Device->VolumeReady = !Device->Config.VolumeTrigger;
 			raopcl_disconnect(Device->Raop);
 			raopcl_sanitize(Device->Raop);
 		}
 
-		if (!strcasecmp(req->Type, "VOLUME")) {
+		if (!strcasecmp(req->Type, "VOLUME") && Device->VolumeReady) {
 			LOG_INFO("[%p]: processing volume: %d (%.2f)", Device, Device->Volume, req->Data.Volume);
 			raopcl_set_volume(Device->Raop, req->Data.Volume);
 		}
@@ -769,6 +773,7 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	Device->TrackDuration = 0;
 	Device->TrackRunning = false;
 	Device->TrackElapsed = 0;
+	Device->VolumeReady = !Device->Config.VolumeTrigger;
 	sprintf(Device->ActiveRemote, "%u", hash32(Device->UDN));
 	strcpy(Device->FriendlyName, data->hostname);
 	p = stristr(Device->FriendlyName, ".local");
@@ -914,11 +919,9 @@ static void *ActiveRemoteThread(void *args)
 		}
 
 		// receive data, all should be in a single receive, hopefully
-		n = recv(sd, (void*) buf, 1024, 0);
-		buf[n] = '\0';
+		n = recv(sd, (void*) buf, sizeof(buf) - 1, 0);
+		buf[sizeof(buf) - 1] = '\0';
 		strlwr(buf);
-
-		LOG_INFO("raw command: %s", buf);
 
 		// a pretty basic reading of command
 		p = strstr(buf, "active-remote:");
@@ -972,18 +975,28 @@ static void *ActiveRemoteThread(void *args)
 			}
 
 			// volume remote command
-			if (Device->Config.VolumeMode != VOLUME_SOFT &&
-				Device->Config.VolumeFeedback && stristr(command, "-volume=")) {
-				float volume;
-				char vol[10];
-				int i;
+			if (stristr(command, "-volume=")) {
+				// need to wait for a 1st setproperty
+				if (!Device->VolumeReady) {
+					tRaopReq *Req = malloc(sizeof(tRaopReq));
 
-				Device->VolumeStamp = gettime_ms();
-				sscanf(command, "%*[^=]=%f", &volume);
-				for (i = 0; i < 100 && volume > Device->VolumeMapping[i]; i++ );
-				sprintf(vol, "%d", i);
-				LOG_INFO("[%p]: volume feedback %s (%.2f)", Device, vol, volume);
-				sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, vol);
+					Device->VolumeReady = true;
+					Req->Data.Volume = Device->VolumeMapping[Device->Volume];
+					strcpy(Req->Type, "VOLUME");
+					QueueInsert(&Device->Queue, Req);
+					pthread_cond_signal(&Device->Cond);
+				} else if (Device->Config.VolumeMode != VOLUME_SOFT && Device->Config.VolumeFeedback) {
+					float volume;
+					char vol[10];
+					int i;
+
+					Device->VolumeStamp = gettime_ms();
+					sscanf(command, "%*[^=]=%f", &volume);
+					for (i = 0; i < 100 && volume > Device->VolumeMapping[i]; i++ );
+					sprintf(vol, "%d", i);
+					LOG_INFO("[%p]: volume feedback %s (%.2f)", Device, vol, volume);
+					sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, vol);
+				}
 			}
 		}
 

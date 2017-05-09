@@ -71,6 +71,7 @@ typedef struct sMRConfig
 	char		VolumeMapping[SQ_STR_LENGTH];
 	bool		MuteOnPause;
 	bool		AlacEncode;
+	bool		VolumeTrigger;
 } tMRConfig;
 
 
@@ -89,6 +90,7 @@ struct sMR {
 	u8_t			Volume;
 	u32_t			VolumeStamp;
 	float 			VolumeMapping[101];
+	bool			VolumeReady;
 	int				MissingCount;
 	bool			Running;
 	struct raopcl_s	*Raop;

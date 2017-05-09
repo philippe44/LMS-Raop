@@ -1,3 +1,7 @@
+0.2.2.6.1
+ - correct some strings
+ - add <volume_trigger> parameter to wait 1st setproperty before sending volume
+ 
 0.2.2.5
  - undefine LINKALL for non-WIN version in resample
  
