@@ -102,14 +102,20 @@
 			<option [% IF entry.1 == volume_mode %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
 		[% END %]</select>
 		&nbsp[% "PLUGIN_RAOPBRIDGE_PLAYERVOLUME" | string %]&nbsp<input type="text" class="stdedit" name="player_volume" id="player_volume" value="[% player_volume %]" size="2">
-		&nbsp[% "PLUGIN_RAOPBRIDGE_MUTEONPAUSE" | string %]
+		&nbsp[% "PLUGIN_RAOPBRIDGE_VOLUMEMAPPING" | string %]&nbsp<input type="text" class="stdedit" name="volume_mapping" id="volume_mapping" value="[% volume_mapping %]" size="30">
+		</p>
+		[% "PLUGIN_RAOPBRIDGE_MUTEONPAUSE" | string %]
 		<select class="stdedit" name="mute_on_pause" id="mute_on_pause">
 		[% FOREACH entry IN YESNOBOX %] 
 			<option [% IF entry.1 == mute_on_pause %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
 		[% END %]
 		</select>
-		</p>
-		[% "PLUGIN_RAOPBRIDGE_VOLUMEMAPPING" | string %]&nbsp<input type="text" class="stdedit" name="volume_mapping" id="volume_mapping" value="[% volume_mapping %]" size="30">
+		&nbsp[% "PLUGIN_RAOPBRIDGE_VOLUMETRIGGER" | string %]
+		<select class="stdedit" name="volume_trigger" id="volume_trigger">
+		[% FOREACH entry IN YESNOBOX %] 
+			<option [% IF entry.1 == volume_trigger %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+		[% END %]
+		</select>
 		&nbsp[% "PLUGIN_RAOPBRIDGE_VOLUMEFEEDBACK" | string %]&nbsp<select class="stdedit" name="volume_feedback" id="volume_feedback">
 		[% FOREACH entry IN YESNOBOX %] 
 			<option [% IF entry.1 == volume_feedback %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
