@@ -725,6 +725,7 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 {
 	pthread_attr_t attr;
 	raop_crypto_t Crypto;
+	bool Auth = false;
 	char *p;
 	u32_t mac_size = 6;
 	char *am = GetmDNSAttribute(data, "am");
@@ -743,6 +744,13 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 		NFREE(am);
 		return false;
 	}
+
+	 // if airport express, forece auth
+	 if (am && stristr(am, "airport")) {
+		LOG_INFO("[%p]: AirPort Express", Device);
+		Auth = true;
+	}
+
 	NFREE(am);
 
 	if (stristr(data->name, "AirSonos")) {
@@ -780,7 +788,7 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	if (p) *p = '\0';
 	SetVolumeMapping(Device);
 
-	LOG_INFO("[%p]: adding renderer (%s)", Device, Device->FriendlyName);
+	LOG_INFO("[%p]: adding renderer (%s)", Device, Device->FriendlyName);
 
 	if (!memcmp(Device->sq_config.mac, "\0\0\0\0\0\0", mac_size)) {
 		if (SendARP(Device->PlayerIP.s_addr, INADDR_ANY, (u32_t*) Device->sq_config.mac, &mac_size)) {
@@ -805,8 +813,7 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 		LOG_WARN("[%p]: ALAC not in codecs, player might not work %s", Device, Device->Codecs);
 	}
 
-	if ((Device->Config.Encryption && strchr(Device->Crypto, '1')) ||
-		(!strchr(Device->Crypto, '0') && strchr(Device->Crypto, '1')))
+	if ((Device->Config.Encryption || Auth) && strchr(Device->Crypto, '1'))
 		Crypto = RAOP_RSA;
 	else
 		Crypto = RAOP_CLEAR;
@@ -814,7 +821,7 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	Device->Raop = raopcl_create(glHost, glDACPid, Device->ActiveRemote,
 								 RAOP_ALAC, Device->Config.AlacEncode, FRAMES_PER_BLOCK,
 								 (u32_t) MS2TS(Device->Config.ReadAhead, Device->SampleRate ? atoi(Device->SampleRate) : 44100),
-								 RAOP_LATENCY_MIN, Crypto,
+								 RAOP_LATENCY_MIN, Crypto, Auth,
 								 Device->SampleRate ? atoi(Device->SampleRate) : 44100,
 								 Device->SampleSize ? atoi(Device->SampleSize) : 16,
 								 Device->Channels ? atoi(Device->Channels) : 2,

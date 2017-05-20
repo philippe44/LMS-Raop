@@ -1,3 +1,13 @@
+0.2.3.0.1
+ - Change synchronization logic in raop_send_sync gor GGMM devices that *want* the timestamp to NTP match to be exactly the timestamp that will be send in the next audio packet
+ 
+0.2.2.6.5
+ - Initial server detection should be in slimproto thread, otherwise sq_run_device can block 
+ - Separate RSA encryption from Apple-Challenge and it only for AirPort Express (seems that encryption for new AirPort Expresss is now 4, so use of Apple-Challenge/RSA has been deprecated)
+ 
+0.2.2.6.3
+ - daap type parsing should be char, not int
+
 0.2.2.6.2
  - damp format for integer was wrong
 

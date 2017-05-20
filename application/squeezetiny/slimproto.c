@@ -816,6 +816,10 @@ static void slimproto(struct thread_ctx_s *ctx) {
 	mutex_create(ctx->mutex);
 	mutex_create(ctx->cli_mutex);
 
+	discover_server(ctx);
+	LOG_INFO("squeezelite [%p] <=> player [%p]", ctx, ctx->MR);
+	LOG_INFO("[%p] connecting to %s:%d", ctx, inet_ntoa(ctx->serv_addr.sin_addr), ntohs(ctx->serv_addr.sin_port));
+
 	while (ctx->running) {
 
 		if (ctx->new_server) {
@@ -906,8 +910,6 @@ void slimproto_thread_init(struct thread_ctx_s *ctx) {
 		server_addr(ctx->config.server, &ctx->slimproto_ip, &ctx->slimproto_port);
 	}
 
-	discover_server(ctx);
-
 	/* could be avoided as whole context is reset at init ...*/
 	strcpy(ctx->var_cap, "");
 	ctx->new_server_cap = NULL;
@@ -935,8 +937,6 @@ void slimproto_thread_init(struct thread_ctx_s *ctx) {
 	UNLOCK_O;
 
 	memcpy(ctx->mac, ctx->config.mac, 6);
-
-	LOG_INFO("[%p] connecting to %s:%d", ctx, inet_ntoa(ctx->serv_addr.sin_addr), ntohs(ctx->serv_addr.sin_port));
 
 	ctx->new_server = 0;
 
