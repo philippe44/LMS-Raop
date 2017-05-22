@@ -79,8 +79,8 @@ static void *output_raop_thread(struct thread_ctx_s *ctx) {
 	while (ctx->output_running) {
 		bool ran = false;
 
-		// proceed only if room in queue *and* running
-		if (ctx->output.state >= OUTPUT_BUFFER && raopcl_accept_frames(ctx->output.device) >= FRAMES_PER_BLOCK) {
+		// proceed only if player can accept audio *and* running
+		if (ctx->output.state >= OUTPUT_BUFFER && raopcl_accept_frames(ctx->output.device)) {
 			u64_t playtime;
 
 			LOCK;
@@ -88,7 +88,6 @@ static void *output_raop_thread(struct thread_ctx_s *ctx) {
 			_output_frames(FRAMES_PER_BLOCK, ctx);
 			UNLOCK;
 
-			// nothing to do, sleep
 			if (ctx->output.buf_frames) {
 				raopcl_send_chunk(ctx->output.device, ctx->output.buf, ctx->output.buf_frames, &playtime);
 
@@ -102,20 +101,17 @@ static void *output_raop_thread(struct thread_ctx_s *ctx) {
 
 				ctx->output.buf_frames = 0;
 				ran = true;
-
-				//LOG_INFO("[%p]: sending chunk pt:%u.%u", ctx, (u32_t) (playtime >> 32), (u32_t) playtime);
 			}
 		}
 
 		LOCK;
 		ctx->output.updated = gettime_ms();
-		// check that later: shall we change queued_frames when not running?
-		// or a keep-alive when no frame sent
-		ctx->output.device_frames = raopcl_queued_frames(ctx->output.device) + raopcl_latency(ctx->output.device);
-		ctx->output.device_true_frames = raopcl_queued_frames(ctx->output.device);
+		// TODO: in some cases, we have less frames than latency (beginning & end)
+		ctx->output.device_frames = raopcl_latency(ctx->output.device);
 		ctx->output.frames_played_dmp = ctx->output.frames_played;
 		UNLOCK;
 
+		// nothing to do, sleep
 		if (!ran) usleep(10000);
 	}
 

@@ -821,7 +821,7 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	Device->Raop = raopcl_create(glHost, glDACPid, Device->ActiveRemote,
 								 RAOP_ALAC, Device->Config.AlacEncode, FRAMES_PER_BLOCK,
 								 (u32_t) MS2TS(Device->Config.ReadAhead, Device->SampleRate ? atoi(Device->SampleRate) : 44100),
-								 RAOP_LATENCY_MIN, Crypto, Auth,
+								 Crypto, Auth,
 								 Device->SampleRate ? atoi(Device->SampleRate) : 44100,
 								 Device->SampleSize ? atoi(Device->SampleSize) : 16,
 								 Device->Channels ? atoi(Device->Channels) : 2,
