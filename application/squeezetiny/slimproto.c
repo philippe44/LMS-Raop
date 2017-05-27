@@ -129,9 +129,9 @@ static void sendSTAT(const char *event, u32_t server_timestamp, struct thread_ct
 		LOG_DEBUG("[%p]: ms fr:%u clk:%u (frames_played: %u device_frames: %u)", ctx, ms_played, now - ctx->output.start_at, ctx->status.frames_played, ctx->status.device_frames);
 	} else if (ctx->status.frames_played && now > ctx->status.stream_start) {
 		ms_played = now - ctx->status.stream_start;
-		LOG_INFO("[%p]: ms_played: %u using elapsed time (frames_played: %u device_frames: %u)", ctx, ms_played, ctx->status.frames_played, ctx->status.device_frames);
+		LOG_DEBUG("[%p]: ms_played: %u using elapsed time (frames_played: %u device_frames: %u)", ctx, ms_played, ctx->status.frames_played, ctx->status.device_frames);
 	} else {
-		LOG_SDEBUG("[%p]: ms_played: 0", ctx);
+		LOG_DEBUG("[%p]: ms_played: 0", ctx);
 		ms_played = 0;
 	}
 
@@ -691,8 +691,11 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 				ctx->status.last = now;
 			}
 
-			if ((ctx->status.stream_state == STREAMING_HTTP || ctx->status.stream_state == STREAMING_FILE || ctx->stream.disconnect == DISCONNECT_OK)
+			if ((ctx->status.stream_state == STREAMING_HTTP || ctx->status.stream_state == STREAMING_FILE || (ctx->status.stream_state == DISCONNECT && ctx->stream.disconnect == DISCONNECT_OK))
 				&& !ctx->sentSTMl && ctx->decode.state == DECODE_READY) {
+				if (ctx->stream.disconnect == DISCONNECT_OK) {
+					LOG_ERROR("WTF", 1);
+                }
 				if (ctx->autostart == 0) {
 					ctx->decode.state = DECODE_RUNNING;
 					_sendSTMl = true;

@@ -261,6 +261,7 @@ void 		DelRaopDevice(struct sMR *Device);
 			device->TrackRunning = false;
 			device->TrackDuration = 0;
 			device->sqState = SQ_STOP;
+			// see not in raop_client.h why this 2-stages stop is needed
 			raopcl_stop(device->Raop);
 
 			strcpy(Req->Type, "FLUSH");
@@ -273,6 +274,7 @@ void 		DelRaopDevice(struct sMR *Device);
 
 			device->TrackRunning = false;
 			device->sqState = SQ_PAUSE;
+			// see not in raop_client.h why this 2-stages pause is needed
 			raopcl_pause(device->Raop);
 
 			Req = malloc(sizeof(tRaopReq));
@@ -298,22 +300,23 @@ void 		DelRaopDevice(struct sMR *Device);
 		}
 		case SQ_VOLUME: {
 			u32_t Volume = *(u16_t*) param;
+			int LMSVolume;
+
+			// first convert to 0..100 value
+			for (LMSVolume = 100; Volume < LMSVolumeMap[LMSVolume] && LMSVolume; LMSVolume--);
 
 			if (device->Config.VolumeMode == VOLUME_HARD &&	gettime_ms() > device->VolumeStamp + 1000 &&
 				(Volume || device->Config.MuteOnPause || sq_get_mode(device->SqueezeHandle) == device->sqState)) {
 				tRaopReq *Req = malloc(sizeof(tRaopReq));
-				int i;
 
-				// first convert to 0..100 value
-				for (i = 100; Volume < LMSVolumeMap[i] && i; i--);
-				device->Volume = i;
+				device->Volume = LMSVolume;
 
 				Req->Data.Volume = device->VolumeMapping[device->Volume];
 				strcpy(Req->Type, "VOLUME");
 				QueueInsert(&device->Queue, Req);
 				pthread_cond_signal(&device->Cond);
 			} else {
-            	LOG_INFO("[%p]: volume ignored %u", device, Volume);
+				LOG_INFO("[%p]: volume ignored %u", device, LMSVolume);
 			}
 			break;
 		}
@@ -473,6 +476,7 @@ static void *PlayerThread(void *args)
 		}
 
 		if (!strcasecmp(req->Type, "FLUSH")) {
+			// to handle immediate disconnect when a player sends busy
 			if (Device->DiscWait) {
 				LOG_INFO("[%p]: disconnecting ...", Device);
 				Device->DiscWait = false;
@@ -1034,7 +1038,7 @@ void StartActiveRemote(struct in_addr host)
 	char buf[256];
 	const char *txt[] = {
 		"txtvers=1",
-		"Ver=1",
+		"Ver=131075",
 		"DbId=63B5E5C0C201542E",
 		"OSsi=0x1F5",
 		NULL
@@ -1057,6 +1061,7 @@ void StartActiveRemote(struct in_addr host)
 
 	getsockname(glActiveRemoteSock, (struct sockaddr *) &my_addr, &nlen);
 	port = ntohs(my_addr.sin_port);
+	LOG_INFO("DACP port: %d", port);
 
 	// start mDNS responder
 	if ((gl_mDNSResponder = mdnsd_start(host)) == NULL) {

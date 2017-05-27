@@ -521,7 +521,7 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 		}
 		case SQ_VOLUME: {
 			if (strstr(param, "up")) sprintf(cmd, "%s mixer volume +5", ctx->cli_id);
-			else if (strstr(param, "down")) sprintf(cmd, "%s mixer volume +5", ctx->cli_id);
+			else if (strstr(param, "down")) sprintf(cmd, "%s mixer volume -5", ctx->cli_id);
 				 else sprintf(cmd, "%s mixer volume %s", ctx->cli_id, (char*) param);
 			break;
 		}
