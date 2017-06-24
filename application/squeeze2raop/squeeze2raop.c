@@ -305,7 +305,7 @@ void 		DelRaopDevice(struct sMR *Device);
 			// first convert to 0..100 value
 			for (LMSVolume = 100; Volume < LMSVolumeMap[LMSVolume] && LMSVolume; LMSVolume--);
 
-			if (device->Config.VolumeMode == VOLUME_HARD &&	gettime_ms() > device->VolumeStamp + 1000 &&
+			if (device->Config.VolumeMode == VOLUME_HARD &&	gettime_ms() - device->VolumeStamp > 1000 &&
 				(Volume || device->Config.MuteOnPause || sq_get_mode(device->SqueezeHandle) == device->sqState)) {
 				tRaopReq *Req = malloc(sizeof(tRaopReq));
 

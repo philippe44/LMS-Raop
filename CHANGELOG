@@ -1,9 +1,13 @@
+0.3.0.0.3 
+ - correct timegaps using gettime_ms() to manage 32 bits rollover (was causing volume command to be ignored)
+ - suppress some angry logs :-)
+
 0.3.0.0.2
  - "down" volume on feedback that was adding a +5 instead of -5
  - need to set TTL for tinysvcmdns to 255 for some players 
  - restart immediately after pause w/o synchronization
  - short file patch was creating STMl to be sent too early
-  
+   
 0.3.0.0.1
  - Redesign synchronization logic for GGMM devices that *want* the timestamp to NTP match to be exactly the timestamp that will be send in the next audio packet (strictly like iTunes does)
  - First audio packet was missing "marker bit" in some cases

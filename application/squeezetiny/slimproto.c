@@ -593,7 +593,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 				wake = true;
 			}
 
-			if (ctx->cli_sock > 0 && gettime_ms() > ctx->cli_timestamp + 10000) {
+			if (ctx->cli_sock > 0 && gettime_ms() - ctx->cli_timestamp > 10000) {
 				if (!mutex_trylock(ctx->cli_mutex)) {
 					LOG_INFO("[%p] Closing CLI socket %d", ctx, ctx->cli_sock);
 					closesocket(ctx->cli_sock);
@@ -693,9 +693,6 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 
 			if ((ctx->status.stream_state == STREAMING_HTTP || ctx->status.stream_state == STREAMING_FILE || (ctx->status.stream_state == DISCONNECT && ctx->stream.disconnect == DISCONNECT_OK))
 				&& !ctx->sentSTMl && ctx->decode.state == DECODE_READY) {
-				if (ctx->stream.disconnect == DISCONNECT_OK) {
-					LOG_ERROR("WTF", 1);
-                }
 				if (ctx->autostart == 0) {
 					ctx->decode.state = DECODE_RUNNING;
 					_sendSTMl = true;
