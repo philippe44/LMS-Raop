@@ -168,16 +168,35 @@
 	[% END %]
 	
 	<hr>
-	<b>[% "PLUGIN_RAOPBRIDGE_PLAYERLIST" | string %]</b><br>
-	<br><table>
+	<b>[% "PLUGIN_RAOPBRIDGE_PLAYERLIST" | string %]</b><br><br>
+	
+	<input hidden type="text" name="pairdevice" id="pairdevice" value="[% pairdevice %]">
+		
+	<script type="text/javascript">
+	function setPairing(input) {
+		document.getElementById('pairdevice').value = input.name;
+	}
+	</script>
+	
+	<table>
 	[% FOREACH entry IN devices %]
 		[% IF entry.udn != '.common.' %]
 			<tr><td><input name="enabled.[% entry.udn %]" type="checkbox" value="1" [% IF entry.enabled %] checked [% END %]></td>
-			<th>[% entry.name %]</th><th>&nbsp[% entry.mac %]</th><th>&nbsp[% entry.udn %]</th><th>&nbsp[% entry.friendly_name %]</th></tr>
+			<th>[% entry.name %]</th><th>&nbsp[% entry.mac %]</th><th>&nbsp[% entry.udn %]</th><th>&nbsp[% entry.friendly_name %]</th>
+			[% IF entry.credentials %]
+				[% IF !pairdevice %]
+					<th>&nbsp<input name="[% entry.udn %]" type="submit" onclick="setPairing(this)" value=[% "PLUGIN_RAOPBRIDGE_PAIR" | string %]></th>
+					<th>&nbsp<i>[% entry.credentials.split('@').0 %]</i></th>
+				[% ELSIF entry.udn == pairdevice %]	
+					<th><b><font color="red">&nbsp[% "PLUGIN_RAOPBRIDGE_PINCODE" | string %]&nbsp<input type="text" class="stdedit" autofocus name="pincode" id="pincode" size="4"></font></b></th>
+					<th>&nbsp<input name="[% entry.udn %]" type="submit" value=[% "PLUGIN_RAOPBRIDGE_SUBMIT" | string %]></th>
+				[% END %]
+			[% END %]
+			</tr>
 		[% END %]
 	[% END %]
 	</table>
 	
 	[% END %]
-
+	
 [% PROCESS settings/footer.html %]

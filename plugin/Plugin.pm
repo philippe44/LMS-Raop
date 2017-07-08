@@ -2,10 +2,14 @@ package Plugins::RaopBridge::Plugin;
 
 use strict;
 
-use Data::Dumper;
-use File::Spec::Functions;
-use XML::Simple;
 use base qw(Slim::Plugin::Base);
+
+use File::Spec::Functions;
+use FindBin qw($Bin);
+use lib catdir($Bin, 'Plugins', 'RaopBridge', 'lib');
+
+use Data::Dumper;
+use XML::Simple;
 
 use Slim::Utils::Prefs;
 use Slim::Utils::Log;
@@ -25,7 +29,8 @@ sub initPlugin {
 
 	$class->SUPER::initPlugin(@_);
 		
-	require Plugins::RaopBridge::Squeeze2raop;		
+	require Plugins::RaopBridge::Squeeze2raop;	
+	require	Plugins::RaopBridge::Pairing;
 	
 	if ($prefs->get('autorun')) {
 		Plugins::RaopBridge::Squeeze2raop->start;

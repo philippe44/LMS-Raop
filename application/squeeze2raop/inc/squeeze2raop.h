@@ -64,6 +64,7 @@ typedef struct sMRConfig
 	bool		AutoPlay;
 	int			IdleTimeout;
 	bool		Encryption;
+	char		Credentials[SQ_STR_LENGTH];
 	int 		ReadAhead;
 	int			VolumeMode;
 	int			Volume;

@@ -76,7 +76,8 @@ tMRConfig			glMRConfig = {
 							false,
 							30,
 							false,
-							1000,
+							"",				// credentials
+							1000,			// read_ahead
 							2,
 							-1,
 							true,
@@ -576,8 +577,7 @@ static void *UpdateMRThread(void *args)
 			if (j == MAX_RENDERERS) {
 				LOG_ERROR("Too many Raop devices", NULL);
 				break;
-			}
-			else Device = &glMRDevices[j];
+			} else Device = &glMRDevices[j];
 
 			if (AddRaopDevice(Device, p) && !glSaveConfigFile) {
 				// create a new slimdevice
@@ -592,14 +592,22 @@ static void *UpdateMRThread(void *args)
 					DelRaopDevice(Device);
 				}
 			}
-		}
-		else {
+		} else {
 			for (j = 0; j < MAX_RENDERERS; j++) {
-				if (glMRDevices[j].InUse && !strcmp(glMRDevices[j].UDN, p->name)) {
-					if (p->port != glMRDevices[j].PlayerPort || p->addr.s_addr != glMRDevices[j].PlayerIP.s_addr) {
-						LOG_INFO("[%p]: changed ip:port %s:%d", &glMRDevices[j], inet_ntoa(p->addr), p->port);
-						glMRDevices[j].PlayerPort = p->port;
-						glMRDevices[j].PlayerIP = p->addr;
+				Device = &glMRDevices[j];
+				if (Device->InUse && !strcmp(Device->UDN, p->name)) {
+					if (p->port != Device->PlayerPort || p->addr.s_addr != Device->PlayerIP.s_addr) {
+						LOG_INFO("[%p]: changed ip:port %s:%d", Device, inet_ntoa(p->addr), p->port);
+
+						Device->PlayerPort = p->port;
+						Device->PlayerIP = p->addr;
+
+						// replace ip:port piece of credentials
+						if (*Device->Config.Credentials) {
+							char *token = strchr(Device->Config.Credentials, '@');
+							if (token) *token = '\0';
+							sprintf(Device->Config.Credentials + strlen(Device->Config.Credentials), "@%s:%d", inet_ntoa(p->addr), p->port);
+						}
 					}
 					break;
 				}
@@ -733,6 +741,7 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	char *p;
 	u32_t mac_size = 6;
 	char *am = GetmDNSAttribute(data, "am");
+	char Secret[SQ_STR_LENGTH] = "";
 
 	// read parameters from default then config file
 	memset(Device, 0, sizeof(struct sMR));
@@ -753,6 +762,18 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	 if (am && stristr(am, "airport")) {
 		LOG_INFO("[%p]: AirPort Express", Device);
 		Auth = true;
+	}
+
+	 if (am && stristr(am, "appletv")) {
+		char *pk = GetmDNSAttribute(data, "pk");
+		if (pk && *pk) {
+			char *token = strchr(Device->Config.Credentials, '@');
+			LOG_INFO("[%p]: AppleTV with authentication (pairing must be done separately)", Device);
+			if (Device->Config.Credentials[0]) sscanf(Device->Config.Credentials, "%[a-fA-F0-9]", Secret);
+			if (token) *token = '\0';
+			sprintf(Device->Config.Credentials + strlen(Device->Config.Credentials), "@%s:%d", inet_ntoa(data->addr), data->port);
+		}
+		NFREE(pk);
 	}
 
 	NFREE(am);
@@ -825,7 +846,7 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	Device->Raop = raopcl_create(glHost, glDACPid, Device->ActiveRemote,
 								 RAOP_ALAC, Device->Config.AlacEncode, FRAMES_PER_BLOCK,
 								 (u32_t) MS2TS(Device->Config.ReadAhead, Device->SampleRate ? atoi(Device->SampleRate) : 44100),
-								 Crypto, Auth,
+								 Crypto, Auth, Secret,
 								 Device->SampleRate ? atoi(Device->SampleRate) : 44100,
 								 Device->SampleSize ? atoi(Device->SampleSize) : 16,
 								 Device->Channels ? atoi(Device->Channels) : 2,

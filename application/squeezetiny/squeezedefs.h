@@ -1,9 +1,9 @@
-/* 
+/*
  *  Squeezelite - lightweight headless squeezebox emulator
  *
  *  (c) Adrian Smith 2012-2014, triode1@btinternet.com
  *  (c) Philippe, philippe_44@outlook.com for raop/multi-instance modifications
- *  
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -23,7 +23,7 @@
 #ifndef __SQUEEZEDEFS_H
 #define __SQUEEZEDEFS_H
 
-#define VERSION "v0.3.0.0.3"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.3.0.0.4"" ("__DATE__" @ "__TIME__")"
 
 #include <pthread.h>
 #include "platform.h"

@@ -18,72 +18,86 @@ my @xmlmainskip = qw(interface);
 my @xmlmain = ( @xmlmainskip, qw(scan_interval scan_timeout log_limit) );
 my @xmldevice = qw(name mac codecs enabled remove_count send_metadata send_coverart player_volume idle_timeout read_ahead encryption server volume_feedback volume_mode volume_mapping mute_on_pause alac_encode volume_trigger);
 
+my $session; # this can be a global, only one instance can run
+
 sub name { 'PLUGIN_RAOPBRIDGE' }
 
 sub page { 'plugins/RaopBridge/settings/basic.html' }
 	
 sub handler {
 	my ($class, $client, $params, $callback, @args) = @_;
-
-	my $update;
-	
+	my $process;
+		
 	require Plugins::RaopBridge::Squeeze2raop;
 	require Plugins::RaopBridge::Plugin;
 			
-	if ($params->{ 'delconfig' }) {
-				
+	if ( $params->{ 'delconfig' } ) {
 		my $conf = Plugins::RaopBridge::Squeeze2raop->configFile($class);
+		
+		$process = { cb => undef };
 		unlink $conf;							
 		$log->info("deleting configuration $conf");
-		
-		#okay, this is hacky, will change in the future, just don't want another indent layer :-(
-		$params->{'saveSettings'} = 0;
-		
-		$update = 1;
-	}
-		
-	if ($params->{ 'genconfig' }) {
-	
-		Plugins::RaopBridge::Squeeze2raop->stop;
-		waitEndHandler(\&genConfig, $class, $client, $params, $callback, 30, @args);
-	
-		return undef;
-	}
-	
-	if ($params->{ 'cleanlog' }) {
-				
+	} elsif ( $params->{ 'genconfig' } ) {
+		$log->info("generating configuration ", Plugins::RaopBridge::Squeeze2raop->configFile($class));
+		$process = { cb => \&genConfig };
+	} elsif ( $params->{ 'cleanlog' } ) {
 		my $logfile = Plugins::RaopBridge::Squeeze2raop->logFile($class);
+
 		open my $fh, ">", $logfile;
 		print $fh;
 		close $fh;
-		
-		#okay, this is hacky, will change in the future, just don't want another indent layer :-(
-		$params->{'saveSettings'} = 0;
-	}
-	
-	if ($params->{'saveSettings'}) {
-
-		$log->debug("save settings required");
-		
+	} elsif ( $params->{'pairdevice'} ) {
+		my $xmlconfig = readconfig($class, KeyAttr => 'device');
+		my ($device) = \grep { $_->{udn} eq $params->{'pairdevice'} } @{$xmlconfig->{'device'}};
+		my ($host) = ($$device->{'credentials'} =~ /.*@(.+)/);
+			
+		if ( $params->{pincode} && $session) {
+			my $data = { 'I' => $$device->{mac}, 'P' => $params->{ 'pincode' } };
+			my $udn = $params->{'pairdevice'};
+			my $writeXML =	sub {
+					my $secret = shift;
+						
+					if ( defined $secret ) { 
+						$log->info("$udn pairing success: ", unpack("H*", $secret)); 
+						$$device->{credentials} = unpack("H*", $secret) . '@' . $host;
+					}			
+					else { 
+						$$device->{credentials} = '@' . $host;
+						$log->error("$udn pairing failed");
+					}	
+					
+					XMLout(	$xmlconfig, RootName => "squeeze2raop", NoSort => 1, NoAttr => 1, 
+								OutputFile => Plugins::RaopBridge::Squeeze2raop->configFile($class)); 
+					
+					waitEndHandler( { cb => undef }, $class, $client, $params, $callback, 30, @args);								
+				};
+				
+			$process = { cb => sub { Plugins::RaopBridge::Pairing::doPairing( $session, $writeXML, "http://$host", $data ) } };
+			delete $params->{'pairdevice'};
+			
+			$log->info("I=$data->{I} P=$data->{P}");
+		} else {
+			$log->debug("Launching pincode display for host:$host udn:$params->{'pairdevice'}");
+			$session = Plugins::RaopBridge::Pairing::displayPIN( "http://$host" );
+		}
+	} elsif ( $params->{'saveSettings'} ) {
 		my @bool  = qw(autorun logging autosave eraselog useLMSsocket);
 		my @other = qw(output bin debugs opts);
-		my $skipxml;
+		my $update;
+		
+		$log->debug("save settings required");
 				
 		for my $param (@bool) {
-			
 			my $val = $params->{ $param } ? 1 : 0;
 			
 			if ($val != $prefs->get($param)) {
-					
 				$prefs->set($param, $val);
 				$update = 1;
-					
 			}
 		}
 		
 		# check that the config file name has not changed first
 		for my $param (@other) {
-		
 			if ($params->{ $param } ne $prefs->get($param)) {
 			
 				$prefs->set($param, $params->{ $param });
@@ -91,21 +105,20 @@ sub handler {
 			}
 		}
 		
-		if ($params->{ 'configfile' } ne $prefs->get('configfile')) {
-		
-			$prefs->set('configfile', $params->{ 'configfile' });
-			$update = 1;
-			$skipxml = 1;
-		}	
-		
 		my $xmlconfig = readconfig($class, KeyAttr => 'device');
+		
+		if ($params->{ 'configfile' } ne $prefs->get('configfile')) {
+			$prefs->set('configfile', $params->{ 'configfile' });
+			if (-e Plugins::RaopBridge::Squeeze2raop->configFile($class)) {
+				$update = 0;
+				undef $xmlconfig;
+			} 
+		}	
 				
 		# get XML player configuration if current device has changed in the list
-		if ($xmlconfig and !$skipxml and ($params->{'seldevice'} eq $params->{'prevseldevice'})) {
-		
-			$log->info('Writing XML:', $params->{'seldevice'});
+		if ($xmlconfig && ($params->{'seldevice'} eq $params->{'prevseldevice'})) {
+						
 			for my $p (@xmlmain) {
-			
 				next if !defined $params->{ $p } && grep($_ eq $p, @xmlmainskip);
 												
 				if (!defined $params->{ $p }) {
@@ -121,9 +134,8 @@ sub handler {
 			
 			$log->info("current: ", $params->{'seldevice'}, "previous: ", $params->{'prevseldevice'});
 			
-			#save common parameters
 			if ($params->{'seldevice'} eq '.common.') {
-			
+				#save common parameters
 				for my $p (@xmldevice) {
 					if ($params->{ $p } eq '') {
 						delete $xmlconfig->{ common }->{ $p };
@@ -131,29 +143,23 @@ sub handler {
 						$xmlconfig->{ common }->{ $p } = $params->{ $p };
 					}
 				}	
-				
+			} elsif ( $params->{'deldevice'} ) {
+				#delete current device	
+				$log->info(@{$xmlconfig->{'device'}});
+				@{$xmlconfig->{'device'}} = grep $_->{'udn'} ne $params->{'seldevice'}, @{$xmlconfig->{'device'}};
+				$params->{'seldevice'} = '.common.';
 			} else {
-			
-				if ($params->{'deldevice'}) {
-					#delete current device	
-					$log->info(@{$xmlconfig->{'device'}});
-					@{$xmlconfig->{'device'}} = grep $_->{'udn'} ne $params->{'seldevice'}, @{$xmlconfig->{'device'}};
-					$params->{'seldevice'} = '.common.';
+				# save player specific parameters
+				$params->{'devices'} = \@{$xmlconfig->{'device'}};
+				my $device = findUDN($params->{'seldevice'}, $params->{'devices'});
 					
-				} else {
-					# save player specific parameters
-					$params->{'devices'} = \@{$xmlconfig->{'device'}};
-					my $device = findUDN($params->{'seldevice'}, $params->{'devices'});
-					
-					for my $p (@xmldevice) {
-						if ($params->{ $p } eq '') {
-							delete $device->{ $p };
-						} else {
-							$device->{ $p } = $params->{ $p };
-						}
-					}	
-					
-				}			
+				for my $p (@xmldevice) {
+					if ($params->{ $p } eq '') {
+						delete $device->{ $p };
+					} else {
+						$device->{ $p } = $params->{ $p };
+					}
+				}	
 			}	
 			
 			# get enabled status for all device, except the selected one (if any)
@@ -166,24 +172,28 @@ sub handler {
 			
 			$log->info("writing XML config");
 			$log->debug(Dumper($xmlconfig));
-			Plugins::RaopBridge::Squeeze2raop->stop;
-			waitEndHandler( sub { XMLout($xmlconfig, RootName => "squeeze2raop", NoSort => 1, NoAttr => 1, OutputFile => Plugins::RaopBridge::Squeeze2raop->configFile($class)); }, 
-							$class, $client, $params, $callback, 30, @args);
 			$update = 1;
+		}	
+		
+		if ($update) {
+			my $writeXML = sub {
+				my $conf = Plugins::RaopBridge::Squeeze2raop->configFile($class);
+				
+				$log->debug("write file now");
+				XMLout(	$xmlconfig, RootName => "squeeze2raop", NoSort => 1, NoAttr => 1, OutputFile => $conf );
+			};
+			
+			$process = { cb => $writeXML, handler => 1 };
 		}	
 	}
 
 	# something has been updated, XML array is up-to-date anyway, but need to write it
-	if ($update) {
-
-		$log->debug("updating");
-				
+	if ($process) {
+		$log->debug("full processing");
 		Plugins::RaopBridge::Squeeze2raop->stop;
-		waitEndHandler(undef, $class, $client, $params, $callback, 30, @args);
-		
-	#no update detected or first time looping
+		waitEndHandler($process, $class, $client, $params, $callback, 30, @args);
 	} else {
-
+		# just re-read config file and update page
 		$log->debug("not updating");
 		$class->handler2($client, $params, $callback, @args);		  
 	}
@@ -192,47 +202,47 @@ sub handler {
 }
 
 sub waitEndHandler	{
-	my ($func, $class, $client, $params, $callback, $wait, @args) = @_;
+	my ($process, $class, $client, $params, $callback, $wait, @args) = @_;
+	my $page;
 	
-	if (Plugins::RaopBridge::Squeeze2raop->alive()) {
+	if ( Plugins::RaopBridge::Squeeze2raop->alive() ) {
 		$log->debug('Waiting for squeeze2raop to end');
 		$wait--;
 		if ($wait) {
 			Slim::Utils::Timers::setTimer($class, Time::HiRes::time() + 1, sub {
-				waitEndHandler($func, $class, $client, $params, $callback, $wait, @args); });
+				waitEndHandler($process, $class, $client, $params, $callback, $wait, @args); });
 		}		
-
+	} elsif ( defined $process->{cb} ) {
+		$log->debug("helper stopped, processing with callback");
+		$process->{cb}->($process->{args}, $class, $client, $params, $callback, @args);
+		$page = $process->{handler};
 	} else {
-		if (defined $func) {
-			$func->($class, $client, $params, $callback, @args);
-		}
-		else {
-			if ($prefs->get('autorun')) {
-				Plugins::RaopBridge::Squeeze2raop->start
-			}
+		$page = 1;
+	}
 	
-			$class->handler2($client, $params, $callback, @args);		  
-		}	
+	if ( $page ) {
+		$log->debug("updating page");
+		Plugins::RaopBridge::Squeeze2raop->start if $prefs->get('autorun');
+		$class->handler2($client, $params, $callback, @args);		  
 	}
 }
 
 sub genConfig {
+	shift;
 	my ($class, $client, $params, $callback, @args) = @_;
-	
 	my $conf = Plugins::RaopBridge::Squeeze2raop->configFile($class);
+	
+	$log->debug("lauching helper to build $conf");
 	Plugins::RaopBridge::Squeeze2raop->start( "-i", $conf );
-	waitEndHandler(undef, $class, $client, $params, $callback, 120, @args);
+	waitEndHandler({ cb => undef}, $class, $client, $params, $callback, 120, @args);
 }	
 
 sub handler2 {
 	my ($class, $client, $params, $callback, @args) = @_;
 
 	if ($prefs->get('autorun')) {
-
 		$params->{'running'}  = Plugins::RaopBridge::Squeeze2raop->alive;
-
 	} else {
-
 		$params->{'running'} = 0;
 	}
 
@@ -253,7 +263,6 @@ sub handler2 {
 		$params->{'devices'} = \@{$xmlconfig->{'device'}};
 		unshift(@{$params->{'devices'}}, {'name' => '[common parameters]', 'udn' => '.common.'});
 		
-		$log->info("reading config: ", $params->{'seldevice'});
 		$log->debug(Dumper($params->{'devices'}));
 				
 		#read global parameters

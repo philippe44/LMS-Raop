@@ -150,6 +150,7 @@ void SaveConfig(char *name, void *ref, bool full)
 
 			XMLUpdateNode(doc, dev_node, false, "friendly_name", p->FriendlyName);
 			XMLUpdateNode(doc, dev_node, true, "name", p->sq_config.name);
+			if (*p->Config.Credentials) XMLUpdateNode(doc, dev_node, true, "credentials", p->Config.Credentials);
 			if (*p->sq_config.dynamic.server) XMLUpdateNode(doc, dev_node, true, "server", p->sq_config.dynamic.server);
 		}
 		// new device, add nodes
@@ -158,6 +159,7 @@ void SaveConfig(char *name, void *ref, bool full)
 			XMLAddNode(doc, dev_node, "udn", p->UDN);
 			XMLAddNode(doc, dev_node, "name", p->FriendlyName);
 			XMLAddNode(doc, dev_node, "friendly_name", p->FriendlyName);
+			if (*p->Config.Credentials) XMLAddNode(doc, dev_node, "credentials", p->Config.Credentials);
 			if (*p->sq_config.dynamic.server) XMLAddNode(doc, dev_node, "server", p->sq_config.dynamic.server);
 			XMLAddNode(doc, dev_node, "mac", "%02x:%02x:%02x:%02x:%02x:%02x", p->sq_config.mac[0],
 						p->sq_config.mac[1], p->sq_config.mac[2], p->sq_config.mac[3], p->sq_config.mac[4], p->sq_config.mac[5]);
@@ -219,6 +221,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "auto_play")) Conf->AutoPlay = atol(val);
 	if (!strcmp(name, "idle_timeout")) Conf->IdleTimeout = atol(val);
 	if (!strcmp(name, "encryption")) Conf->Encryption = atol(val);
+	if (!strcmp(name, "credentials")) strcpy(Conf->Credentials, val);
 	if (!strcmp(name, "read_ahead")) Conf->ReadAhead = atol(val);
 	if (!strcmp(name, "send_metadata")) Conf->SendMetaData = atol(val);
 	if (!strcmp(name, "send_coverart")) Conf->SendCoverArt = atol(val);

@@ -284,6 +284,15 @@ PLUGIN_RAOPBRIDGE_ALACENCODE
 	
 PLUGIN_RAOPBRIDGE_PLAYERLIST
 	EN	List of players currently in configuration file - Note that more devices might have been discovered
+
+PLUGIN_RAOPBRIDGE_PAIR
+	EN	Pair
+
+PLUGIN_RAOPBRIDGE_SUBMIT
+	EN	Submit
+		
+PLUGIN_RAOPBRIDGE_PINCODE
+	EN	Enter PIN code
 		
 PLUGIN_RAOPBRIDGE_NOCONFIG
 	EN	Configuration file missing - create one by clicking "generate" or, if autosave is on, refresh this page
