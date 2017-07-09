@@ -1,3 +1,7 @@
+0.3.0.0.4
+  - add support for AppleTV with pairing
+  - clean settings.pm to make it more readable
+  
 0.3.0.0.3 
  - correct timegaps using gettime_ms() to manage 32 bits rollover (was causing volume command to be ignored)
  - suppress some angry logs :-)

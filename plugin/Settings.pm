@@ -172,6 +172,7 @@ sub handler {
 			
 			$log->info("writing XML config");
 			$log->debug(Dumper($xmlconfig));
+			
 			$update = 1;
 		}	
 		
@@ -214,7 +215,7 @@ sub waitEndHandler	{
 		}		
 	} elsif ( defined $process->{cb} ) {
 		$log->debug("helper stopped, processing with callback");
-		$process->{cb}->($process->{args}, $class, $client, $params, $callback, @args);
+		$process->{cb}->($class, $client, $params, $callback, @args);
 		$page = $process->{handler};
 	} else {
 		$page = 1;
@@ -228,7 +229,6 @@ sub waitEndHandler	{
 }
 
 sub genConfig {
-	shift;
 	my ($class, $client, $params, $callback, @args) = @_;
 	my $conf = Plugins::RaopBridge::Squeeze2raop->configFile($class);
 	
