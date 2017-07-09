@@ -25,6 +25,8 @@ libupnp: https://sourceforge.net/projects/pupnp (you just need the libixml part 
 pthread for Windows: https://www.sourceware.org/pthreads-win32
 
 ALAC codec: https://github.com/macosforge/alac
+
+Curve25519 crypto: https://github.com/msotoodeh/curve25519
  
 Use also faad, limad, mpg123 and libflac, libsoxr (use headers only if you do shared libs, 
 full library if you want static link)
