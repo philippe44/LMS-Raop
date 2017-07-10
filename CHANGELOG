@@ -1,3 +1,6 @@
+0.3.0.0.5
+ - better correct 32 bits rollover
+ 
 0.3.0.0.4
   - add support for AppleTV with pairing
   - clean settings.pm to make it more readable
