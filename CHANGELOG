@@ -1,3 +1,6 @@
+0.3.0.2
+ - (P) do not refuse to load if crypto modules are missing
+ 
 0.3.0.1
  - LMS forces content-type to image/jpeg when sending images from cache, even when a PNG is sent
  

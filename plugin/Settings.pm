@@ -79,6 +79,7 @@ sub handler {
 		} else {
 			$log->debug("Launching pincode display for host:$host udn:$params->{'pairdevice'}");
 			$session = Plugins::RaopBridge::Pairing::displayPIN( "http://$host" );
+			delete $params->{'pairdevice'} if !$session;
 		}
 	} elsif ( $params->{'saveSettings'} ) {
 		my @bool  = qw(autorun logging autosave eraselog useLMSsocket);

@@ -7,10 +7,6 @@ use File::Spec::Functions;
 use XML::Simple;
 use Data::Plist::BinaryWriter;
 use Data::Plist::BinaryReader;
-use Crypt::SRP;
-use Crypt::Digest::SHA512 qw (sha512);
-use Crypt::Ed25519;
-use Crypt::AuthEnc::GCM qw(gcm_encrypt_authenticate gcm_decrypt_verify);
 use Encode qw(decode encode);
 
 use base qw(Slim::Plugin::Base);
@@ -27,6 +23,22 @@ Plugins::RaopBridge::Async::HTTP::init();
 
 sub displayPIN {
 	my ($host) = @_;
+
+	eval {
+		require Crypt::SRP;
+		Crypt::SRP->import();
+		require Crypt::Digest::SHA512;
+		Crypt::Digest::SHA512->import( qw(sha512) );
+		require Crypt::Ed25519;
+		Crypt::Ed25519->import();		
+		require Crypt::AuthEnc::GCM;
+		Crypt::AuthEnc::GCM->import( qw(gcm_encrypt_authenticate gcm_decrypt_verify) );
+	};
+	
+	if ($@) {
+		$log->error("Cannot load crypto modules, please check your configuration");
+		return undef;
+	}	
 	
 	my $request = HTTP::Request->new( POST => "$host/pair-pin-start" ); 
 	$request->header( 'Connection' => 'Keep-Alive', 'Content-Type' => 'application/octet-stream' );
