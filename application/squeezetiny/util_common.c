@@ -211,14 +211,20 @@ u64_t hash64_buf(char *str, size_t len)
 /*---------------------------------------------------------------------------*/
 char *stristr(char *s1, char *s2)
 {
- char *s1_lwr = strlwr(strdup(s1));
- char *s2_lwr = strlwr(strdup(s2));
- char *p = strstr(s1_lwr, s2_lwr);
+	char *s1_lwr, *s2_lwr, *p;
 
- if (p) p = s1 + (p - s1_lwr);
- free(s1_lwr);
- free(s2_lwr);
- return p;
+	if (!s1 || !s2) return NULL;
+
+	s1_lwr = strlwr(strdup(s1));
+	s2_lwr = strlwr(strdup(s2));
+	p = strstr(s1_lwr, s2_lwr);
+
+	if (p) p = s1 + (p - s1_lwr);
+
+	free(s1_lwr);
+	free(s2_lwr);
+
+	return p;
 }
 
 /*---------------------------------------------------------------------------*/

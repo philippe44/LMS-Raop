@@ -1,3 +1,6 @@
+0.3.0.1
+ - LMS forces content-type to image/jpeg when sending images from cache, even when a PNG is sent
+ 
 0.3.0.0
  - better correct 32 bits rollover
  - add support for AppleTV with pairing

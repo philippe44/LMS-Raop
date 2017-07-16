@@ -434,10 +434,13 @@ static void *PlayerThread(void *args)
 													 "asal", 's', metadata.album,
 													 "asgn", 's', metadata.genre,
 													 "astn", 'i', (int) metadata.track);
-					// TODO: convert when it's not JPEG
+
 					if (metadata.artwork && Device->Config.SendCoverArt) {
 						char *image = NULL, *contentType = NULL;
 						int size = http_fetch(metadata.artwork, &contentType, &image);
+
+						// LMS always sends image/jpeg (from cache) for content-type
+						if (stristr(metadata.artwork, ".png")) strcpy(contentType, "image/png");
 
 						if (size != -1) raopcl_set_artwork(Device->Raop, contentType, size - 1, image);
 
