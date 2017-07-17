@@ -1,5 +1,6 @@
 0.3.0.2
- - (P) do not refuse to load if crypto modules are missing
+ - (P) do not refuse to load if crypto libraries are missing
+ - (P) add platform specific libraries sor Perl 5.24 (x86, x64, armv6hf)
  
 0.3.0.1
  - LMS forces content-type to image/jpeg when sending images from cache, even when a PNG is sent
