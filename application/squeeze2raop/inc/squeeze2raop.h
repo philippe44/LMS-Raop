@@ -73,6 +73,7 @@ typedef struct sMRConfig
 	bool		MuteOnPause;
 	bool		AlacEncode;
 	bool		VolumeTrigger;
+	char 		PreventPlayback[SQ_STR_LENGTH];
 } tMRConfig;
 
 

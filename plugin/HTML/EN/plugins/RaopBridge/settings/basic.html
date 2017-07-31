@@ -167,6 +167,16 @@
 		</select>
 	[% END %]
 	
+	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_OTHEROPTIONS" desc="PLUGIN_RAOPBRIDGE_OTHEROPTIONS_DESC" %]
+		[% PREVENTPLAYBACKBOX = [['',''], ['Stop','stop'], ['Power OFF','off']] %]
+		<select class="stdedit" name="prevent_playback" id="prevent_playback">
+		[% FOREACH entry IN PREVENTPLAYBACKBOX %] 
+			<option [% IF entry.1 == prevent_playback %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+		[% END %]
+		</select>
+		[% "PLUGIN_RAOPBRIDGE_PREVENTPLAYBACK" | string %]&nbsp
+	[% END %]
+	
 	<hr>
 	<b>[% "PLUGIN_RAOPBRIDGE_PLAYERLIST" | string %]</b><br><br>
 	

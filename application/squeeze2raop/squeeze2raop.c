@@ -85,6 +85,7 @@ tMRConfig			glMRConfig = {
 							true,
 							false,
 							false,			// VolumeTrigger
+							"stop",			// PreventPlayback
 					};
 
 static u8_t LMSVolumeMap[101] = {
@@ -306,7 +307,7 @@ void 		DelRaopDevice(struct sMR *Device);
 			// first convert to 0..100 value
 			for (LMSVolume = 100; Volume < LMSVolumeMap[LMSVolume] && LMSVolume; LMSVolume--);
 
-			if (device->Config.VolumeMode == VOLUME_HARD &&	(u64_t) gettime_ms() > (u64_t) device->VolumeStamp + 1000 &&
+			if (device->Config.VolumeMode == VOLUME_HARD &&	(device->VolumeStamp + 1000 - gettime_ms() > 0x7fffffff) &&
 				(Volume || device->Config.MuteOnPause || sq_get_mode(device->SqueezeHandle) == device->sqState)) {
 				tRaopReq *Req = malloc(sizeof(tRaopReq));
 
@@ -377,7 +378,7 @@ static void *PlayerThread(void *args)
 
 			LOG_DEBUG("[%p]: tick %u", Device, now);
 
-			if (Device->DiscWait && (u64_t) now > (u64_t) Device->LastFlush + Device->Config.IdleTimeout * 1000) {
+			if (Device->DiscWait && (Device->LastFlush + Device->Config.IdleTimeout * 1000 - now > 0x7fffffff) ) {
 				Device->VolumeReady = !Device->Config.VolumeTrigger;
 				LOG_INFO("[%p]: Disconnecting %u", Device, now);
 				raopcl_disconnect(Device->Raop);
@@ -1006,7 +1007,9 @@ static void *ActiveRemoteThread(void *args)
 			// player is switched to something else, so require immediate disc
 			if (stristr(command, "-prevent-playback=1")) {
 				Device->DiscWait = true;
-				sq_notify(Device->SqueezeHandle, Device, SQ_STOP, NULL, NULL);
+				sq_notify(Device->SqueezeHandle, Device,
+						strcasecmp(Device->Config.PreventPlayback, "STOP") ? SQ_STOP : SQ_OFF,
+						NULL, NULL);
 			}
 
 			// volume remote command

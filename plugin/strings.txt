@@ -293,6 +293,21 @@ PLUGIN_RAOPBRIDGE_SUBMIT
 		
 PLUGIN_RAOPBRIDGE_PINCODE
 	EN	Enter PIN code
+
+PLUGIN_RAOPBRIDGE_OTHEROPTIONS
+	EN	Various Options
+
+PLUGIN_RAOPBRIDGE_PREVENTPLAYBACK
+	EN	LMS player when AirPlay device disconnects 
+
+PLUGIN_RAOPBRIDGE_POWEROFF
+	EN	Power off
+	
+PLUGIN_RAOPBRIDGE_STOP
+	EN	Stop
+
+PLUGIN_RAOPBRIDGE_OTHEROPTIONS_DESC
+	EN	- When AirPlay device disconnects locally (e.g. by using the remote of an AV amplifier to switch source, should LMS stop or poweroff the virtual SB player)
 		
 PLUGIN_RAOPBRIDGE_NOCONFIG
 	EN	Configuration file missing - create one by clicking "generate" or, if autosave is on, refresh this page

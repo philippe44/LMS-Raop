@@ -545,6 +545,10 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 			sprintf(cmd, "%s time %+d", ctx->cli_id, *((s16_t*) param));
 			break;
 		}
+		case SQ_OFF: {
+			sprintf(cmd, "%s power 0", ctx->cli_id);
+			break;
+		}
 
 		default: break;
 	 }

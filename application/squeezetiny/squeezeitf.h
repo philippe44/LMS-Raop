@@ -31,7 +31,7 @@ typedef enum { SQ_NONE, SQ_PLAY, SQ_PAUSE, SQ_UNPAUSE, SQ_STOP, SQ_SEEK,
 			  SQ_VOLUME, SQ_ONOFF, SQ_NEXT, SQ_CONNECT, SQ_STARTED,
 			  SQ_METASEND, SQ_SETNAME, SQ_SETSERVER, SQ_FINISHED, SQ_PLAY_PAUSE,
 			  SQ_MUTE_TOGGLE, SQ_PREVIOUS, SQ_SHUFFLE,
-			  SQ_FF_REW } sq_action_t;
+			  SQ_FF_REW, SQ_OFF } sq_action_t;
 typedef enum {SQ_STREAM = 2, SQ_FULL = 3} sq_mode_t;
 typedef	sq_action_t sq_event_t;
 

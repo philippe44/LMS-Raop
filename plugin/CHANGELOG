@@ -1,3 +1,7 @@
+0.3.1.0.1
+ - another silly mistake in 32 bits timer comparison :-(
+ - option to switch off or stop virtual player when AirPlay device disconnect
+
 0.3.0.2
  - (P) do not refuse to load if crypto libraries are missing
  - (P) add platform specific libraries sor Perl 5.24 (x86, x64, armv6hf)
