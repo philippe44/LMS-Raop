@@ -1008,7 +1008,7 @@ static void *ActiveRemoteThread(void *args)
 			if (stristr(command, "-prevent-playback=1")) {
 				Device->DiscWait = true;
 				sq_notify(Device->SqueezeHandle, Device,
-						strcasecmp(Device->Config.PreventPlayback, "STOP") ? SQ_STOP : SQ_OFF,
+						!strcasecmp(Device->Config.PreventPlayback, "STOP") ? SQ_STOP : SQ_OFF,
 						NULL, NULL);
 			}
 
@@ -1432,7 +1432,7 @@ int main(int argc, char *argv[])
 			main_loglevel = debug2level(level);
 		}
 
-		if (!strcmp(resp, "slimmainqdbg"))	{
+		if (!strcmp(resp, "slimmaindbg"))	{
 			char level[20];
 			i = scanf("%s", level);
 			slimmain_loglevel = debug2level(level);
