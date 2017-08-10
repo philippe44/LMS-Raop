@@ -258,6 +258,7 @@ static void LoadGlobalItem(char *name, char *val)
 	if (!strcmp(name, "scan_interval")) glScanInterval = atol(val);
 	if (!strcmp(name, "scan_timeout")) glScanTimeout = atol(val);
 	if (!strcmp(name, "log_limit")) glLogLimit = atol(val);
+	if (!strcmp(name, "exclude_model")) strcpy(glExcluded, val);
  }
 
 

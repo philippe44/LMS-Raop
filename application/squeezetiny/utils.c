@@ -21,7 +21,7 @@
 
 #include "squeezelite.h"
 #include <fcntl.h>
-
+#include "util.h"
 #include "log_util.h"
 
 #if LINUX || OSX || FREEBSD

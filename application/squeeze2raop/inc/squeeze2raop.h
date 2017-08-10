@@ -130,6 +130,7 @@ extern char					glSQServer[SQ_STR_LENGTH];
 extern u32_t				glScanInterval;
 extern u32_t				glScanTimeout;
 extern struct sMR			glMRDevices[MAX_RENDERERS];
+extern char					glExcluded[SQ_STR_LENGTH];
 
 
 #endif

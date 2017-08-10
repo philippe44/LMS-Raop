@@ -57,6 +57,7 @@ bool				glAutoSaveConfigFile = false;
 bool				glGracefullShutdown = true;
 int					gl_mDNSId;
 char 				glDACPid[] = "1A2B3D4EA1B2C3D4";
+char				glExcluded[SQ_STR_LENGTH] = "aircast;airupnp";
 
 log_level	slimproto_loglevel = lINFO;
 log_level	stream_loglevel = lWARN;
@@ -156,6 +157,7 @@ static char usage[] =
 		   "  -b <address>]\tNetwork address to bind to\n"
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
 		   "  -i <config file>\tdiscover players, save <config file> and exit\n"
+   		   "  -m <name1;name2...>\texclude from search devices whose model name contains name1 or name 2 ...\n"
 		   "  -I \t\t\tauto save config at every network scan\n"
 		   "  -f <logfile>\t\tWrite debug to logfile\n"
   		   "  -p <pid file>\t\twrite PID in file\n"
@@ -1124,6 +1126,21 @@ void StopActiveRemote(void)
 
 
 /*----------------------------------------------------------------------------*/
+bool isExcluded(char *Model)
+{
+	char item[SQ_STR_LENGTH];
+	char *p = glExcluded;
+
+	while (p && *p && sscanf(p, "%[^:]", item)) {
+		if (stristr(Model, item)) return true;
+		p += strlen(item) + 1;
+	}
+
+	return false;
+}
+
+
+/*----------------------------------------------------------------------------*/
 static bool Start(void)
 {
 	pthread_attr_t attr;
@@ -1211,7 +1228,7 @@ bool ParseArgs(int argc, char **argv) {
 
 	while (optind < argc && strlen(argv[optind]) >= 2 && argv[optind][0] == '-') {
 		char *opt = argv[optind] + 1;
-		if (strstr("stxdfpib", opt) && optind < argc - 1) {
+		if (strstr("stxdfpibm", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
 		} else if (strstr("tzZIk"
@@ -1264,7 +1281,9 @@ bool ParseArgs(int argc, char **argv) {
 		case 'k':
 			glGracefullShutdown = false;
 			break;
-
+		case 'm':
+			strcpy(glExcluded, optarg);
+			break;
 #if LINUX || FREEBSD
 		case 'z':
 			glDaemonize = true;
