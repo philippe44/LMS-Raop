@@ -211,7 +211,8 @@ static char license[] =
 /*----------------------------------------------------------------------------*/
 static void *UpdateMRThread(void *args);
 static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data);
-void 		DelRaopDevice(struct sMR *Device);
+static void DelRaopDevice(struct sMR *Device);
+static bool IsExcluded(char *Model);
 
 /*----------------------------------------------------------------------------*/
 bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, void *param)
@@ -572,8 +573,12 @@ static void *UpdateMRThread(void *args)
 	for (i = 0; i < DiscDevices.count; i++) {
 		int j;
 		struct mDNSItem_s *p = &DiscDevices.items[i];
+		char *am = GetmDNSAttribute(p, "am");
+		bool excluded = IsExcluded(am);
 
-		if (!p->name) continue;
+		NFREE(am);
+
+		if (!p->name || excluded) continue;
 
 		if (!RefreshTO(p->name)) {
 			// new device so search a free spot.
@@ -1126,12 +1131,12 @@ void StopActiveRemote(void)
 
 
 /*----------------------------------------------------------------------------*/
-bool isExcluded(char *Model)
+bool IsExcluded(char *Model)
 {
 	char item[SQ_STR_LENGTH];
 	char *p = glExcluded;
 
-	while (p && *p && sscanf(p, "%[^:]", item)) {
+	while (Model && p && *p && sscanf(p, "%[^:]", item)) {
 		if (stristr(Model, item)) return true;
 		p += strlen(item) + 1;
 	}
