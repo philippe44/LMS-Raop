@@ -1,3 +1,6 @@
+0.3.1.0.3
+ - Add correct shared libs (multi, thread, 64int)
+ 
 0.3.1.0.2
  - add option to exclude models (command line and config file)
  - (P) undo @INC change
