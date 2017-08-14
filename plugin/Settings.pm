@@ -177,10 +177,11 @@ sub handler {
 			$update = 1;
 		}	
 		
-		if ($xmlconfig && $update) {
+		if ($update) {
 			my $writeXML = sub {
 				my $conf = Plugins::RaopBridge::Squeeze2raop->configFile($class);
 				
+				return if !$xmlconfig;
 				$log->debug("write file now");
 				XMLout(	$xmlconfig, RootName => "squeeze2raop", NoSort => 1, NoAttr => 1, OutputFile => $conf );
 			};
