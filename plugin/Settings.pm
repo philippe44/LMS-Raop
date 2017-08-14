@@ -177,7 +177,7 @@ sub handler {
 			$update = 1;
 		}	
 		
-		if ($update) {
+		if ($xmlconfig && $update) {
 			my $writeXML = sub {
 				my $conf = Plugins::RaopBridge::Squeeze2raop->configFile($class);
 				
