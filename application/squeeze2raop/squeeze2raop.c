@@ -443,9 +443,6 @@ static void *PlayerThread(void *args)
 						char *image = NULL, *contentType = NULL;
 						int size = http_fetch(metadata.artwork, &contentType, &image);
 
-						// LMS always sends image/jpeg (from cache) for content-type
-						if (stristr(metadata.artwork, ".png")) strcpy(contentType, "image/png");
-
 						if (size != -1) raopcl_set_artwork(Device->Raop, contentType, size - 1, image);
 
 						NFREE(image);
