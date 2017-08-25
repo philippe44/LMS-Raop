@@ -1,3 +1,6 @@
+0.3.1.0.5
+ - force file extension to JPG when image extension is PNG but content-type if JPG
+
 0.3.1.0.4
  - PNG/JPEG image problem solved
  
