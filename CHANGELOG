@@ -1,20 +1,9 @@
-0.3.1.0.5
+0.3.1.0
  - force file extension to JPG when image extension is PNG but content-type if JPG
-
-0.3.1.0.4
- - PNG/JPEG image problem solved
- 
-0.3.1.0.3
- - Add correct shared libs (multi, thread, 64int)
- 
-0.3.1.0.2
+ - Add correct shared libs (multi, thread, 64int) needed for ATV pairing
  - add option to exclude models (command line and config file)
- - (P) undo @INC change
-
-0.3.1.0.1
  - another silly mistake in 32 bits timer comparison :-(
  - option to switch off or stop virtual player when AirPlay device disconnects
- - (P) Add local lib to the end of @INC, not the beginning
 
 0.3.0.2
  - (P) do not refuse to load if crypto libraries are missing
