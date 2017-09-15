@@ -443,15 +443,9 @@ static void *PlayerThread(void *args)
 						char *image = NULL, *contentType = NULL;
 						int size = http_fetch(metadata.artwork, &contentType, &image);
 
-						if (size != -1) {
-							char *p;
-
-							if ((p = stristr(metadata.artwork, ".png")) != NULL && stristr(contentType, "jpeg")) {
-								memcpy(p, ".jpg", 4);
-								LOG_INFO("[%p]: wrong file extension %s", Device, metadata.artwork);
-							}
-
-							raopcl_set_artwork(Device->Raop, contentType, size - 1, image);
+						if (size != -1)	raopcl_set_artwork(Device->Raop, contentType, size, image);
+						else {
+							LOG_WARN("[%p]: cannot get coverart %s", Device, metadata.artwork);
 						}
 
 						NFREE(image);

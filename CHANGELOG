@@ -1,3 +1,6 @@
+0.3.1.1
+ - artwork size sent to AirPlay device was wrong!
+
 0.3.1.0
  - force file extension to JPG when image extension is PNG but content-type if JPG
  - Add correct shared libs (multi, thread, 64int) needed for ATV pairing
