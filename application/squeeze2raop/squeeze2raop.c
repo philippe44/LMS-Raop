@@ -55,9 +55,8 @@ static char			*glPidFile = NULL;
 static char			*glSaveConfigFile = NULL;
 bool				glAutoSaveConfigFile = false;
 bool				glGracefullShutdown = true;
-int					gl_mDNSId;
 char 				glDACPid[] = "1A2B3D4EA1B2C3D4";
-char				glExcluded[SQ_STR_LENGTH] = "aircast;airupnp";
+char				glExcluded[SQ_STR_LENGTH] = "aircast,airupnp";
 
 log_level	slimproto_loglevel = lINFO;
 log_level	stream_loglevel = lWARN;
@@ -127,7 +126,7 @@ sq_dev_param_t glDeviceParam = {
 static pthread_t 	glMainThread;
 void				*glConfigID = NULL;
 char				glConfigName[SQ_STR_LENGTH] = "./config.xml";
-static bool			glDiscovery = false;
+
 u32_t				glScanInterval = SCAN_INTERVAL;
 u32_t				glScanTimeout = SCAN_TIMEOUT;
 struct sMR			glMRDevices[MAX_RENDERERS];
@@ -142,8 +141,11 @@ enum { VOLUME_IGNORE = 0, VOLUME_SOFT, VOLUME_HARD };
 extern log_level	main_loglevel;
 static log_level 	*loglevel = &main_loglevel;
 
-static pthread_t			glUpdateMRThread;
+static pthread_t  	glUpdateMRThread;
 static bool			glMainRunning = true;
+static bool			glDiscoveryRunning = false;
+static bool			gl_mDNSQuery;
+static int			gl_mDNSId;
 
 static struct mdnsd *gl_mDNSResponder;
 static int			glActiveRemoteSock;
@@ -157,7 +159,7 @@ static char usage[] =
 		   "  -b <address>]\tNetwork address to bind to\n"
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
 		   "  -i <config file>\tdiscover players, save <config file> and exit\n"
-   		   "  -m <name1;name2...>\texclude from search devices whose model name contains name1 or name 2 ...\n"
+   		   "  -m <name1,name2...>\texclude from search devices whose model name contains name1 or name 2 ...\n"
 		   "  -I \t\t\tauto save config at every network scan\n"
 		   "  -f <logfile>\t\tWrite debug to logfile\n"
   		   "  -p <pid file>\t\twrite PID in file\n"
@@ -554,23 +556,13 @@ static void *UpdateMRThread(void *args)
 	struct sMR *Device = NULL;
 	int i, TimeStamp;
 	DiscoveredList DiscDevices;
-	static bool Running = false;
-
-	if (Running) return NULL;
-	Running = true;
 
 	LOG_DEBUG("Begin Raop devices update", NULL);
 	TimeStamp = gettime_ms();
 
-	query_mDNS(gl_mDNSId, "_raop._tcp.local", &DiscDevices, glScanTimeout);
+	query_mDNS(gl_mDNSId, &gl_mDNSQuery, "_raop._tcp.local", &DiscDevices, glScanTimeout);
 
-	if (!glMainRunning) {
-		LOG_DEBUG("Aborting ...", NULL);
-		Running = false;
-		return NULL;
-	}
-
-	for (i = 0; i < DiscDevices.count; i++) {
+	for (i = 0; i < DiscDevices.count && glMainRunning; i++) {
 		int j;
 		struct mDNSItem_s *p = &DiscDevices.items[i];
 		char *am = GetmDNSAttribute(p, "am");
@@ -640,15 +632,15 @@ static void *UpdateMRThread(void *args)
 		DelRaopDevice(Device);
 	}
 
-	glDiscovery = true;
-
 	if (glAutoSaveConfigFile && !glSaveConfigFile) {
 		LOG_DEBUG("Updating configuration %s", glConfigName);
 		SaveConfig(glConfigName, glConfigID, false);
 	}
 
+	glDiscoveryRunning = false;
+
 	LOG_DEBUG("End Raop devices update %d", gettime_ms() - TimeStamp);
-	Running = false;
+
 	return NULL;
 }
 
@@ -664,15 +656,13 @@ static void *MainThread(void *args)
 
 		// reset timeout and re-scan devices
 		ScanPoll += elapsed;
-		if (glScanInterval && ScanPoll > glScanInterval*1000) {
+		if (glScanInterval && ScanPoll > glScanInterval*1000 && !glDiscoveryRunning) {
 			pthread_attr_t attr;
 
 			ScanPoll = 0;
 
-			for (i = 0; i < MAX_RENDERERS; i++) {
-				glMRDevices[i].TimeOut = true;
-				glDiscovery = false;
-			}
+			glDiscoveryRunning = true;
+			for (i = 0; i < MAX_RENDERERS; i++) glMRDevices[i].TimeOut = true;
 
 			pthread_attr_init(&attr);
 			pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + 64*1024);
@@ -1136,10 +1126,11 @@ bool IsExcluded(char *Model)
 	char item[SQ_STR_LENGTH];
 	char *p = glExcluded;
 
-	while (Model && p && *p && sscanf(p, "%[^;]", item)) {
+	do {
+		sscanf(p, "%[^,]", item);
 		if (stristr(Model, item)) return true;
-		p += strlen(item) + 1;
-	}
+		p += strlen(item);
+	} while (*p++);
 
 	return false;
 }
@@ -1182,14 +1173,15 @@ static bool Start(void)
 /*---------------------------------------------------------------------------*/
 static bool Stop(void)
 {
-	pthread_join(glUpdateMRThread, NULL);
+	// this forces an ongoing search to end
+	LOG_DEBUG("terminate mDNS queries", NULL);
+	close_mDNS(gl_mDNSId, &gl_mDNSQuery);
+
+	LOG_DEBUG("terminate update thread ...", NULL);
+	while (glDiscoveryRunning) usleep(50000);
 
 	LOG_DEBUG("flush renderers ...", NULL);
 	FlushRaopDevices();
-
-	// this forces an ongoing search to end
-	LOG_DEBUG("terminate mDNS queries", NULL);
-	close_mDNS(gl_mDNSId);
 
 	// Stop ActiveRemote server
 	LOG_DEBUG("terminate mDNS responder", NULL);
@@ -1199,6 +1191,8 @@ static bool Stop(void)
 	pthread_join(glMainThread, NULL);
 
 	free(glHostName);
+
+	if (glConfigID) ixmlDocument_free(glConfigID);
 
 	return true;
 }
@@ -1406,7 +1400,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (glSaveConfigFile) {
-		while (!glDiscovery) sleep(1);
+		while (glDiscoveryRunning) sleep(1);
 		SaveConfig(glSaveConfigFile, glConfigID, true);
 	}
 
@@ -1482,9 +1476,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (glConfigID) ixmlDocument_free(glConfigID);
 	glMainRunning = false;
-	LOG_INFO("stopping squeelite devices ...", NULL);
+	LOG_INFO("stopping squeezelite devices ...", NULL);
 	sq_end();
 	LOG_INFO("stopping Raop devices ...", NULL);
 	Stop();
