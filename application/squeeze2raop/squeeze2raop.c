@@ -78,8 +78,8 @@ tMRConfig			glMRConfig = {
 							false,
 							"",				// credentials
 							1000,			// read_ahead
-							2,
-							-1,
+							2,				// VolumeMode = HARDWARE
+							-1,				// Volume = nothing at first connection
 							true,
 							"-30:1, -15:50, 0:100",
 							true,
@@ -508,7 +508,7 @@ static void *PlayerThread(void *args)
 			raopcl_sanitize(Device->Raop);
 		}
 
-		if (!strcasecmp(req->Type, "VOLUME") && Device->VolumeReady) {
+		if (!strcasecmp(req->Type, "VOLUME")) {
 			LOG_INFO("[%p]: processing volume: %d (%.2f)", Device, Device->Volume, req->Data.Volume);
 			raopcl_set_volume(Device->Raop, req->Data.Volume);
 		}
@@ -808,6 +808,7 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	Device->TrackRunning = false;
 	Device->TrackElapsed = 0;
 	Device->VolumeReady = !Device->Config.VolumeTrigger;
+	Device->Volume = Device->Config.Volume;
 	sprintf(Device->ActiveRemote, "%u", hash32(Device->UDN));
 	strcpy(Device->FriendlyName, data->hostname);
 	p = stristr(Device->FriendlyName, ".local");
@@ -851,7 +852,7 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 								 Device->SampleRate ? atoi(Device->SampleRate) : 44100,
 								 Device->SampleSize ? atoi(Device->SampleSize) : 16,
 								 Device->Channels ? atoi(Device->Channels) : 2,
-								 raopcl_float_volume(Device->Config.Volume));
+								 raopcl_float_volume(Device->Volume));
 
 	if (!Device->Raop) {
 		LOG_ERROR("[%p]: cannot create raop device", Device);
@@ -1011,15 +1012,26 @@ static void *ActiveRemoteThread(void *args)
 
 			// volume remote command
 			if (stristr(command, "-volume=")) {
-				// need to wait for a 1st setproperty
+				/*
+				 When waiting for a first feedback before sending volume, new
+				 value shall only be sent if volume is HARDWARE or an initial
+				 has been set
+				*/
+
 				if (!Device->VolumeReady) {
 					tRaopReq *Req = malloc(sizeof(tRaopReq));
 
 					Device->VolumeReady = true;
-					Req->Data.Volume = Device->VolumeMapping[Device->Volume];
-					strcpy(Req->Type, "VOLUME");
-					QueueInsert(&Device->Queue, Req);
-					pthread_cond_signal(&Device->Cond);
+					if (Device->Config.VolumeMode == VOLUME_HARD || Device->Volume != -1) {
+						Req->Data.Volume = Device->VolumeMapping[Device->Volume];
+						strcpy(Req->Type, "VOLUME");
+						QueueInsert(&Device->Queue, Req);
+						pthread_cond_signal(&Device->Cond);
+					}
+				/*
+				  Feedback does not make much sense with SOFT_VOLUME anyway, better
+				  set VOLUME_IGNORE in that case
+				*/
 				} else if (Device->Config.VolumeMode != VOLUME_SOFT && Device->Config.VolumeFeedback) {
 					float volume;
 					char vol[10];
