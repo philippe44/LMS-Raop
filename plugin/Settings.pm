@@ -46,6 +46,10 @@ sub handler {
 		open my $fh, ">", $logfile;
 		print $fh;
 		close $fh;
+	} elsif ($params->{ 'restart' }) {
+		Plugins::RaopBridge::Squeeze2raop->stop;
+		waitEndHandler(undef, $class, $client, $params, $callback, 30, @args);
+	} elsif ($params->{'saveSettings'}) {
 	} elsif ( $params->{'pairdevice'} ) {
 		my $xmlconfig = readconfig($class, KeyAttr => 'device');
 		my ($device) = \grep { $_->{udn} eq $params->{'pairdevice'} } @{$xmlconfig->{'device'}};

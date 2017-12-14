@@ -1,6 +1,7 @@
-0.3.2.2.1
- - volume was sent on trigger even in case of SOFT_VOLUME or initial volume not set
- - always send volume command even if not ready but one extra will be sent when receiving the 1st feedback
+0.3.3.0
+ - (1) volume was sent on trigger even in case of SOFT_VOLUME or initial volume not set
+ - (1) do not send *any* volume command in case of Trigger
+ - (1) add a "restart" button
  
 0.3.2.1
  - bump version number as previous packaging did not work

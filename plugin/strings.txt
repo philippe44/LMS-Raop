@@ -27,7 +27,10 @@ PLUGIN_RAOPBRIDGE_USERGUIDELINK
 	
 PLUGIN_RAOPBRIDGE_BINARIES
 	EN	Select Binary
-
+	
+PLUGIN_RAOPBRIDGE_RESTART
+	EN	Restart
+	
 PLUGIN_RAOPBRIDGE_BINARIES_DESC
 	EN	Select the squeeze2raop binary which best matches your machine's architecture. 
 	EN	<br>- on raspi, use only armv6hf version

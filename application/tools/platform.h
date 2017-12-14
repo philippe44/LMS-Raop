@@ -72,6 +72,7 @@ typedef u_int16_t u16_t;
 typedef u_int32_t u32_t;
 typedef u_int64_t u64_t;
 typedef int16_t   s16_t;
+typedef int8_t    s8_t;
 typedef int32_t   s32_t;
 typedef int64_t   s64_t;
 
@@ -102,6 +103,7 @@ typedef unsigned __int8  u8_t;
 typedef unsigned __int16 u16_t;
 typedef unsigned __int32 u32_t;
 typedef unsigned __int64 u64_t;
+typedef __int8 	s8_t;
 typedef __int16 s16_t;
 typedef __int32 s32_t;
 typedef __int64 s64_t;
@@ -132,6 +134,7 @@ int gettimeofday(struct timeval *tv, struct timezone *tz);
 #endif
 
 typedef u8_t  __u8;
+typedef s8_t  __s8;
 typedef u16_t __u16;
 typedef u32_t __u32;
 typedef u64_t __u64;

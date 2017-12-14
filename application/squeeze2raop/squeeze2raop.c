@@ -393,7 +393,7 @@ static void *PlayerThread(void *args)
 			Device->Sane = raopcl_is_sane(Device->Raop) ? 0 : Device->Sane + 1;
 			if (Device->Sane > 3) {
 				LOG_ERROR("[%p]: broken connection, attempting repair", Device);
-				raopcl_repair(Device->Raop);
+				raopcl_repair(Device->Raop, !Device->Config.VolumeTrigger);
 			}
 
 			// after that, only check what's needed when running
@@ -476,7 +476,7 @@ static void *PlayerThread(void *args)
 
 			LOG_INFO("[%p]: raop connecting ...", Device);
 
-			if (raopcl_connect(Device->Raop, Device->PlayerIP, Device->PlayerPort, req->Data.Codec)) {
+			if (raopcl_connect(Device->Raop, Device->PlayerIP, Device->PlayerPort, req->Data.Codec, !Device->Config.VolumeTrigger)) {
 				Device->DiscWait = false;
 				LOG_INFO("[%p]: raop connected", Device);
 			}
@@ -508,7 +508,7 @@ static void *PlayerThread(void *args)
 			raopcl_sanitize(Device->Raop);
 		}
 
-		if (!strcasecmp(req->Type, "VOLUME")) {
+		if (!strcasecmp(req->Type, "VOLUME") && Device->VolumeReady) {
 			LOG_INFO("[%p]: processing volume: %d (%.2f)", Device, Device->Volume, req->Data.Volume);
 			raopcl_set_volume(Device->Raop, req->Data.Volume);
 		}
@@ -1023,6 +1023,7 @@ static void *ActiveRemoteThread(void *args)
 
 					Device->VolumeReady = true;
 					if (Device->Config.VolumeMode == VOLUME_HARD || Device->Volume != -1) {
+						LOG_INFO("[%p]: volume trigger %d (%s)", Device, Device->Volume, command);
 						Req->Data.Volume = Device->VolumeMapping[Device->Volume];
 						strcpy(Req->Type, "VOLUME");
 						QueueInsert(&Device->Queue, Req);
