@@ -469,12 +469,21 @@ static void *PlayerThread(void *args)
 			}
 			else pthread_mutex_unlock(&Device->Mutex);
 
+			// was waiting for volume trigger, never received
+			if (Device->VolumeReadyWait && !--Device->VolumeReadyWait && Device->Volume != -1) {
+				LOG_WARN("[%p]: volume trigger timeout", Device);
+				raopcl_set_volume(Device->Raop, Device->VolumeMapping[Device->Volume]);
+			}
+
 			continue;
 		}
 
 		if (!strcasecmp(req->Type, "CONNECT")) {
 
 			LOG_INFO("[%p]: raop connecting ...", Device);
+
+			// if we need to wait for a volume, set a timout in case player does not send it
+			if (!Device->VolumeReady) Device->VolumeReadyWait = 3;
 
 			if (raopcl_connect(Device->Raop, Device->PlayerIP, Device->PlayerPort, req->Data.Codec, !Device->Config.VolumeTrigger)) {
 				Device->DiscWait = false;
@@ -808,6 +817,7 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	Device->TrackRunning = false;
 	Device->TrackElapsed = 0;
 	Device->VolumeReady = !Device->Config.VolumeTrigger;
+	Device->VolumeReadyWait = 0;
 	Device->Volume = Device->Config.Volume;
 	sprintf(Device->ActiveRemote, "%u", hash32(Device->UDN));
 	strcpy(Device->FriendlyName, data->hostname);
@@ -1022,6 +1032,8 @@ static void *ActiveRemoteThread(void *args)
 					tRaopReq *Req = malloc(sizeof(tRaopReq));
 
 					Device->VolumeReady = true;
+					Device->VolumeReadyWait = 0;
+
 					if (Device->Config.VolumeMode == VOLUME_HARD || Device->Volume != -1) {
 						LOG_INFO("[%p]: volume trigger %d (%s)", Device, Device->Volume, command);
 						Req->Data.Volume = Device->VolumeMapping[Device->Volume];

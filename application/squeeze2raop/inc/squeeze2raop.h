@@ -93,6 +93,7 @@ struct sMR {
 	u32_t			VolumeStamp;
 	float 			VolumeMapping[101];
 	bool			VolumeReady;
+	u8_t			VolumeReadyWait;
 	int				MissingCount;
 	bool			Running;
 	struct raopcl_s	*Raop;
