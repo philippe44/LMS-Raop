@@ -3,6 +3,7 @@
  - (1) do not send *any* volume command in case of Trigger
  - (1) add a "restart" button
  - (2) when using trigger, a 3 seconds timeout is used in case the status is never received
+ - (3) fading could be incorrect when cross-fading fails
  
 0.3.2.1
  - bump version number as previous packaging did not work

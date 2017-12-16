@@ -177,10 +177,10 @@ PLUGIN_RAOPBRIDGE_VOLUMEMGMT_DESC
 	EN	LMS if authorized by "mode" parameter. Set to -1 to disable it
 	EN	<br><b>Mode</b>: Sets how LMS volume commands are handled
 	EN	<br>- <i>ignore</i>: LMS cannot control volume (only the "Volume" command will be send if set at connection)
+	EN	<br>- <i>hardware</i>: LMS volume is transcoded into AirPlay commands (<b>HIGHLY recommended</b>)
 	EN	<br>- <i>software</i>: LMS volume is rendered by applying gain on digital samples. Note that volume feedback is disabled
-	EN	<br>- <i>hardware</i>: LMS volume is transcoded into AirPlay commands
 	EN	<br><b>Mute on Pause</b>: Allow LMS to mute player while paused 
-	EN	<br><b>Trigger</b>: Volume triggered by player's remote command (set if volume is muted after un-pause)
+	EN	<br><b>Trigger</b>: Volume triggered by reception of player's volume status (set if volume is muted/ignored after un-pause)
 	EN	<br><b>Feedback</b>: Allows device's remote control to change LMS volume. See the "Mapping" parameter as well
 	EN	<br><b>Mapping</b>: Defines a few matching points between AirPlay volume (-30...0) and LMS volume (1..100). 
 	EN	This is a comma-separated set of pairs like "a1:l1, a2:l2 ... an:ln" (a=AirPlay, l=LMS).
