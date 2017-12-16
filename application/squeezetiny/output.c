@@ -101,7 +101,7 @@ frames_t _output_frames(frames_t avail, struct thread_ctx_s *ctx) {
 				ctx->output.frames_played = 0;
 				ctx->output.track_started = true;
 				ctx->output.detect_start_time = true;
-				if (!(ctx->output.fade == FADE_ACTIVE) || !(ctx->output.fade_mode == FADE_CROSSFADE)) {
+				if (ctx->output.fade == FADE_INACTIVE || ctx->output.fade_mode != FADE_CROSSFADE) {
 					ctx->output.current_replay_gain = ctx->output.next_replay_gain;
 				}
 				ctx->output.track_start = NULL;
