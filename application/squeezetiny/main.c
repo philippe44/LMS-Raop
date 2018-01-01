@@ -393,11 +393,10 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 		metadata->artwork = cli_find_tag(rsp, "artwork_url");
 		if (!metadata->artwork || !strlen(metadata->artwork)) {
 			NFREE(metadata->artwork);
-			if ((p = cli_find_tag(rsp, "coverid")) != NULL) {
-				metadata->artwork = malloc(SQ_STR_LENGTH);
-				snprintf(metadata->artwork, SQ_STR_LENGTH, "http://%s:%s/music/%s/cover.jpg", ctx->server_ip, ctx->server_port, p);
-				free(p);
-			}
+			if ((p = cli_find_tag(rsp, "coverid")) == NULL) p = strdup("0");
+			metadata->artwork = malloc(SQ_STR_LENGTH);
+			snprintf(metadata->artwork, SQ_STR_LENGTH, "http://%s:%s/music/%s/cover.jpg", ctx->server_ip, ctx->server_port, p);
+			free(p);
 		}
 	}
 	else {
