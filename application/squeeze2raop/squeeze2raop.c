@@ -470,9 +470,11 @@ static void *PlayerThread(void *args)
 			else pthread_mutex_unlock(&Device->Mutex);
 
 			// was waiting for volume trigger, never received
-			if (Device->VolumeReadyWait && !--Device->VolumeReadyWait && Device->Volume != -1) {
+			if (Device->VolumeReadyWait && !--Device->VolumeReadyWait) {
 				LOG_WARN("[%p]: volume trigger timeout", Device);
-				raopcl_set_volume(Device->Raop, Device->VolumeMapping[Device->Volume]);
+				Device->VolumeReady = true;
+				// only send 'last' command if required (might be -1 in config)
+				if (Device->Volume != -1) raopcl_set_volume(Device->Raop, Device->VolumeMapping[Device->Volume]);
 			}
 
 			continue;

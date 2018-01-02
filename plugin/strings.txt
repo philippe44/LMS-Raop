@@ -173,7 +173,7 @@ PLUGIN_RAOPBRIDGE_VOLUMEMGMT
 	EN	Volume management
 
 PLUGIN_RAOPBRIDGE_VOLUMEMGMT_DESC
-	EN	<b>Volume</b>: Set the initial volume value when the bridge connects to the player. This will be over-ridden by 
+	EN	<b>Default</b>: Set the initial volume value when the bridge connects to the player. This will be over-ridden by 
 	EN	LMS if authorized by "mode" parameter. Set to -1 to disable it
 	EN	<br><b>Mode</b>: Sets how LMS volume commands are handled
 	EN	<br>- <i>ignore</i>: LMS cannot control volume (only the "Volume" command will be send if set at connection)
