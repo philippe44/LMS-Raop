@@ -111,7 +111,7 @@ struct sMR {
 	u32_t			TrackElapsed;
 	bool			TrackRunning;
 	u8_t			MetadataWait;
-	u32_t			MetadataHash;
+	u32_t			TitleHash, ArtworkHash;
 	char *SampleSize;
 	char *SampleRate;
 	char *Channels;

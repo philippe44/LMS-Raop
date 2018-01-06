@@ -350,7 +350,7 @@ static bool IsExcluded(char *Model);
 			device->TrackRunning = true;
 			device->TrackElapsed = 0;
 			device->MetadataWait = 1;
-			device->MetadataHash = 0;
+			device->TitleHash = device->ArtworkHash = 0;
 			break;
 		case SQ_SETNAME:
 			strcpy(device->sq_config.name, (char*) param);
@@ -431,9 +431,9 @@ static void *PlayerThread(void *args)
 				// on live stream, gather metadata every 5 seconds
 				if (metadata.remote && !metadata.duration) Device->MetadataWait = 5;
 
-				hash = hash32(metadata.title) ^ hash32(metadata.artwork);
+				hash = hash32(metadata.title);
 
-				if (Device->MetadataHash != hash) {
+				if (Device->TitleHash != hash) {
 					Device->TrackDuration = metadata.duration;
 					raopcl_set_daap(Device->Raop, 5, "minm", 's', metadata.title,
 													 "asar", 's', metadata.artist,
@@ -441,11 +441,20 @@ static void *PlayerThread(void *args)
 													 "asgn", 's', metadata.genre,
 													 "astn", 'i', (int) metadata.track);
 
+					Device->TitleHash = hash;
+
+					// only get coverart if title has changed
 					if (metadata.artwork && Device->Config.SendCoverArt) {
 						char *image = NULL, *contentType = NULL;
 						int size = http_fetch(metadata.artwork, &contentType, &image);
 
-						if (size != -1)	raopcl_set_artwork(Device->Raop, contentType, size, image);
+						if (size != -1)	{
+							hash = hash32_buf(image, size);
+							if (Device->ArtworkHash != hash) {
+								raopcl_set_artwork(Device->Raop, contentType, size, image);
+								Device->ArtworkHash = hash;
+							}
+						}
 						else {
 							LOG_WARN("[%p]: cannot get coverart %s", Device, metadata.artwork);
 						}
@@ -454,16 +463,15 @@ static void *PlayerThread(void *args)
 						NFREE(contentType);
 					}
 
-					Device->MetadataHash = hash;
-
 					LOG_INFO("[%p]: idx %d\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n"
-									"\tgenre:%s\n\tduration:%d.%03d\n\tsize:%d\n\tcover:%s",
-									 Device, metadata.index, metadata.artist,
-									 metadata.album, metadata.title, metadata.genre,
-									 div(metadata.duration, 1000).quot,
-									 div(metadata.duration,1000).rem, metadata.file_size,
-									 metadata.artwork ? metadata.artwork : "");
-				}
+								"\tgenre:%s\n\tduration:%d.%03d\n\tsize:%d\n\tcover:%s",
+								 Device, metadata.index, metadata.artist,
+								 metadata.album, metadata.title, metadata.genre,
+								 div(metadata.duration, 1000).quot,
+								 div(metadata.duration,1000).rem, metadata.file_size,
+								 metadata.artwork ? metadata.artwork : "");
+
+				}
 
 				sq_free_metadata(&metadata);
 			}

@@ -6,6 +6,7 @@
  - (3) fading could be incorrect when cross-fading fails
  - (4) send empty coverart if none available
  - (5) when volume trigger timeouts, VolumeReady was not reset
+ - (6) only send artwork if binary content changed
  
 0.3.2.1
  - bump version number as previous packaging did not work
