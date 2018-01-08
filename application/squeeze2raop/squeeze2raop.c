@@ -136,7 +136,8 @@ char				*glHostName;
 /*----------------------------------------------------------------------------*/
 /* locals */
 /*----------------------------------------------------------------------------*/
-enum { VOLUME_IGNORE = 0, VOLUME_SOFT, VOLUME_HARD };
+enum { VOLUME_IGNORE = 0, VOLUME_SOFT = 1, VOLUME_HARD = 2};
+enum { VOLUME_FEEDBACK = 1, VOLUME_UNFILTERED = 2};
 
 extern log_level	main_loglevel;
 static log_level 	*loglevel = &main_loglevel;
@@ -314,7 +315,8 @@ static bool IsExcluded(char *Model);
 			// first convert to 0..100 value
 			for (LMSVolume = 100; Volume < LMSVolumeMap[LMSVolume] && LMSVolume; LMSVolume--);
 
-			if (device->Config.VolumeMode == VOLUME_HARD &&	(device->VolumeStamp + 1000 - gettime_ms() > 0x7fffffff) &&
+			if (device->Config.VolumeMode == VOLUME_HARD &&
+				(device->Config.VolumeFeedback == VOLUME_UNFILTERED || device->VolumeStamp + 1000 - gettime_ms() > 0x7fffffff) &&
 				(Volume || device->Config.MuteOnPause || sq_get_mode(device->SqueezeHandle) == device->sqState)) {
 				tRaopReq *Req = malloc(sizeof(tRaopReq));
 
@@ -327,6 +329,7 @@ static bool IsExcluded(char *Model);
 			} else {
 				LOG_INFO("[%p]: volume ignored %u", device, LMSVolume);
 			}
+
 			break;
 		}
 		case SQ_CONNECT: {

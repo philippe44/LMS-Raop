@@ -68,7 +68,7 @@ typedef struct sMRConfig
 	int 		ReadAhead;
 	int			VolumeMode;
 	int			Volume;
-	bool		VolumeFeedback;
+	int			VolumeFeedback;
 	char		VolumeMapping[SQ_STR_LENGTH];
 	bool		MuteOnPause;
 	bool		AlacEncode;

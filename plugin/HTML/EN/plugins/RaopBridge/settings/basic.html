@@ -118,7 +118,8 @@
 		[% END %]
 		</select>
 		&nbsp[% "PLUGIN_RAOPBRIDGE_VOLUMEFEEDBACK" | string %]&nbsp<select class="stdedit" name="volume_feedback" id="volume_feedback">
-		[% FOREACH entry IN YESNOBOX %] 
+		[% FEEDBACKBOX = [['',''], ['no','0'], ['yes','1'] ['raw','2']] %]
+		[% FOREACH entry IN FEEDBACKBOX %] 
 			<option [% IF entry.1 == volume_feedback %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
 		[% END %]</select>
 	[% END %]

@@ -181,7 +181,7 @@ PLUGIN_RAOPBRIDGE_VOLUMEMGMT_DESC
 	EN	<br>- <i>software</i>: LMS volume is rendered by applying gain on digital samples. Note that volume feedback is disabled
 	EN	<br><b>Mute on Pause</b>: Allow LMS to mute player while paused 
 	EN	<br><b>Trigger</b>: Volume triggered by reception of player's volume status (set if volume is muted/ignored after un-pause)
-	EN	<br><b>Feedback</b>: Allows device's remote control to change LMS volume. See the "Mapping" parameter as well
+	EN	<br><b>Feedback</b>: Allows device's remote control to change LMS volume - please see the "Mapping" parameter and read User's Guide to set it to "raw"
 	EN	<br><b>Mapping</b>: Defines a few matching points between AirPlay volume (-30...0) and LMS volume (1..100). 
 	EN	This is a comma-separated set of pairs like "a1:l1, a2:l2 ... an:ln" (a=AirPlay, l=LMS).
 	EN	This is needed for players whose volume scale 1..100 is not proportional to AirPlay scale -30..0 in which case
