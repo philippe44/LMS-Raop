@@ -40,6 +40,8 @@
 #include "mdns.h"
 #include "mdnsd.h"
 
+enum { VOLUME_IGNORE = 0, VOLUME_SOFT = 1, VOLUME_HARD = 2};
+enum { VOLUME_FEEDBACK = 1, VOLUME_UNFILTERED = 2};
 
 /*----------------------------------------------------------------------------*/
 /* globals initialized */
@@ -76,16 +78,16 @@ tMRConfig			glMRConfig = {
 							false,
 							30,
 							false,
-							"",				// credentials
-							1000,			// read_ahead
-							2,				// VolumeMode = HARDWARE
-							-1,				// Volume = nothing at first connection
-							true,
+							"",				 // credentials
+							1000,			 // read_ahead
+							2,				 // VolumeMode = HARDWARE
+							-1,				 // Volume = nothing at first connection
+							VOLUME_FEEDBACK, // volumeFeedback
 							"-30:1, -15:50, 0:100",
 							true,
 							false,
-							false,			// VolumeTrigger
-							"stop",			// PreventPlayback
+							false,			 // VolumeTrigger
+							"stop",			 // PreventPlayback
 					};
 
 static u8_t LMSVolumeMap[101] = {
@@ -136,9 +138,6 @@ char				*glHostName;
 /*----------------------------------------------------------------------------*/
 /* locals */
 /*----------------------------------------------------------------------------*/
-enum { VOLUME_IGNORE = 0, VOLUME_SOFT = 1, VOLUME_HARD = 2};
-enum { VOLUME_FEEDBACK = 1, VOLUME_UNFILTERED = 2};
-
 extern log_level	main_loglevel;
 static log_level 	*loglevel = &main_loglevel;
 
