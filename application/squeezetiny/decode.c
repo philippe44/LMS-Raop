@@ -130,6 +130,7 @@ void decode_init(void) {
 	i++;
 	codecs[i++] = register_flac();
 	codecs[i++] = register_faad();
+	codecs[i++] = register_vorbis();
 #if RESAMPLE
 	register_soxr();
 #endif
@@ -143,6 +144,7 @@ void decode_end(void) {
 	deregister_mad();
 	deregister_flac();
 	deregister_faad();
+	deregister_vorbis();
 #if RESAMPLE
 	deregister_soxr();
 #endif

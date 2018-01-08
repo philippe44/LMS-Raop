@@ -9,6 +9,7 @@
  - (6) only send artwork if binary content changed
  - (7) do not reset hash of artwork at beginning of tracks ...
  - (8) some players do *not* set their volume, so time filtering must disabled when using feedback
+ - (9) added vorbis support
  
 0.3.2.1
  - bump version number as previous packaging did not work

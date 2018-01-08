@@ -539,6 +539,8 @@ struct codec*	register_mpg(void);
 void			deregister_mpg(void);
 struct codec*	register_faad(void);
 void 			deregister_faad(void);
+struct codec*	register_vorbis(void);
+void 			deregister_vorbis(void);
 
 #if RESAMPLE
 bool register_soxr(void);
