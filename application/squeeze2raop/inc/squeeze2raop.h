@@ -45,6 +45,8 @@
 
 #define PLAYER_LATENCY	1500
 
+enum { CONFIG_CREATE, CONFIG_UPDATE, CONFIG_MIGRATE };
+
 typedef struct sRaopReq {
 	char Type[20];
 	union {
@@ -132,6 +134,7 @@ extern u32_t				glScanInterval;
 extern u32_t				glScanTimeout;
 extern struct sMR			glMRDevices[MAX_RENDERERS];
 extern char					glExcluded[SQ_STR_LENGTH];
+extern int					glMigration;
 
 
 #endif

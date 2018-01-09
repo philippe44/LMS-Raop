@@ -59,6 +59,7 @@ bool				glAutoSaveConfigFile = false;
 bool				glGracefullShutdown = true;
 char 				glDACPid[] = "1A2B3D4EA1B2C3D4";
 char				glExcluded[SQ_STR_LENGTH] = "aircast,airupnp";
+int					glMigration = 0;
 
 log_level	slimproto_loglevel = lINFO;
 log_level	stream_loglevel = lWARN;
@@ -106,7 +107,7 @@ static u8_t LMSVolumeMap[101] = {
 sq_dev_param_t glDeviceParam = {
 					STREAMBUF_SIZE,
 					OUTPUTBUF_SIZE,
-					"flc,pcm,aif,aac,mp3",
+					"flc,pcm,aif,aac,mp3,ogg",
 					"?",
 					"",
 					{ 0x00,0x00,0x00,0x00,0x00,0x00 },
@@ -659,7 +660,7 @@ static void *UpdateMRThread(void *args)
 
 	if (glAutoSaveConfigFile && !glSaveConfigFile) {
 		LOG_DEBUG("Updating configuration %s", glConfigName);
-		SaveConfig(glConfigName, glConfigID, false);
+		SaveConfig(glConfigName, glConfigID, CONFIG_UPDATE);
 	}
 
 	glDiscoveryRunning = false;
@@ -1398,6 +1399,13 @@ int main(int argc, char *argv[])
 	// load config from xml file
 	glConfigID = (void*) LoadConfig(glConfigName, &glMRConfig, &glDeviceParam);
 
+	// do some parameters migration
+	if (!glMigration || glMigration == 1) {
+		glMigration = 2;
+		if (!stristr(glDeviceParam.codecs, "ogg")) strcat(glDeviceParam.codecs, ",ogg");
+		SaveConfig(glConfigName, glConfigID, CONFIG_MIGRATE);
+	}
+
 	// potentially overwrite with some cmdline parameters
 	if (!ParseArgs(argc, argv)) exit(1);
 
@@ -1442,7 +1450,7 @@ int main(int argc, char *argv[])
 
 	if (glSaveConfigFile) {
 		while (glDiscoveryRunning) sleep(1);
-		SaveConfig(glSaveConfigFile, glConfigID, true);
+		SaveConfig(glSaveConfigFile, glConfigID, CONFIG_CREATE);
 	}
 
 	while (strcmp(resp, "exit") && !glSaveConfigFile) {

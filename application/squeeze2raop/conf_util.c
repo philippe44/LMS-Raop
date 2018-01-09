@@ -61,7 +61,7 @@ void MakeMacUnique(struct sMR *Device)
 }
 
 /*----------------------------------------------------------------------------*/
-void SaveConfig(char *name, void *ref, bool full)
+void SaveConfig(char *name, void *ref, int mode)
 {
 	struct sMR *p;
 	IXML_Document *doc = ixmlDocument_createDocument();
@@ -72,10 +72,11 @@ void SaveConfig(char *name, void *ref, bool full)
 	char *s;
 	FILE *file;
 	int i;
+	bool force = (mode == CONFIG_MIGRATE);
 
 	old_root = ixmlDocument_getElementById(old_doc, "squeeze2raop");
 
-	if (!full && old_doc) {
+	if (mode != CONFIG_CREATE && old_doc) {
 		ixmlDocument_importNode(doc, (IXML_Node*) old_root, true, &root);
 		ixmlNode_appendChild((IXML_Node*) doc, root);
 
@@ -95,45 +96,46 @@ void SaveConfig(char *name, void *ref, bool full)
 		common = (IXML_Node*) XMLAddNode(doc, root, "common", NULL);
 	}
 
-	XMLUpdateNode(doc, root, false, "interface", glInterface);
-	XMLUpdateNode(doc, root, false, "slimproto_log", level2debug(slimproto_loglevel));
-	XMLUpdateNode(doc, root, false, "stream_log", level2debug(stream_loglevel));
-	XMLUpdateNode(doc, root, false, "output_log", level2debug(output_loglevel));
-	XMLUpdateNode(doc, root, false, "decode_log", level2debug(decode_loglevel));
-	XMLUpdateNode(doc, root, false, "main_log",level2debug(main_loglevel));
-	XMLUpdateNode(doc, root, false, "slimmain_log", level2debug(slimmain_loglevel));
-	XMLUpdateNode(doc, root, false, "raop_log",level2debug(raop_loglevel));
-	XMLUpdateNode(doc, root, false, "util_log",level2debug(util_loglevel));
-	XMLUpdateNode(doc, root, false, "scan_interval", "%d", (u32_t) glScanInterval);
-	XMLUpdateNode(doc, root, false, "scan_timeout", "%d", (u32_t) glScanTimeout);
-	XMLUpdateNode(doc, root, false, "log_limit", "%d", (s32_t) glLogLimit);
+	XMLUpdateNode(doc, root, force, "interface", glInterface);
+	XMLUpdateNode(doc, root, force, "slimproto_log", level2debug(slimproto_loglevel));
+	XMLUpdateNode(doc, root, force, "stream_log", level2debug(stream_loglevel));
+	XMLUpdateNode(doc, root, force, "output_log", level2debug(output_loglevel));
+	XMLUpdateNode(doc, root, force, "decode_log", level2debug(decode_loglevel));
+	XMLUpdateNode(doc, root, force, "main_log",level2debug(main_loglevel));
+	XMLUpdateNode(doc, root, force, "slimmain_log", level2debug(slimmain_loglevel));
+	XMLUpdateNode(doc, root, force, "raop_log",level2debug(raop_loglevel));
+	XMLUpdateNode(doc, root, force, "util_log",level2debug(util_loglevel));
+	XMLUpdateNode(doc, root, force, "scan_interval", "%d", (u32_t) glScanInterval);
+	XMLUpdateNode(doc, root, force, "scan_timeout", "%d", (u32_t) glScanTimeout);
+	XMLUpdateNode(doc, root, force, "log_limit", "%d", (s32_t) glLogLimit);
+	XMLUpdateNode(doc, root, true, "migration", "%d", (s32_t) glMigration);
 
-	XMLUpdateNode(doc, common, false, "streambuf_size", "%d", (u32_t) glDeviceParam.stream_buf_size);
-	XMLUpdateNode(doc, common, false, "output_size", "%d", (u32_t) glDeviceParam.output_buf_size);
-	XMLUpdateNode(doc, common, false, "enabled", "%d", (int) glMRConfig.Enabled);
-	XMLUpdateNode(doc, common, false, "codecs", glDeviceParam.codecs);
-	XMLUpdateNode(doc, common, false, "sample_rate", "%d", (int) glDeviceParam.sample_rate);
+	XMLUpdateNode(doc, common, force, "streambuf_size", "%d", (u32_t) glDeviceParam.stream_buf_size);
+	XMLUpdateNode(doc, common, force, "output_size", "%d", (u32_t) glDeviceParam.output_buf_size);
+	XMLUpdateNode(doc, common, force, "enabled", "%d", (int) glMRConfig.Enabled);
+	XMLUpdateNode(doc, common, force, "codecs", glDeviceParam.codecs);
+	XMLUpdateNode(doc, common, force, "sample_rate", "%d", (int) glDeviceParam.sample_rate);
 #if defined(RESAMPLE)
-	XMLUpdateNode(doc, common, false, "resample", "%d", (int) glDeviceParam.resample);
-	XMLUpdateNode(doc, common, false, "resample_options", glDeviceParam.resample_options);
+	XMLUpdateNode(doc, common, force, "resample", "%d", (int) glDeviceParam.resample);
+	XMLUpdateNode(doc, common, force, "resample_options", glDeviceParam.resample_options);
 #endif
-	XMLUpdateNode(doc, common, false, "player_volume", "%d", (int) glMRConfig.Volume);
-	XMLUpdateNode(doc, common, false, "volume_mapping", glMRConfig.VolumeMapping);
-	XMLUpdateNode(doc, common, false, "volume_feedback", "%d", (int) glMRConfig.VolumeFeedback);
-	XMLUpdateNode(doc, common, false, "volume_mode", "%d", (int) glMRConfig.VolumeMode);
-	XMLUpdateNode(doc, common, false, "mute_on_pause", "%d", (int) glMRConfig.MuteOnPause);
-	XMLUpdateNode(doc, common, false, "send_metadata", "%d", (int) glMRConfig.SendMetaData);
-	XMLUpdateNode(doc, common, false, "send_coverart", "%d", (int) glMRConfig.SendCoverArt);
-	XMLUpdateNode(doc, common, false, "remove_count", "%d", (u32_t) glMRConfig.RemoveCount);
-	XMLUpdateNode(doc, common, false, "auto_play", "%d", (int) glMRConfig.AutoPlay);
-	XMLUpdateNode(doc, common, false, "idle_timeout", "%d", (int) glMRConfig.IdleTimeout);
-	XMLUpdateNode(doc, common, false, "alac_encode", "%d", (int) glMRConfig.AlacEncode);
-	XMLUpdateNode(doc, common, false, "volume_trigger", "%d", (int) glMRConfig.VolumeTrigger);
-	XMLUpdateNode(doc, common, false, "prevent_playback", glMRConfig.PreventPlayback);
+	XMLUpdateNode(doc, common, force, "player_volume", "%d", (int) glMRConfig.Volume);
+	XMLUpdateNode(doc, common, force, "volume_mapping", glMRConfig.VolumeMapping);
+	XMLUpdateNode(doc, common, force, "volume_feedback", "%d", (int) glMRConfig.VolumeFeedback);
+	XMLUpdateNode(doc, common, force, "volume_mode", "%d", (int) glMRConfig.VolumeMode);
+	XMLUpdateNode(doc, common, force, "mute_on_pause", "%d", (int) glMRConfig.MuteOnPause);
+	XMLUpdateNode(doc, common, force, "send_metadata", "%d", (int) glMRConfig.SendMetaData);
+	XMLUpdateNode(doc, common, force, "send_coverart", "%d", (int) glMRConfig.SendCoverArt);
+	XMLUpdateNode(doc, common, force, "remove_count", "%d", (u32_t) glMRConfig.RemoveCount);
+	XMLUpdateNode(doc, common, force, "auto_play", "%d", (int) glMRConfig.AutoPlay);
+	XMLUpdateNode(doc, common, force, "idle_timeout", "%d", (int) glMRConfig.IdleTimeout);
+	XMLUpdateNode(doc, common, force, "alac_encode", "%d", (int) glMRConfig.AlacEncode);
+	XMLUpdateNode(doc, common, force, "volume_trigger", "%d", (int) glMRConfig.VolumeTrigger);
+	XMLUpdateNode(doc, common, force, "prevent_playback", glMRConfig.PreventPlayback);
 
-	XMLUpdateNode(doc, common, false, "encryption", "%d", (int) glMRConfig.Encryption);
-	XMLUpdateNode(doc, common, false, "read_ahead", "%d", (int) glMRConfig.ReadAhead);
-	XMLUpdateNode(doc, common, false, "server", glDeviceParam.server);
+	XMLUpdateNode(doc, common, force, "encryption", "%d", (int) glMRConfig.Encryption);
+	XMLUpdateNode(doc, common, force, "read_ahead", "%d", (int) glMRConfig.ReadAhead);
+	XMLUpdateNode(doc, common, force, "server", glDeviceParam.server);
 
 	// correct some buggy parameters
 	if (glDeviceParam.sample_rate < 44100) XMLUpdateNode(doc, common, true, "sample_rate", "%d", 96000);
@@ -149,7 +151,7 @@ void SaveConfig(char *name, void *ref, bool full)
 			ixmlDocument_importNode(doc, dev_node, true, &dev_node);
 			ixmlNode_appendChild((IXML_Node*) root, dev_node);
 
-			XMLUpdateNode(doc, dev_node, false, "friendly_name", p->FriendlyName);
+			XMLUpdateNode(doc, dev_node, force, "friendly_name", p->FriendlyName);
 			XMLUpdateNode(doc, dev_node, true, "name", p->sq_config.name);
 			if (*p->Config.Credentials) XMLUpdateNode(doc, dev_node, true, "credentials", p->Config.Credentials);
 			if (*p->sq_config.dynamic.server) XMLUpdateNode(doc, dev_node, true, "server", p->sq_config.dynamic.server);
@@ -259,6 +261,7 @@ static void LoadGlobalItem(char *name, char *val)
 	if (!strcmp(name, "scan_timeout")) glScanTimeout = atol(val);
 	if (!strcmp(name, "log_limit")) glLogLimit = atol(val);
 	if (!strcmp(name, "exclude_model")) strcpy(glExcluded, val);
+	if (!strcmp(name, "migration")) glMigration = atol(val);
  }
 
 
