@@ -262,8 +262,6 @@ static bool IsExcluded(char *Model);
 			device->DiscWait = true;
 			device->TrackRunning = false;
 			device->TrackDuration = 0;
-			device->MetaHash++;
-			device->ArtworkHash++;
 			break;
 		case SQ_STOP: {
 			tRaopReq *Req = malloc(sizeof(tRaopReq));
@@ -355,6 +353,7 @@ static bool IsExcluded(char *Model);
 			device->TrackRunning = true;
 			device->TrackElapsed = 0;
 			device->MetadataWait = 1;
+			device->MetadataHash++;
 			break;
 		case SQ_SETNAME:
 			strcpy(device->sq_config.name, (char*) param);
@@ -437,7 +436,7 @@ static void *PlayerThread(void *args)
 
 				hash = hash32(metadata.title) ^ hash32(metadata.artwork);
 
-				if (Device->MetaHash != hash) {
+				if (Device->MetadataHash != hash) {
 					Device->TrackDuration = metadata.duration;
 					raopcl_set_daap(Device->Raop, 5, "minm", 's', metadata.title,
 													 "asar", 's', metadata.artist,
@@ -445,21 +444,14 @@ static void *PlayerThread(void *args)
 													 "asgn", 's', metadata.genre,
 													 "astn", 'i', (int) metadata.track);
 
-					Device->MetaHash = hash;
+					Device->MetadataHash = hash;
 
 					// only get coverart if title has changed
 					if (metadata.artwork && Device->Config.SendCoverArt) {
 						char *image = NULL, *contentType = NULL;
 						int size = http_fetch(metadata.artwork, &contentType, &image);
 
-						if (size != -1)	{
-							hash = hash32_buf(image, size);
-							if (Device->ArtworkHash != hash) {
-								LOG_INFO("[%p]: artwork has changed %s (hash:%x size:%u", Device, metadata.artwork, hash, size);
-								raopcl_set_artwork(Device->Raop, contentType, size, image);
-								Device->ArtworkHash = hash;
-							}
-						}
+						if (size != -1)	raopcl_set_artwork(Device->Raop, contentType, size, image);
 						else {
 							LOG_WARN("[%p]: cannot get coverart %s", Device, metadata.artwork);
 						}
@@ -510,8 +502,6 @@ static void *PlayerThread(void *args)
 		}
 
 		if (!strcasecmp(req->Type, "FLUSH")) {
-			Device->MetaHash++;
-			Device->ArtworkHash++;
 			// to handle immediate disconnect when a player sends busy
 			if (Device->DiscWait) {
 				LOG_INFO("[%p]: disconnecting ...", Device);

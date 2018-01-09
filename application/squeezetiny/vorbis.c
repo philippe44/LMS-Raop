@@ -1,8 +1,9 @@
-													   /*
+ /*
  *  Squeezelite - lightweight headless squeezebox emulator
  *
  *  (c) Adrian Smith 2012-2015, triode1@btinternet.com
  *      Ralph Irving 2015-2017, ralph_irving@hotmail.com
+ *      Philippe, philippe_44@outlook.com for raop/multi-instance modifications
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -182,7 +183,7 @@ static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
 		write_buf = ctx->process.inbuf;
 	);
 
-	// write the decoded frames into outputbuf even though they are 16 bits per sample, then unpack them
+	// write the 16 bits decoded frames into outputbuf even when they are mono
 	if (!TREMOR(&gv)) {
 #if SL_LITTLE_ENDIAN
 		n = OV(&gv, read, v->vf, (char *)write_buf, bytes, 0, 2, 1, &s);

@@ -11,6 +11,8 @@
  - (8) some players do *not* set their volume, so time filtering must disabled when using feedback
  - (9) added vorbis support
  - (9) rudimentary migration management
+ - (10) revert to a more simple metadata hash as ATV still flickers when title changes, whether artwork is updated or not 
+ - (11) updated mdns
  
 0.3.2.1
  - bump version number as previous packaging did not work
