@@ -62,7 +62,6 @@ typedef struct sMRConfig
 	char		Name[SQ_STR_LENGTH];
 	bool		SendMetaData;
 	bool		SendCoverArt;
-	int			RemoveCount;
 	bool		AutoPlay;
 	int			IdleTimeout;
 	bool		Encryption;
@@ -81,14 +80,13 @@ typedef struct sMRConfig
 
 struct sMR {
 	u32_t Magic;
-	bool  InUse;
+	bool  Running;
 	tMRConfig Config;
 	sq_dev_param_t	sq_config;
 	bool on;
 	char UDN			[RESOURCE_LENGTH];
 	char FriendlyName	[RESOURCE_LENGTH];
 	char			ContentType[SQ_STR_LENGTH];		// a bit patchy ... to buffer next URI
-	bool			TimeOut;
 	int	 			SqueezeHandle;
 	sq_action_t		sqState;
 	s8_t			Volume;
@@ -96,14 +94,14 @@ struct sMR {
 	float 			VolumeMapping[101];
 	bool			VolumeReady;
 	u8_t			VolumeReadyWait;
-	int				MissingCount;
-	bool			Running;
 	struct raopcl_s	*Raop;
 	struct in_addr 	PlayerIP;
 	u16_t			PlayerPort;
 	pthread_t		Thread;
 	pthread_mutex_t Mutex;
 	pthread_cond_t	Cond;
+	bool			Delete;
+	u32_t			Busy;
 	tQueue			Queue;
 	u32_t 			LastFlush;
 	bool			DiscWait;
@@ -124,17 +122,12 @@ struct sMR {
 	bool SkipDir;
 };
 
-
 extern char 				glInterface[];
 extern s32_t				glLogLimit;
 extern tMRConfig			glMRConfig;
 extern sq_dev_param_t		glDeviceParam;
-extern char					glSQServer[SQ_STR_LENGTH];
-extern u32_t				glScanInterval;
-extern u32_t				glScanTimeout;
 extern struct sMR			glMRDevices[MAX_RENDERERS];
 extern char					glExcluded[SQ_STR_LENGTH];
 extern int					glMigration;
-
 
 #endif

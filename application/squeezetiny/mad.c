@@ -338,10 +338,17 @@ static void mad_open(u8_t sample_size, u32_t sample_rate, u8_t channels, u8_t en
 	if (!m) {
 		m = ctx->decode.handle = malloc(sizeof(struct mad));
 		if (!m) return;
-		m->readbuf = NULL;
+		m->readbuf = malloc(READBUF_SIZE + MAD_BUFFER_GUARD);
+		if (!m->readbuf) {
+			free(m);
+			return;
+		}
+	} else {
+		mad_synth_finish(&m->synth); // macro only in current version
+		MAD(&gm, frame_finish, &m->frame);
+		MAD(&gm, stream_finish, &m->stream);
 	}
 
-	if (!m->readbuf) m->readbuf = malloc(READBUF_SIZE + MAD_BUFFER_GUARD);
 	m->checktags = 1;
 	m->consume = 0;
 	m->skip = MAD_DELAY;

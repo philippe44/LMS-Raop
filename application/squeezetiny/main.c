@@ -60,9 +60,6 @@ void sq_end() {
 	}
 
 	decode_end();
-#if WIN
-	winsock_close();
-#endif
 }
 
 /*--------------------------------------------------------------------------*/
@@ -191,39 +188,53 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 }
 
 
-/*---------------------------------------------------------------------------*/
-char *cli_send_cmd(char *cmd, bool req, bool decode, struct thread_ctx_s *ctx)
-{
+#define CLI_SEND_SLEEP (10000)
+#define CLI_SEND_TO (1*500000)
+/*---------------------------------------------------------------------------*/
+char *cli_send_cmd(char *cmd, bool req, bool decode, struct thread_ctx_s *ctx)
+{
 #define CLI_LEN 2048
 	char packet[CLI_LEN];
-	int wait = 100;
-	size_t len;
-	char *rsp = NULL;
+	int wait;
+	size_t len;
+	char *rsp = NULL;
 
-	mutex_lock(ctx->cli_mutex);
+	mutex_lock(ctx->cli_mutex);
 	if (!cli_open_socket(ctx)) {
-		mutex_unlock(ctx->cli_mutex);
-		return NULL;
-	}
+		mutex_unlock(ctx->cli_mutex);
+		return NULL;
+	}
 	ctx->cli_timestamp = gettime_ms();
 
+	wait = CLI_SEND_TO / CLI_SEND_SLEEP;
 	cmd = cli_encode(cmd);
 	if (req) len = sprintf(packet, "%s ?\n", cmd);
-	else len = sprintf(packet, "%s\n", cmd);
+	else len = sprintf(packet, "%s\n", cmd);
+
+	LOG_SDEBUG("[%p]: cmd %s", ctx, packet);
 	send_packet((u8_t*) packet, len, ctx->cli_sock);
-
-	LOG_SDEBUG("[%p]: cmd %s", ctx, packet);
-
 	// first receive the tag and then point to the last '\n'
 	len = 0;
-	while (wait--)	{
+	while (wait)	{
 		int k;
-		usleep(10000);
-		k = recv(ctx->cli_sock, packet + len, CLI_LEN-1 - len, 0);
-		if (k < 0) {
-			if (last_error() == ERROR_WOULDBLOCK) continue;
-			else break;
+		fd_set rfds;
+		struct timeval timeout = {0, CLI_SEND_SLEEP};
+
+		FD_ZERO(&rfds);
+		FD_SET(ctx->cli_sock, &rfds);
+
+		k = select(ctx->cli_sock + 1, &rfds, NULL, NULL, &timeout);
+
+		if (!k) {
+			wait--;
+			continue;
 		}
+
+		if (k < 0) break;
+
+		k = recv(ctx->cli_sock, packet + len, CLI_LEN-1 - len, 0);
+		if (k <= 0) break;
+
 		len += k;
 		packet[len] = '\0';
 		if (strchr(packet, '\n') && stristr(packet, cmd)) {
@@ -237,7 +248,6 @@ char *cli_send_cmd(char *cmd, bool req, bool decode, struct thread_ctx_s *ctx)
 	}
 
 	LOG_SDEBUG("[%p]: rsp %s", ctx, rsp);
-
 
 	if (rsp && ((rsp = stristr(rsp, cmd)) != NULL)) {
 		rsp += strlen(cmd);
@@ -254,7 +264,7 @@ char *cli_send_cmd(char *cmd, bool req, bool decode, struct thread_ctx_s *ctx)
 }
 
 
-/*--------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------*/
 static void sq_init_metadata(sq_metadata_t *metadata)
 {
 	metadata->artist 	= NULL;
@@ -562,10 +572,6 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 /*---------------------------------------------------------------------------*/
 void sq_init(void)
 {
-#if WIN
-	winsock_init();
-#endif
-
 	decode_init();
 }
 

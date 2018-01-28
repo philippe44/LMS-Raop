@@ -1,3 +1,7 @@
+0.4.0.0
+ - (1) new mDNS discovery for instant player addition / removal
+ - memory leak in mad.c when opening an already opened decoder
+
 0.3.3.0
  - (1) volume was sent on trigger even in case of SOFT_VOLUME or initial volume not set
  - (1) do not send *any* volume command in case of Trigger

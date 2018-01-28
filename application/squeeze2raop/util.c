@@ -32,6 +32,37 @@
 extern log_level	util_loglevel;
 static log_level 	*loglevel = &util_loglevel;
 
+#if WIN
+/*----------------------------------------------------------------------------*/
+void winsock_init(void) {
+	WSADATA wsaData;
+	WORD wVersionRequested = MAKEWORD(2, 2);
+	int WSerr = WSAStartup(wVersionRequested, &wsaData);
+	if (WSerr != 0) {
+		LOG_ERROR("Bad winsock version", NULL);
+		exit(1);
+	}
+}
+
+
+/*----------------------------------------------------------------------------*/
+void winsock_close(void) {
+
+	WSACleanup();
+}
+#endif
+
+
+/*----------------------------------------------------------------------------*/
+void close_socket(int sd) {
+#if WIN
+		shutdown(sd, SD_BOTH);
+#else
+		shutdown(sd, SHUT_RDWR);
+#endif
+		closesocket(sd);
+}
+
 
 /*----------------------------------------------------------------------------*/
 int pthread_cond_reltimedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, u32_t msWait)

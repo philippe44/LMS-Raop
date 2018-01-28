@@ -23,7 +23,7 @@
 #ifndef __SQUEEZEDEFS_H
 #define __SQUEEZEDEFS_H
 
-#define VERSION "v0.3.3.0.10"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.4.0.0.1"" ("__DATE__" @ "__TIME__")"
 
 #include <pthread.h>
 #include "platform.h"
@@ -45,7 +45,6 @@ int _mutex_timedlock(mutex_type *m, u32_t wait);
 
 #if LINUX || OSX || FREEBSD
 
-#define closesocket(s) close(s)
 #define last_error() errno
 #define ERROR_WOULDBLOCK EWOULDBLOCK
 #define mutex_create_p(m) pthread_mutexattr_t attr; pthread_mutexattr_init(&attr); pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT); pthread_mutex_init(&m, &attr); pthread_mutexattr_destroy(&attr)

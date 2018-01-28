@@ -119,7 +119,7 @@ PLUGIN_RAOPBRIDGE_CONFIG
 PLUGIN_RAOPBRIDGE_CONFIG_DESC
 	EN	<i>Generate</i> re-scans the network and builds a configuration file including all discovered players while retaining
 	EN	existing parameters and players (this will stop the bridge for ~30s)
-	EN	<br>When autosave is checked, the configuration file will be automatically updated at every network scan (see mDNS scanning options)
+	EN	<br>When autosave is checked, the configuration file will be automatically updated every time a player connects or disconnects
 
 PLUGIN_RAOPBRIDGE_CONFLINK
 	EN	View
@@ -133,12 +133,6 @@ PLUGIN_RAOPBRIDGE_AUTOSAVECONFIG
 PLUGIN_RAOPBRIDGE_DELCONFIG
 	EN	Erase
 	
-PLUGIN_RAOPBRIDGE_SCAN
-	EN	AirPlay device scanning options
-
-PLUGIN_RAOPBRIDGE_SCAN_DESC
-	EN	How often and for how long the network is scanned for added/removed AirPlay players on your network
-
 PLUGIN_RAOPBRIDGE_INTERFACE
 	EN	Network interface 
 	
@@ -149,12 +143,6 @@ PLUGIN_RAOPBRIDGE_INTERFACE_DESC
 	EN	The network interface (ip address in format xxx.xxx.xxx.xxx) used by the bridge. This is especially useful if you have a
 	EN	computer with multiple network interfaces. Use ? to let the bridge decide or check "use LMS' network
 	EN	interface" to make sure the Bridge uses the same network as LMS
-	
-PLUGIN_RAOPBRIDGE_SCANINTERVAL
-	EN	Scan for AirPlay devices every
-	
-PLUGIN_RAOPBRIDGE_SCANTIMEOUT
-	EN	during 	
 	
 PLUGIN_RAOPBRIDGE_TEXTDEFAULT
 	EN	The following parameters apply to ALL players - enter "default" (without ") in text boxes to set to default values
@@ -235,18 +223,11 @@ PLUGIN_RAOPBRIDGE_MDNSMGMT_DESC
 	EN	Misc options
 	EN	<br>- For the default list newly discovered players can be automatically added to LMS 
 	EN	<br>– For individual players a player can be enabled or disabled
-	EN	<br>- Number of mDNS scan cycles a player can be found missing before being removed
 	EN	<br>- Force LMS server (? for auto-discovery)
 
 PLUGIN_RAOPBRIDGE_ENABLEDEFS
 	EN	Player is enabled
 
-PLUGIN_RAOPBRIDGE_REMOVECOUNT_1
-	EN	but removed after  
-	
-PLUGIN_RAOPBRIDGE_REMOVECOUNT_2
-	EN	failed scans
-	
 PLUGIN_RAOPBRIDGE_SENDMETADATA
 	EN	Send LMS metadata to player
 	

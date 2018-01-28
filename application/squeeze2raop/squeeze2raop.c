@@ -40,26 +40,19 @@
 #include "mdns.h"
 #include "mdnsd.h"
 
+#define DISCOVERY_TIME 20
+
 enum { VOLUME_IGNORE = 0, VOLUME_SOFT = 1, VOLUME_HARD = 2};
 enum { VOLUME_FEEDBACK = 1, VOLUME_UNFILTERED = 2};
 
 /*----------------------------------------------------------------------------*/
-/* globals initialized */
+/* globals 																	  */
 /*----------------------------------------------------------------------------*/
-#if LINUX || FREEBSD
-bool				glDaemonize = false;
-#endif
-char 				glInterface[16] = "?";
-bool				glInteractive = true;
-char				*glLogFile;
 s32_t				glLogLimit = -1;
-static char			*glPidFile = NULL;
-static char			*glSaveConfigFile = NULL;
-bool				glAutoSaveConfigFile = false;
-bool				glGracefullShutdown = true;
-char 				glDACPid[] = "1A2B3D4EA1B2C3D4";
-char				glExcluded[SQ_STR_LENGTH] = "aircast,airupnp";
+char 				glInterface[16] = "?";
+char				glExcluded[SQ_STR_LENGTH] = "aircast,airupnp,shairtunes2";
 int					glMigration = 0;
+struct sMR			glMRDevices[MAX_RENDERERS];
 
 log_level	slimproto_loglevel = lINFO;
 log_level	stream_loglevel = lWARN;
@@ -75,7 +68,6 @@ tMRConfig			glMRConfig = {
 							"",
 							false,
 							false,
-							30,
 							false,
 							30,
 							false,
@@ -122,35 +114,33 @@ sq_dev_param_t glDeviceParam = {
 					{ "" },
 				} ;
 
-
-/*----------------------------------------------------------------------------*/
-/* globals */
-/*----------------------------------------------------------------------------*/
-static pthread_t 	glMainThread;
-void				*glConfigID = NULL;
-char				glConfigName[SQ_STR_LENGTH] = "./config.xml";
-
-u32_t				glScanInterval = SCAN_INTERVAL;
-u32_t				glScanTimeout = SCAN_TIMEOUT;
-struct sMR			glMRDevices[MAX_RENDERERS];
-static struct in_addr glHost;
-char				*glHostName;
-
 /*----------------------------------------------------------------------------*/
 /* locals */
 /*----------------------------------------------------------------------------*/
-extern log_level	main_loglevel;
-static log_level 	*loglevel = &main_loglevel;
+static log_level 			*loglevel = &main_loglevel;
+#if LINUX || FREEBSD
+static bool			 		glDaemonize = false;
+#endif
+static bool					glMainRunning = true;
+static char					*glPidFile = NULL;
+static bool					glAutoSaveConfigFile = false;
+static bool					glGracefullShutdown = true;
+static struct mDNShandle_s	*glmDNSsearchHandle = NULL;
+static pthread_t 			glMainThread, glmDNSsearchThread;
+static bool					glDiscovery = false;
+static pthread_mutex_t		glMainMutex;
+static pthread_cond_t		glMainCond;
+static bool					glInteractive = true;
+static char					*glLogFile;
+static char 				glDACPid[] = "1A2B3D4EA1B2C3D4";
+static struct mdnsd 		*gl_mDNSResponder;
+static int					glActiveRemoteSock;
+static pthread_t			glActiveRemoteThread;
+static void					*glConfigID = NULL;
+static char					glConfigName[SQ_STR_LENGTH] = "./config.xml";
+static struct in_addr 		glHost;
+static char					*glHostName;
 
-static pthread_t  	glUpdateMRThread;
-static bool			glMainRunning = true;
-static bool			glDiscoveryRunning = false;
-static bool			gl_mDNSQuery;
-static int			gl_mDNSId;
-
-static struct mdnsd *gl_mDNSResponder;
-static int			glActiveRemoteSock;
-static pthread_t	glActiveRemoteThread;
 
 static char usage[] =
 			VERSION "\n"
@@ -212,10 +202,13 @@ static char license[] =
 /*----------------------------------------------------------------------------*/
 /* prototypes */
 /*----------------------------------------------------------------------------*/
-static void *UpdateMRThread(void *args);
-static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data);
+static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s);
 static void DelRaopDevice(struct sMR *Device);
 static bool IsExcluded(char *Model);
+#if BUSY_MODE
+static void BusyRaise(struct sMR *Device);
+static void BusyDrop(struct sMR *Device);
+#endif
 
 /*----------------------------------------------------------------------------*/
 bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, void *param)
@@ -223,8 +216,11 @@ static bool IsExcluded(char *Model);
 	struct sMR *device = caller;
 	bool rc = true;
 
-	if (!device)	{
-		LOG_ERROR("No caller ID in callback", NULL);
+	pthread_mutex_lock(&device->Mutex);
+
+	if (!device->Running)	{
+		LOG_WARN("[%]: device has been removed", device);
+		pthread_mutex_unlock(&device->Mutex);
 		return false;
 	}
 
@@ -237,12 +233,10 @@ static bool IsExcluded(char *Model);
 		if (!device->on) {
 			tRaopReq *Req = malloc(sizeof(tRaopReq));
 
-			pthread_mutex_lock(&device->Mutex);
-			QueueFlush(&device->Queue);
+			QueueFlush(&device->Queue);
 			strcpy(Req->Type, "OFF");
 			QueueInsert(&device->Queue, Req);
 			pthread_cond_signal(&device->Cond);
-			pthread_mutex_unlock(&device->Mutex);
 		}
 
 		LOG_DEBUG("[%p]: device set on/off %d", caller, device->on);
@@ -250,11 +244,11 @@ static bool IsExcluded(char *Model);
 
 	if (!device->on && action != SQ_SETNAME && action != SQ_SETSERVER) {
 		LOG_DEBUG("[%p]: device off or not controlled by LMS", caller);
+		pthread_mutex_unlock(&device->Mutex);
 		return false;
 	}
 
 	LOG_SDEBUG("callback for %s (%d)", device->FriendlyName, action);
-	pthread_mutex_lock(&device->Mutex);
 
 	switch (action) {
 		case SQ_FINISHED:
@@ -377,7 +371,14 @@ static void *PlayerThread(void *args)
 
 	Device->Running = true;
 
+	/*
+	There is probably a few unsafe thread conditions with the callback and the
+	the activethread, but nothing serious and locking the mutex during the whole
+	time would seriously block the callback, so it's not worth
+	*/
+
 	while (Device->Running) {
+		// context is valid until this thread ends, no deletion issue
 		tRaopReq *req = GetRequest(&Device->Queue, &Device->Mutex, &Device->Cond, 1000);
 
 		// empty means timeout every sec
@@ -415,6 +416,7 @@ static void *PlayerThread(void *args)
 			}
 
 			pthread_mutex_lock(&Device->Mutex);
+
 			if (Device->MetadataWait && !--Device->MetadataWait && Device->Config.SendMetaData) {
 				sq_metadata_t metadata;
 				u32_t hash;
@@ -471,8 +473,7 @@ static void *PlayerThread(void *args)
 				}
 
 				sq_free_metadata(&metadata);
-			}
-			else pthread_mutex_unlock(&Device->Mutex);
+			} else pthread_mutex_unlock(&Device->Mutex);
 
 			// was waiting for volume trigger, never received
 			if (Device->VolumeReadyWait && !--Device->VolumeReadyWait) {
@@ -530,7 +531,32 @@ static void *PlayerThread(void *args)
 		}
 
 		free(req);
+	}
 
+	return NULL;
+}
+
+/*----------------------------------------------------------------------------*/
+char *GetmDNSAttribute(txt_attr_t *p, int count, char *name)
+{
+	int j;
+
+	for (j = 0; j < count; j++)
+		if (!strcasecmp(p[j].name, name))
+			return strdup(p[j].value);
+
+	return NULL;
+}
+
+
+/*----------------------------------------------------------------------------*/
+struct sMR *SearchUDN(char *UDN)
+{
+	int i;
+
+	for (i = 0; i < MAX_RENDERERS; i++) {
+		if (glMRDevices[i].Running && !strcmp(glMRDevices[i].UDN, UDN))
+			return glMRDevices + i;
 	}
 
 	return NULL;
@@ -538,154 +564,104 @@ static void *PlayerThread(void *args)
 
 
 /*----------------------------------------------------------------------------*/
-static bool RefreshTO(char *UDN)
+bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 {
-	int i;
+	struct sMR *Device;
+	mDNSservice_t *s;
 
-	for (i = 0; i < MAX_RENDERERS; i++) {
-		if (glMRDevices[i].InUse && !strcmp(glMRDevices[i].UDN, UDN)) {
-			glMRDevices[i].TimeOut = false;
-			glMRDevices[i].MissingCount = glMRDevices[i].Config.RemoveCount;
-			return true;
+	for (s = slist; s && glMainRunning; s = s->next) {
+		char *am = GetmDNSAttribute(s->attr, s->attr_count, "am");
+		bool excluded = IsExcluded(am);
+		int j;
+
+		NFREE(am);
+
+		if (!s->name || excluded) continue;
+
+		// is that device already here
+		if ((Device = SearchUDN(s->name)) != NULL) {
+			// device disconnected
+			if (!s->port && !s->addr.s_addr) {
+				LOG_INFO("[%p]: removing renderer (%s)", Device, Device->FriendlyName);
+				if (Device->SqueezeHandle) sq_delete_device(Device->SqueezeHandle);
+				DelRaopDevice(Device);
+			// device update - ignore changes in TXT
+			} else if (s->port != Device->PlayerPort || s->addr.s_addr != Device->PlayerIP.s_addr) {
+				LOG_INFO("[%p]: changed ip:port %s:%d", Device, inet_ntoa(s->addr), s->port);
+
+				Device->PlayerPort = s->port;
+				Device->PlayerIP = s->addr;
+
+				// replace ip:port piece of credentials
+				if (*Device->Config.Credentials) {
+					char *token = strchr(Device->Config.Credentials, '@');
+					if (token) *token = '\0';
+					sprintf(Device->Config.Credentials + strlen(Device->Config.Credentials), "@%s:%d", inet_ntoa(s->addr), s->port);
+				}
+			}
+			continue;
+		}
+
+		// disconnect of an unknown device
+		if (!s->port && !s->addr.s_addr) {
+			LOG_ERROR("Unknown device disconnected %s", s->name);
+			continue;
+		}
+
+		// device creation so search a free spot.
+		for (j = 0; j < MAX_RENDERERS && glMRDevices[j].Running; j++);
+
+		// no more room !
+		if (j == MAX_RENDERERS) {
+			LOG_ERROR("Too many Raop devices", NULL);
+			break;
+		}
+
+		Device = glMRDevices + j;
+
+		if (AddRaopDevice(Device, s) && !glDiscovery) {
+			// create a new slimdevice
+			Device->sq_config.soft_volume = (Device->Config.VolumeMode == VOLUME_SOFT);
+			Device->SqueezeHandle = sq_reserve_device(Device, &sq_callback);
+			if (!*(Device->sq_config.name)) strcpy(Device->sq_config.name, Device->FriendlyName);
+			if (!Device->SqueezeHandle || !sq_run_device(Device->SqueezeHandle,
+														 Device->Raop, &Device->sq_config)) {
+				sq_release_device(Device->SqueezeHandle);
+				Device->SqueezeHandle = 0;
+				LOG_ERROR("[%p]: cannot create squeezelite instance (%s)", Device, Device->FriendlyName);
+				DelRaopDevice(Device);
+			}
 		}
 	}
+
+	if (glAutoSaveConfigFile || glDiscovery) {
+		LOG_DEBUG("Updating configuration %s", glConfigName);
+		SaveConfig(glConfigName, glConfigID, false);
+	}
+
+	// we have not released the slist
 	return false;
 }
 
 
 /*----------------------------------------------------------------------------*/
-char *GetmDNSAttribute(struct mDNSItem_s *p, char *name)
+static void *mDNSsearchThread(void *args)
 {
-	int j;
-
-	for (j = 0; j < p->attr_count; j++)
-		if (!strcasecmp(p->attr[j].name, name))
-			return strdup(p->attr[j].value);
-
+	// launch the query,
+	query_mDNS(glmDNSsearchHandle, "_raop._tcp.local", 120,
+			   glDiscovery ? DISCOVERY_TIME : 0, &mDNSsearchCallback, NULL);
 	return NULL;
 }
 
-
-/*----------------------------------------------------------------------------*/
-static void *UpdateMRThread(void *args)
-{
-	struct sMR *Device = NULL;
-	int i, TimeStamp;
-	DiscoveredList DiscDevices;
-
-	LOG_DEBUG("Begin Raop devices update", NULL);
-	TimeStamp = gettime_ms();
-
-	query_mDNS(gl_mDNSId, &gl_mDNSQuery, "_raop._tcp.local", &DiscDevices, glScanTimeout);
-
-	for (i = 0; i < DiscDevices.count && glMainRunning; i++) {
-		int j;
-		struct mDNSItem_s *p = &DiscDevices.items[i];
-		char *am = GetmDNSAttribute(p, "am");
-		bool excluded = IsExcluded(am);
-
-		NFREE(am);
-
-		if (!p->name || excluded) continue;
-
-		if (!RefreshTO(p->name)) {
-			// new device so search a free spot.
-			for (j = 0; j < MAX_RENDERERS && glMRDevices[j].InUse; j++);
-
-			// no more room !
-			if (j == MAX_RENDERERS) {
-				LOG_ERROR("Too many Raop devices", NULL);
-				break;
-			} else Device = &glMRDevices[j];
-
-			if (AddRaopDevice(Device, p) && !glSaveConfigFile) {
-				// create a new slimdevice
-				Device->sq_config.soft_volume = (Device->Config.VolumeMode == VOLUME_SOFT);
-				Device->SqueezeHandle = sq_reserve_device(Device, &sq_callback);
-				if (!*(Device->sq_config.name)) strcpy(Device->sq_config.name, Device->FriendlyName);
-				if (!Device->SqueezeHandle || !sq_run_device(Device->SqueezeHandle,
-															 Device->Raop, &Device->sq_config)) {
-					sq_release_device(Device->SqueezeHandle);
-					Device->SqueezeHandle = 0;
-					LOG_ERROR("[%p]: cannot create squeezelite instance (%s)", Device, Device->FriendlyName);
-					DelRaopDevice(Device);
-				}
-			}
-		} else {
-			for (j = 0; j < MAX_RENDERERS; j++) {
-				Device = &glMRDevices[j];
-				if (Device->InUse && !strcmp(Device->UDN, p->name)) {
-					if (p->port != Device->PlayerPort || p->addr.s_addr != Device->PlayerIP.s_addr) {
-						LOG_INFO("[%p]: changed ip:port %s:%d", Device, inet_ntoa(p->addr), p->port);
-
-						Device->PlayerPort = p->port;
-						Device->PlayerIP = p->addr;
-
-						// replace ip:port piece of credentials
-						if (*Device->Config.Credentials) {
-							char *token = strchr(Device->Config.Credentials, '@');
-							if (token) *token = '\0';
-							sprintf(Device->Config.Credentials + strlen(Device->Config.Credentials), "@%s:%d", inet_ntoa(p->addr), p->port);
-						}
-					}
-					break;
-				}
-			}
-		}
-	}
-
-	free_discovered_list(&DiscDevices);
-
-	// then walk through the list of devices to remove missing ones
-	for (i = 0; i < MAX_RENDERERS; i++) {
-		Device = &glMRDevices[i];
-		if (!Device->InUse || !Device->Config.RemoveCount) continue;
-		if (Device->TimeOut && Device->MissingCount) Device->MissingCount--;
-		if (raopcl_is_connected(Device->Raop) || Device->MissingCount) continue;
-
-		LOG_INFO("[%p]: removing renderer (%s)", Device, Device->FriendlyName);
-		if (Device->SqueezeHandle) sq_delete_device(Device->SqueezeHandle);
-		DelRaopDevice(Device);
-	}
-
-	if (glAutoSaveConfigFile && !glSaveConfigFile) {
-		LOG_DEBUG("Updating configuration %s", glConfigName);
-		SaveConfig(glConfigName, glConfigID, CONFIG_UPDATE);
-	}
-
-	glDiscoveryRunning = false;
-
-	LOG_DEBUG("End Raop devices update %d", gettime_ms() - TimeStamp);
-
-	return NULL;
-}
 
 /*----------------------------------------------------------------------------*/
 static void *MainThread(void *args)
 {
-	unsigned last = gettime_ms();
-	u32_t ScanPoll = glScanInterval*1000 + 1;
-
 	while (glMainRunning) {
-		int i;
-		int elapsed = gettime_ms() - last;
 
-		// reset timeout and re-scan devices
-		ScanPoll += elapsed;
-		if (glScanInterval && ScanPoll > glScanInterval*1000 && !glDiscoveryRunning) {
-			pthread_attr_t attr;
-
-			ScanPoll = 0;
-
-			glDiscoveryRunning = true;
-			for (i = 0; i < MAX_RENDERERS; i++) glMRDevices[i].TimeOut = true;
-
-			pthread_attr_init(&attr);
-			pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + 64*1024);
-			pthread_create(&glUpdateMRThread, &attr, &UpdateMRThread, NULL);
-			pthread_detach(glUpdateMRThread);
-			pthread_attr_destroy(&attr);
-		}
+		pthread_mutex_lock(&glMainMutex);
+		pthread_cond_reltimedwait(&glMainCond, &glMainMutex, 30*1000);
+		pthread_mutex_unlock(&glMainMutex);
 
 		if (glLogFile && glLogLimit != - 1) {
 			s32_t size = ftell(stderr);
@@ -710,10 +686,8 @@ static void *MainThread(void *args)
 				}
 			}
 		}
-
-		last = gettime_ms();
-		sleep(1);
 	}
+
 	return NULL;
 }
 
@@ -750,84 +724,86 @@ void SetVolumeMapping(struct sMR *Device)
 
 
 /*----------------------------------------------------------------------------*/
-static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
+static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s)
 {
-	pthread_attr_t attr;
+	pthread_attr_t pattr;
 	raop_crypto_t Crypto;
 	bool Auth = false;
 	char *p;
 	u32_t mac_size = 6;
-	char *am = GetmDNSAttribute(data, "am");
+	char *am = GetmDNSAttribute(s->attr, s->attr_count, "am");
 	char Secret[SQ_STR_LENGTH] = "";
 
 	// read parameters from default then config file
-	memset(Device, 0, sizeof(struct sMR));
 	memcpy(&Device->Config, &glMRConfig, sizeof(tMRConfig));
 	memcpy(&Device->sq_config, &glDeviceParam, sizeof(sq_dev_param_t));
-	LoadMRConfig(glConfigID, data->name, &Device->Config, &Device->sq_config);
+	LoadMRConfig(glConfigID, s->name, &Device->Config, &Device->sq_config);
 
 	if (!Device->Config.Enabled) return false;
 
-	// don't create virtual players of devices created by shairtunes2 ...
-	if (am && !strcasecmp(am, "shairtunes2")) {
-		LOG_DEBUG("[%p]: skipping shairtunes2 player", Device);
-		NFREE(am);
-		return false;
-	}
-
-	 // if airport express, forece auth
-	 if (am && stristr(am, "airport")) {
+	 // if airport express, forece auth
+	 if (am && stristr(am, "airport")) {
 		LOG_INFO("[%p]: AirPort Express", Device);
 		Auth = true;
 	}
 
 	 if (am && stristr(am, "appletv")) {
-		char *pk = GetmDNSAttribute(data, "pk");
+		char *pk = GetmDNSAttribute(s->attr, s->attr_count, "pk");
 		if (pk && *pk) {
 			char *token = strchr(Device->Config.Credentials, '@');
 			LOG_INFO("[%p]: AppleTV with authentication (pairing must be done separately)", Device);
 			if (Device->Config.Credentials[0]) sscanf(Device->Config.Credentials, "%[a-fA-F0-9]", Secret);
 			if (token) *token = '\0';
-			sprintf(Device->Config.Credentials + strlen(Device->Config.Credentials), "@%s:%d", inet_ntoa(data->addr), data->port);
+			sprintf(Device->Config.Credentials + strlen(Device->Config.Credentials), "@%s:%d", inet_ntoa(s->addr), s->port);
 		}
 		NFREE(pk);
 	}
 
 	NFREE(am);
 
-	if (stristr(data->name, "AirSonos")) {
+	if (stristr(s->name, "AirSonos")) {
 		LOG_DEBUG("[%p]: skipping AirSonos player (please use uPnPBridge)", Device);
 		return false;
 	}
 
 #if 0
-	if (!stristr(data->name, "JBL")) {
+	if (!stristr(s->name, "JBL")) {
 		printf("ONLY JBL %s\n", data->name);
 		return false;
 	}
 #endif
 
-	strcpy(Device->UDN, data->name);
-	Device->Magic = MAGIC;
-	Device->TimeOut = false;
-	Device->MissingCount = Device->Config.RemoveCount;
-	Device->on = false;
-	Device->InUse = true;
-	Device->SqueezeHandle = 0;
-	Device->Running = true;
+	Device->Magic 			= MAGIC;
+	Device->on 				= false;
+	Device->SqueezeHandle 	= 0;
+	Device->Running 		= true;
 	// make sure that 1st volume is not missed
-	Device->VolumeStamp = gettime_ms() - 2000;
-	Device->PlayerIP = data->addr;
-	Device->PlayerPort = data->port;
-	Device->DiscWait = false;
-	Device->TrackDuration = 0;
-	Device->TrackRunning = false;
-	Device->TrackElapsed = 0;
-	Device->VolumeReady = !Device->Config.VolumeTrigger;
+	Device->VolumeStamp 	= gettime_ms() - 2000;
+	Device->PlayerIP 		= s->addr;
+	Device->PlayerPort 		= s->port;
+	Device->DiscWait 		= false;
+	Device->TrackDuration 	= Device->TrackElapsed = Device->TrackStartTime = 0;
+	Device->TrackRunning 	= false;
+	Device->VolumeReady 	= !Device->Config.VolumeTrigger;
 	Device->VolumeReadyWait = 0;
-	Device->Volume = Device->Config.Volume;
+	Device->Volume 			= Device->Config.Volume;
+	Device->SkipStart 		= 0;
+	Device->SkipDir 		= false;
+	Device->ContentType[0] 	= '\0';
+	Device->sqState 		= SQ_STOP;
+	Device->Raop 			= NULL;
+	Device->LastFlush 		= 0;
+	Device->Sane 			= true;
+	Device->MetadataWait 	= Device->MetadataHash = 0;
+	Device->Busy			= 0;
+	Device->Delete			= 0;
+
+	memset(Device->ActiveRemote, 0, 16);
+
+	strcpy(Device->UDN, s->name);
 	sprintf(Device->ActiveRemote, "%u", hash32(Device->UDN));
-	strcpy(Device->FriendlyName, data->hostname);
+	strcpy(Device->FriendlyName, s->hostname);
+
 	p = stristr(Device->FriendlyName, ".local");
 	if (p) *p = '\0';
 	SetVolumeMapping(Device);
@@ -847,11 +823,11 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	MakeMacUnique(Device);
 
 	// gather RAOP device capabilities, to be matched mater
-	Device->SampleSize = GetmDNSAttribute(data, "ss");
-	Device->SampleRate = GetmDNSAttribute(data, "sr");
-	Device->Channels = GetmDNSAttribute(data, "ch");
-	Device->Codecs = GetmDNSAttribute(data, "cn");
-	Device->Crypto = GetmDNSAttribute(data, "et");
+	Device->SampleSize = GetmDNSAttribute(s->attr, s->attr_count, "ss");
+	Device->SampleRate = GetmDNSAttribute(s->attr, s->attr_count, "sr");
+	Device->Channels = GetmDNSAttribute(s->attr, s->attr_count, "ch");
+	Device->Codecs = GetmDNSAttribute(s->attr, s->attr_count, "cn");
+	Device->Crypto = GetmDNSAttribute(s->attr, s->attr_count, "et");
 
 	if (!Device->Codecs || !strchr(Device->Codecs, '1')) {
 		LOG_WARN("[%p]: ALAC not in codecs, player might not work %s", Device, Device->Codecs);
@@ -882,13 +858,13 @@ static bool AddRaopDevice(struct sMR *Device, struct mDNSItem_s *data)
 	}
 
 	pthread_mutex_init(&Device->Mutex, 0);
-	pthread_cond_init(&Device->Cond, 0);
 	QueueInit(&Device->Queue);
 
-	pthread_attr_init(&attr);
-	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + 64*1024);
+	// TODO : reduce stack
+	pthread_attr_init(&pattr);
+	pthread_attr_setstacksize(&pattr, PTHREAD_STACK_MIN + 64*1024);
 	pthread_create(&Device->Thread, NULL, &PlayerThread, Device);
-	pthread_attr_destroy(&attr);
+	pthread_attr_destroy(&pattr);
 
 	return true;
 }
@@ -901,7 +877,7 @@ void FlushRaopDevices(void)
 
 	for (i = 0; i < MAX_RENDERERS; i++) {
 		struct sMR *p = &glMRDevices[i];
-		if (p->InUse) DelRaopDevice(p);
+		if (p->Running) DelRaopDevice(p);
 	}
 }
 
@@ -911,14 +887,10 @@ void DelRaopDevice(struct sMR *Device)
 {
 	pthread_mutex_lock(&Device->Mutex);
 	Device->Running = false;
-	Device->InUse = false;
 	pthread_cond_signal(&Device->Cond);
 	pthread_mutex_unlock(&Device->Mutex);
 
 	pthread_join(Device->Thread, NULL);
-
-	pthread_cond_destroy(&Device->Cond);
-	pthread_mutex_destroy(&Device->Mutex);
 
 	raopcl_destroy(Device->Raop);
 
@@ -929,8 +901,6 @@ void DelRaopDevice(struct sMR *Device)
 	NFREE(Device->Channels);
 	NFREE(Device->Codecs);
 	NFREE(Device->Crypto);
-
-	memset(Device, 0, sizeof(struct sMR));
 }
 
 
@@ -946,7 +916,7 @@ static void *ActiveRemoteThread(void *args)
 	char *day[] = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
 	char *month[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sept", "Oct", "Nov", "Dec" };
 
-	if (listen(glActiveRemoteSock, 5) < 0) {
+	if (listen(glActiveRemoteSock, 1) < 0) {
 		LOG_ERROR("Cannot listen", NULL);
 		return NULL;
 	}
@@ -983,8 +953,9 @@ static void *ActiveRemoteThread(void *args)
 		if (p) sscanf(p, "/ctrl-int/1/%127s", command);
 		command[sizeof(command) - 1] = '\0';
 
+		// find where this is coming from
 		for (i = 0; i < MAX_RENDERERS; i++) {
-			if (glMRDevices[i].InUse && !strcmp(glMRDevices[i].ActiveRemote, ActiveRemote)) {
+			if (glMRDevices[i].Running && !strcmp(glMRDevices[i].ActiveRemote, ActiveRemote)) {
 				Device = &glMRDevices[i];
 				break;
 			}
@@ -992,6 +963,17 @@ static void *ActiveRemoteThread(void *args)
 
 		if (!Device) {
 			LOG_ERROR("DACP from unknown player %s", buf);
+			close_socket(sd);
+			continue;
+		}
+
+		// this is async, so need to check context validity
+		pthread_mutex_lock(&Device->Mutex);
+
+		if (!Device->Running) {
+			LOG_WARN("[%]: device has been removed", Device);
+			pthread_mutex_unlock(&Device->Mutex);
+			close_socket(sd);
 			continue;
 		}
 
@@ -1067,18 +1049,16 @@ static void *ActiveRemoteThread(void *args)
 			}
 		}
 
+		// can free mutex at this point
+		pthread_mutex_unlock(&Device->Mutex);
+
 		// send pre-made response
 		gmt = *gmtime(&now);
 		sprintf(buf, response, day[gmt.tm_wday], gmt.tm_mday, month[gmt.tm_mon],
 								gmt.tm_year + 1900, gmt.tm_hour, gmt.tm_min, gmt.tm_sec);
 		n = send(sd, buf, strlen(buf), 0);
 
-#if WIN
-		shutdown(sd, SD_BOTH);
-#else
-		shutdown(sd, SHUT_RDWR);
-#endif
-		close(sd);
+		close_socket(sd);
 	}
 
 	return NULL;
@@ -1145,7 +1125,7 @@ void StopActiveRemote(void)
 #else
 		shutdown(glActiveRemoteSock, SHUT_RDWR);
 #endif
-		close(glActiveRemoteSock);
+		closesocket(glActiveRemoteSock);
 	}
 	pthread_join(glActiveRemoteThread, NULL);
 	mdnsd_stop(gl_mDNSResponder);
@@ -1153,7 +1133,7 @@ void StopActiveRemote(void)
 
 
 /*----------------------------------------------------------------------------*/
-bool IsExcluded(char *Model)
+static bool IsExcluded(char *Model)
 {
 	char item[SQ_STR_LENGTH];
 	char *p = glExcluded;
@@ -1168,35 +1148,56 @@ bool IsExcluded(char *Model)
 }
 
 
+#if BUSY_MODE
+/*----------------------------------------------------------------------------*/
+void BusyRaise(struct sMR *Device)
+{
+	LOG_DEBUG("[%p]: busy raise %u", Device, Device->Busy);
+	Device->Busy++;
+	pthread_mutex_unlock(&Device->Mutex);
+}
+
+
+/*----------------------------------------------------------------------------*/
+void BusyDrop(struct sMR *Device)
+{
+	pthread_mutex_lock(&Device->Mutex);
+	Device->Busy--;
+	if (!Device->Busy && Device->Delete) pthread_cond_signal(&Device->Cond);
+	LOG_DEBUG("[%p]: busy drop %u", Device, Device->Busy);
+	pthread_mutex_unlock(&Device->Mutex);
+}
+#endif
+
+
 /*----------------------------------------------------------------------------*/
 static bool Start(void)
 {
-	pthread_attr_t attr;
-
-	if (glScanInterval) {
-		if (glScanInterval < SCAN_INTERVAL) glScanInterval = SCAN_INTERVAL;
-		if (glScanTimeout < SCAN_TIMEOUT) glScanTimeout = SCAN_TIMEOUT;
-		if (glScanTimeout > glScanInterval - SCAN_TIMEOUT) glScanTimeout = glScanInterval - SCAN_TIMEOUT;
-	}
+	int i;
 
 	memset(&glMRDevices, 0, sizeof(glMRDevices));
+
+	pthread_mutex_init(&glMainMutex, 0);
+	pthread_cond_init(&glMainCond, 0);
+    for (i = 0; i < MAX_RENDERERS;  i++) {
+		pthread_mutex_init(&glMRDevices[i].Mutex, 0);
+		pthread_cond_init(&glMRDevices[i].Cond, 0);
+	}
 
 	glHost.s_addr = get_localhost(&glHostName);
 	if (!strstr(glInterface, "?")) glHost.s_addr = inet_addr(glInterface);
 
 	LOG_INFO("Binding to %s", inet_ntoa(glHost));
 
-	// init mDNS
-	gl_mDNSId = init_mDNS(false, glHost);
+	/* start the mDNS devices discovery thread */
+	glmDNSsearchHandle = init_mDNS(false, glHost);
+	pthread_create(&glmDNSsearchThread, NULL, &mDNSsearchThread, NULL);
 
 	// Start the ActiveRemote server
 	StartActiveRemote(glHost);
 
 	/* start the main thread */
-	pthread_attr_init(&attr);
-	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + 64*1024);
-	pthread_create(&glMainThread, &attr, &MainThread, NULL);
-	pthread_attr_destroy(&attr);
+	pthread_create(&glMainThread, NULL, &MainThread, NULL);
 
 	return true;
 }
@@ -1205,12 +1206,14 @@ static bool Start(void)
 /*---------------------------------------------------------------------------*/
 static bool Stop(void)
 {
-	// this forces an ongoing search to end
-	LOG_DEBUG("terminate mDNS queries", NULL);
-	close_mDNS(gl_mDNSId, &gl_mDNSQuery);
+	int i;
 
-	LOG_DEBUG("terminate update thread ...", NULL);
-	while (glDiscoveryRunning) usleep(50000);
+	glMainRunning = false;
+
+	LOG_DEBUG("terminate search thread ...", NULL);
+	// this forces an ongoing search to end
+	close_mDNS(glmDNSsearchHandle);
+	pthread_join(glmDNSsearchThread, NULL);
 
 	LOG_DEBUG("flush renderers ...", NULL);
 	FlushRaopDevices();
@@ -1220,11 +1223,22 @@ static bool Stop(void)
 	StopActiveRemote();
 
 	LOG_DEBUG("terminate main thread ...", NULL);
+	pthread_cond_signal(&glMainCond);
 	pthread_join(glMainThread, NULL);
+	pthread_mutex_destroy(&glMainMutex);
+	pthread_cond_destroy(&glMainCond);
+	for (i = 0; i < MAX_RENDERERS;  i++) {
+		pthread_mutex_destroy(&glMRDevices[i].Mutex);
+		pthread_cond_destroy(&glMRDevices[i].Cond);
+	}
 
 	free(glHostName);
 
 	if (glConfigID) ixmlDocument_free(glConfigID);
+
+#if WIN
+	winsock_close();
+#endif
 
 	return true;
 }
@@ -1232,8 +1246,6 @@ static bool Stop(void)
 
 /*---------------------------------------------------------------------------*/
 static void sighandler(int signum) {
-	glMainRunning = false;
-
 	if (!glGracefullShutdown) {
 		LOG_INFO("forced exit", NULL);
 		exit(EXIT_SUCCESS);
@@ -1300,7 +1312,8 @@ bool ParseArgs(int argc, char **argv) {
 			glLogFile = optarg;
 			break;
 		case 'i':
-			glSaveConfigFile = optarg;
+			strcpy(glConfigName, optarg);
+			glDiscovery = true;
 			break;
 		case 'I':
 			glAutoSaveConfigFile = true;
@@ -1358,6 +1371,9 @@ bool ParseArgs(int argc, char **argv) {
 	return true;
 }
 
+#include "squeezelite.h"
+extern struct thread_ctx_s thread_ctx[MAX_PLAYER];
+
 
 /*----------------------------------------------------------------------------*/
 /*																			  */
@@ -1377,6 +1393,10 @@ int main(int argc, char *argv[])
 #endif
 #if defined(SIGHUP)
 	signal(SIGHUP, sighandler);
+#endif
+
+#if WIN
+	winsock_init();
 #endif
 
 	// first try to find a config file on the command line
@@ -1411,8 +1431,16 @@ int main(int argc, char *argv[])
 		LOG_ERROR("\n\n!!!!!!!!!!!!!!!!!! ERROR LOADING CONFIG FILE !!!!!!!!!!!!!!!!!!!!!\n", NULL);
 	}
 
+	// just do device discovery and exit
+	if (glDiscovery) {
+		Start();
+		sleep(DISCOVERY_TIME + 1);
+		Stop();
+		return(0);
+	}
+
 #if LINUX || FREEBSD
-	if (glDaemonize && !glSaveConfigFile) {
+	if (glDaemonize) {
 		if (daemon(1, glLogFile ? 1 : 0)) {
 			fprintf(stderr, "error daemonizing: %s\n", strerror(errno));
 		}
@@ -1438,12 +1466,7 @@ int main(int argc, char *argv[])
 		strcpy(resp, "exit");
 	}
 
-	if (glSaveConfigFile) {
-		while (glDiscoveryRunning) sleep(1);
-		SaveConfig(glSaveConfigFile, glConfigID, CONFIG_CREATE);
-	}
-
-	while (strcmp(resp, "exit") && !glSaveConfigFile) {
+	while (strcmp(resp, "exit")) {
 
 #if LINUX || FREEBSD
 		if (!glDaemonize && glInteractive)
@@ -1508,14 +1531,33 @@ int main(int argc, char *argv[])
 			i = scanf("%s", level);
 			raop_loglevel = debug2level(level);
 		}
-		 if (!strcmp(resp, "save"))	{
+
+		if (!strcmp(resp, "save"))	{
 			char name[128];
 			i = scanf("%s", name);
 			SaveConfig(name, glConfigID, true);
 		}
+
+		if (!strcmp(resp, "dump") || !strcmp(resp, "dumpall"))	{
+			u32_t now = gettime_ms();
+			bool all = !strcmp(resp, "dumpall");
+
+			for (i = 0; i < MAX_RENDERERS; i++) {
+				struct sMR *p = &glMRDevices[i];
+				bool Locked = pthread_mutex_trylock(&p->Mutex);
+
+				if (!Locked) pthread_mutex_unlock(&p->Mutex);
+				if (!p->Running && !all) continue;
+				printf("%20.20s [r:%u] [l:%u] [sq:%u] [%s:%u] [mw:%u] [f:%u]\n"
+						"%20.20s [sq:%p] <==> [ap:%p]\n",
+						p->Config.Name, p->Running, Locked, p->sqState,
+						inet_ntoa(p->PlayerIP), p->PlayerPort, p->MetadataWait,
+						(now - p->LastFlush)/1000, "",
+						thread_ctx + p->SqueezeHandle - 1,	p);
+			}
+		}
 	}
 
-	glMainRunning = false;
 	LOG_INFO("stopping squeezelite devices ...", NULL);
 	sq_end();
 	LOG_INFO("stopping Raop devices ...", NULL);

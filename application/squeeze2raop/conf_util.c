@@ -49,7 +49,7 @@ void MakeMacUnique(struct sMR *Device)
 	int i;
 
 	for (i = 0; i < MAX_RENDERERS; i++) {
-		if (!glMRDevices[i].InUse || Device == &glMRDevices[i]) continue;
+		if (!glMRDevices[i].Running || Device == &glMRDevices[i]) continue;
 		if (!memcmp(&glMRDevices[i].sq_config.mac, &Device->sq_config.mac, 6)) {
 			u32_t hash = hash32(Device->UDN);
 
@@ -59,6 +59,7 @@ void MakeMacUnique(struct sMR *Device)
 		}
 	}
 }
+
 
 /*----------------------------------------------------------------------------*/
 void SaveConfig(char *name, void *ref, int mode)
@@ -105,8 +106,6 @@ void SaveConfig(char *name, void *ref, int mode)
 	XMLUpdateNode(doc, root, force, "slimmain_log", level2debug(slimmain_loglevel));
 	XMLUpdateNode(doc, root, force, "raop_log",level2debug(raop_loglevel));
 	XMLUpdateNode(doc, root, force, "util_log",level2debug(util_loglevel));
-	XMLUpdateNode(doc, root, force, "scan_interval", "%d", (u32_t) glScanInterval);
-	XMLUpdateNode(doc, root, force, "scan_timeout", "%d", (u32_t) glScanTimeout);
 	XMLUpdateNode(doc, root, force, "log_limit", "%d", (s32_t) glLogLimit);
 	XMLUpdateNode(doc, root, true, "migration", "%d", (s32_t) glMigration);
 
@@ -126,7 +125,6 @@ void SaveConfig(char *name, void *ref, int mode)
 	XMLUpdateNode(doc, common, force, "mute_on_pause", "%d", (int) glMRConfig.MuteOnPause);
 	XMLUpdateNode(doc, common, force, "send_metadata", "%d", (int) glMRConfig.SendMetaData);
 	XMLUpdateNode(doc, common, force, "send_coverart", "%d", (int) glMRConfig.SendCoverArt);
-	XMLUpdateNode(doc, common, force, "remove_count", "%d", (u32_t) glMRConfig.RemoveCount);
 	XMLUpdateNode(doc, common, force, "auto_play", "%d", (int) glMRConfig.AutoPlay);
 	XMLUpdateNode(doc, common, force, "idle_timeout", "%d", (int) glMRConfig.IdleTimeout);
 	XMLUpdateNode(doc, common, force, "alac_encode", "%d", (int) glMRConfig.AlacEncode);
@@ -143,7 +141,7 @@ void SaveConfig(char *name, void *ref, int mode)
 	for (i = 0; i < MAX_RENDERERS; i++) {
 		IXML_Node *dev_node;
 
-		if (!glMRDevices[i].InUse) continue;
+		if (!glMRDevices[i].Running) continue;
 		else p = &glMRDevices[i];
 
 		// existing device, keep param and update "name" if LMS has requested it
@@ -220,7 +218,6 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "resample_options")) strcpy(sq_conf->resample_options, val);
 #endif
 	if (!strcmp(name, "enabled")) Conf->Enabled = atol(val);
-	if (!strcmp(name, "remove_count"))Conf->RemoveCount = atol(val);
 	if (!strcmp(name, "auto_play")) Conf->AutoPlay = atol(val);
 	if (!strcmp(name, "idle_timeout")) Conf->IdleTimeout = atol(val);
 	if (!strcmp(name, "encryption")) Conf->Encryption = atol(val);
@@ -244,10 +241,6 @@ static void LoadGlobalItem(char *name, char *val)
 {
 	if (!val) return;
 
-	// if (!strcmp(name, "server")) strcpy(glSQServer, val);
-	// temporary to ensure parameter transfer from global to common
-	if (!strcmp(name, "server")) strcpy(glDeviceParam.server, val);
-
 	if (!strcmp(name, "interface")) strcpy(glInterface, val);
 	if (!strcmp(name, "slimproto_log")) slimproto_loglevel = debug2level(val);
 	if (!strcmp(name, "stream_log")) stream_loglevel = debug2level(val);
@@ -257,8 +250,6 @@ static void LoadGlobalItem(char *name, char *val)
 	if (!strcmp(name, "slimmain_log")) slimmain_loglevel = debug2level(val);
 	if (!strcmp(name, "raop_log")) raop_loglevel = debug2level(val);
 	if (!strcmp(name, "util_log")) util_loglevel = debug2level(val);
-	if (!strcmp(name, "scan_interval")) glScanInterval = atol(val);
-	if (!strcmp(name, "scan_timeout")) glScanTimeout = atol(val);
 	if (!strcmp(name, "log_limit")) glLogLimit = atol(val);
 	if (!strcmp(name, "exclude_model")) strcpy(glExcluded, val);
 	if (!strcmp(name, "migration")) glMigration = atol(val);

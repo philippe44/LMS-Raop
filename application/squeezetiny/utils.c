@@ -51,7 +51,6 @@
 #include <sys/time.h>
 #endif
 
-
 extern log_level 	util_loglevel;
 #if WIN
 static log_level 	*loglevel = &util_loglevel;
@@ -62,7 +61,7 @@ char *next_param(char *src, char c) {
 	static char *str = NULL;
 	char *ptr, *ret;
 	if (src) str = src;
- 	if (str && (ptr = strchr(str, c))) {
+	if (str && (ptr = strchr(str, c))) {
 		ret = str;
 		*ptr = '\0';
 		str = ptr + 1;
@@ -80,14 +79,11 @@ u32_t gettime_ms(void) {
 	return (u32_t) ((u64_t) (tv.tv_sec + 0x83AA7E80) * 1000 + (u64_t) tv.tv_usec / 1000);
 }
 
-
 u64_t gettime_ms64(void) {
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
 	return (u64_t) (tv.tv_sec + 0x83AA7E80) * 1000 + tv.tv_usec / 1000;
 }
-
-
 
 u64_t timeval_to_ntp(struct timeval tv, struct ntp_s *ntp)
 {
@@ -101,7 +97,6 @@ u64_t timeval_to_ntp(struct timeval tv, struct ntp_s *ntp)
 	return (((__u64) local.seconds) << 32) + local.fraction;
 }
 
-
 u64_t get_ntp(struct ntp_s *ntp)
 {
 	struct timeval ctv;
@@ -109,65 +104,6 @@ u64_t get_ntp(struct ntp_s *ntp)
 	gettimeofday(&ctv, NULL);
 	return timeval_to_ntp(ctv, ntp);
 }
-
-
-#if 0
-// clock
-u32_t gettime_ms(void) {
-#if WIN
-	return GetTickCount();
-#else
-#if LINUX || FREEBSD
-	struct timespec ts;
-	if (!clock_gettime(CLOCK_MONOTONIC, &ts)) {
-		return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
-	}
-#endif
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	return tv.tv_sec * 1000 + tv.tv_usec / 1000;
-#endif
-}
-
-#if WIN
-#if defined(_MSC_VER) || defined(_MSC_EXTENSIONS)
-#define DELTA_EPOCH_IN_MICROSECS  11644473600000000Ui64
-#else
-#define DELTA_EPOCH_IN_MICROSECS  11644473600000000ULL
-#endif
-
-int gettimeofday(struct timeval *tv, struct timezone *tz)
-{
-	FILETIME ft;
-	unsigned __int64 tmpres = 0;
-	static int tzflag;
-
-	if (tv) {
-		GetSystemTimeAsFileTime(&ft);
-
-		tmpres |= ft.dwHighDateTime;
-		tmpres <<= 32;
-		tmpres |= ft.dwLowDateTime;
-
-		/*converting file time to unix epoch*/
-		tmpres /= 10;  /*convert into microseconds*/
-		tmpres -= DELTA_EPOCH_IN_MICROSECS;
-		tv->tv_sec = (long)(tmpres / 1000000UL);
-		tv->tv_usec = (long)(tmpres % 1000000UL);
-	}
-	if (tz) {
-		if (!tzflag) {
-			_tzset();
-			tzflag++;
-		}
-		tz->tz_minuteswest = _timezone / 60;
-		tz->tz_dsttime = _daylight;
-	}
-	return 0;
-}
-#endif
-#endif
-
 
 // mutex wait with timeout
 #if LINUX || FREEBSD
@@ -418,21 +354,8 @@ void set_nosigpipe(sockfd s) {
 }
 #endif
 
+
 #if WIN
-void winsock_init(void) {
-    WSADATA wsaData;
-	WORD wVersionRequested = MAKEWORD(2, 2);
-    int WSerr = WSAStartup(wVersionRequested, &wsaData);
-    if (WSerr != 0) {
-		LOG_ERROR("Bad winsock version", NULL);
-        exit(1);
-    }
-}
-
-void winsock_close(void) {
-	WSACleanup();
-}
-
 void *dlopen(const char *filename, int flag) {
 	SetLastError(0);
 	return LoadLibrary((LPCTSTR)filename);

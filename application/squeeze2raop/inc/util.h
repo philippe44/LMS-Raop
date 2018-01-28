@@ -47,4 +47,8 @@ IXML_Node   *XMLAddNode(IXML_Document *doc, IXML_Node *parent, char *name, char 
 IXML_Node 	*XMLUpdateNode(IXML_Document *doc, IXML_Node *parent, bool refresh, char *name, char *fmt, ...);
 int 		XMLAddAttribute(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...);
 
+void 		winsock_init(void);
+void 		winsock_close(void);
+void 		close_socket(int sd);
+
 #endif

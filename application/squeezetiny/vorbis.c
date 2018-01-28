@@ -255,8 +255,13 @@ static void vorbis_open(u8_t size, u32_t rate, u8_t chan, u8_t endianness, struc
 
 	if (!v) {
 		v = ctx->decode.handle = malloc(sizeof(struct vorbis));
+		if (!v) return;
 		v->opened = false;
 		v->vf = malloc(sizeof(OggVorbis_File) + 128); // add some padding as struct size may be larger
+		if (!v->vf ) {
+			free(v);
+			return;
+		}
 		memset(v->vf, 0, sizeof(OggVorbis_File) + 128);
 	}
 
