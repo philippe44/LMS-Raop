@@ -99,7 +99,7 @@ static u8_t LMSVolumeMap[101] = {
 sq_dev_param_t glDeviceParam = {
 					STREAMBUF_SIZE,
 					OUTPUTBUF_SIZE,
-					"flc,pcm,aif,aac,mp3,ogg",
+					"aac,ogg,flc,aif,pcm,mp3", // magic codec order
 					"?",
 					"",
 					{ 0x00,0x00,0x00,0x00,0x00,0x00 },
