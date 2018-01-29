@@ -116,6 +116,7 @@ void				sq_default_metadata(struct sq_metadata_s *metadata, bool init);
 void 				sq_free_metadata(struct sq_metadata_s *metadata);
 u32_t 				sq_get_time(sq_dev_handle_t handle);
 sq_action_t 		sq_get_mode(sq_dev_handle_t handle);
+void*				sq_get_ptr(sq_dev_handle_t handle);
 
 #endif
 

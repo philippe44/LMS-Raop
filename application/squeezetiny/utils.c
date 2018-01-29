@@ -225,7 +225,7 @@ void set_nonblock(sockfd s) {
 #endif
 }
 
-// connect for socket already set to non blocking with timeout in seconds
+// connect for socket already set to non blocking with timeout in seconds or ms
 int connect_timeout(sockfd sock, const struct sockaddr *addr, socklen_t addrlen, int timeout) {
 	fd_set w, e;
 	struct timeval tval;
@@ -243,8 +243,13 @@ int connect_timeout(sockfd sock, const struct sockaddr *addr, socklen_t addrlen,
 	FD_ZERO(&w);
 	FD_SET(sock, &w);
 	e = w;
-	tval.tv_sec = timeout;
-	tval.tv_usec = 0;
+	if (timeout < 10) {
+		tval.tv_sec = timeout;
+		tval.tv_usec = 0;
+	} else {
+		tval.tv_sec = 0;
+		tval.tv_usec = timeout*1000;
+	}
 
 	// only return 0 if w set and sock error is zero, otherwise return error code
 	if (select(sock + 1, NULL, &w, &e, timeout ? &tval : NULL) == 1 && FD_ISSET(sock, &w)) {
