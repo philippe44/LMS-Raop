@@ -9,7 +9,8 @@ Pre-packaged versions for Windows Linux (x86, x64 and ARM) and OSX can be found 
 
 Support thread is here: http://forums.slimdevices.com/showthread.php?105198-ANNOUNCE-AirPlay-Bridge-integrate-AirPlay-devices-with-LMS-(squeeze2raop)&p=846204&viewfull=1#post846204
 
-======================================================================================
+============================================================================
+
 To re-compile, use makefile (none available for Windows, I use Embarcadero IDE) and add
 
 mDNS query: https://github.com/philippe44/mDNS-SD (use fork v2)
