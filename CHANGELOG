@@ -2,6 +2,7 @@
  - new mDNS discovery for instant player addition / removal
  - memory leak in mad.c when opening an already opened decoder
  - (2) cli_send_comment uses timeout in connect (for freebsd)
+ - (3) mDNS search was wrong, should have no impact on raop (only when fast googlecast group changes)
 
 0.3.3.0
  - (1) volume was sent on trigger even in case of SOFT_VOLUME or initial volume not set

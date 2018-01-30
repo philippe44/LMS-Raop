@@ -576,12 +576,13 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 
 		NFREE(am);
 
-		if (!s->name || excluded) continue;
+		// ignore excluded and announces made on behalf
+		if (!s->name || excluded || s->host.s_addr != s->addr.s_addr) continue;
 
 		// is that device already here
 		if ((Device = SearchUDN(s->name)) != NULL) {
 			// device disconnected
-			if (!s->port && !s->addr.s_addr) {
+			if (s->expired) {
 				LOG_INFO("[%p]: removing renderer (%s)", Device, Device->FriendlyName);
 				if (Device->SqueezeHandle) sq_delete_device(Device->SqueezeHandle);
 				DelRaopDevice(Device);
