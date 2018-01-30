@@ -12,7 +12,7 @@ Support thread is here: http://forums.slimdevices.com/showthread.php?105198-ANNO
 ======================================================================================
 To re-compile, use makefile (none available for Windows, I use Embarcadero IDE) and add
 
-mDNS query: https://github.com/philippe44/mDNS-SD
+mDNS query: https://github.com/philippe44/mDNS-SD (use fork v2)
 
 mDNS announce: https://github.com/philippe44/TinySVCmDNS
 
