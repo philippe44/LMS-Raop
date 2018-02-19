@@ -43,7 +43,7 @@
 #define DISCOVERY_TIME 20
 
 enum { VOLUME_IGNORE = 0, VOLUME_SOFT = 1, VOLUME_HARD = 2};
-enum { VOLUME_FEEDBACK = 1, VOLUME_UNFILTERED = 2};
+enum { VOLUME_FEEDBACK = 1, VOLUME_UNFILTERED = 2, VOLUME_FEEDBACK_IGNORE_MAPPING = 3};
 
 /*----------------------------------------------------------------------------*/
 /* globals 																	  */
@@ -760,6 +760,14 @@ static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s)
 		NFREE(pk);
 	}
 
+    if (am && stristr(am, "AudioAccessory1")) {
+        LOG_INFO("[%p]: Found HomePod", Device);
+        if (Device->Config.VolumeFeedback == VOLUME_FEEDBACK) {
+            LOG_INFO("[%p]: Ignoring volume map for remote volume feedback", Device);
+            Device->Config.VolumeFeedback = VOLUME_FEEDBACK_IGNORE_MAPPING;
+        }
+    }
+
 	NFREE(am);
 
 	if (stristr(s->name, "AirSonos")) {
@@ -1001,9 +1009,9 @@ static void *ActiveRemoteThread(void *args)
 		}
 
 		// handle DMCP commands
-		if (stristr(command, "setproperty?dmcp.device")) {
+		if (stristr(command, "setproperty?dmcp.")) {
 			// player is switched to something else, so require immediate disc
-			if (stristr(command, "-prevent-playback=1")) {
+			if (stristr(command, "device-prevent-playback=1")) {
 				Device->DiscWait = true;
 				sq_notify(Device->SqueezeHandle, Device,
 						!strcasecmp(Device->Config.PreventPlayback, "STOP") ? SQ_STOP : SQ_OFF,
@@ -1011,7 +1019,7 @@ static void *ActiveRemoteThread(void *args)
 			}
 
 			// volume remote command
-			if (stristr(command, "-volume=")) {
+                if (stristr(command, "device-volume=") || stristr(command, "volume=")) {
 				/*
 				 When waiting for a first feedback before sending volume, new
 				 value shall only be sent if volume is HARDWARE or an initial
@@ -1042,7 +1050,13 @@ static void *ActiveRemoteThread(void *args)
 
 					Device->VolumeStamp = gettime_ms();
 					sscanf(command, "%*[^=]=%f", &volume);
-					for (i = 0; i < 100 && volume > Device->VolumeMapping[i]; i++ );
+                    if (Device->Config.VolumeFeedback == VOLUME_FEEDBACK_IGNORE_MAPPING) {
+                        // Remote volume feedback is already in valid range (0.0 to 100.0).
+                        i = (int)volume;
+                    } else {
+                        // Volume feedback is in range -30.0 to 0.0.
+					    for (i = 0; i < 100 && volume > Device->VolumeMapping[i]; i++ );
+                    }
 					sprintf(vol, "%d", i);
 					LOG_INFO("[%p]: volume feedback %s (%.2f)", Device, vol, volume);
 					sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, vol);
