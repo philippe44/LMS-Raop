@@ -988,7 +988,7 @@ static void *ActiveRemoteThread(void *args)
 		if (!strcasecmp(command, "nextitem")) sq_notify(Device->SqueezeHandle, Device, SQ_NEXT, NULL, NULL);
 		if (!strcasecmp(command, "previtem")) sq_notify(Device->SqueezeHandle, Device, SQ_PREVIOUS, NULL, NULL);
 		if (!strcasecmp(command, "volumeup")) sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, "up");
-		if (!strcasecmp(command, "volumedown")) sq_notify(Device->SqueezeHandle, Device, SQ_PREVIOUS, NULL, "down");
+		if (!strcasecmp(command, "volumedown")) sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, "down");
 		if (!strcasecmp(command, "shuffle_songs")) sq_notify(Device->SqueezeHandle, Device, SQ_SHUFFLE, NULL, NULL);
 		if (!strcasecmp(command, "beginff") || !strcasecmp(command, "beginrew")) {
 			Device->SkipStart = gettime_ms();
