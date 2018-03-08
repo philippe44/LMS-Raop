@@ -86,17 +86,6 @@ typedef	struct sq_dev_param_s {
 	} dynamic;
 } sq_dev_param_t;
 
-
-typedef struct
-{
-	u8_t	channels;
-	u8_t	sample_size;
-	u32_t	sample_rate;
-	u8_t	codec;
-	u8_t 	endianness;
-} sq_format_t;
-
-
 struct raopcl_s;
 
 typedef bool (*sq_callback_t)(sq_dev_handle_t handle, void *caller_id, sq_action_t action, void *param);

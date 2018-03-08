@@ -325,7 +325,6 @@ static void BusyDrop(struct sMR *Device);
 			break;
 		}
 		case SQ_CONNECT: {
-			sq_format_t *p = (sq_format_t*) param;
 			tRaopReq *Req = malloc(sizeof(tRaopReq));
 
 			device->sqState = SQ_PLAY;
@@ -335,8 +334,6 @@ static void BusyDrop(struct sMR *Device);
 			QueueInsert(&device->Queue, Req);
 			pthread_cond_signal(&device->Cond);
 
-			LOG_INFO("[%p]: codec:%c, ch:%d, s:%d, r:%d", device, p->codec,
-										p->channels, p->sample_size, p->sample_rate);
 			break;
 		}
 		case SQ_METASEND:
@@ -760,6 +757,12 @@ static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s)
 		NFREE(pk);
 	}
 
+	if (am && stristr(am, "AudioAccessory1")) {
+		int i;
+		LOG_INFO("[%p]: Found HomePod", Device);
+		for (i = 0; i < 101; i++) Device->VolumeMapping[i] = i;
+	} else SetVolumeMapping(Device);
+
 	NFREE(am);
 
 	if (stristr(s->name, "AirSonos")) {
@@ -807,7 +810,6 @@ static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s)
 
 	p = stristr(Device->FriendlyName, ".local");
 	if (p) *p = '\0';
-	SetVolumeMapping(Device);
 
 	LOG_INFO("[%p]: adding renderer (%s)", Device, Device->FriendlyName);
 
@@ -988,7 +990,7 @@ static void *ActiveRemoteThread(void *args)
 		if (!strcasecmp(command, "nextitem")) sq_notify(Device->SqueezeHandle, Device, SQ_NEXT, NULL, NULL);
 		if (!strcasecmp(command, "previtem")) sq_notify(Device->SqueezeHandle, Device, SQ_PREVIOUS, NULL, NULL);
 		if (!strcasecmp(command, "volumeup")) sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, "up");
-		if (!strcasecmp(command, "volumedown")) sq_notify(Device->SqueezeHandle, Device, SQ_PREVIOUS, NULL, "down");
+		if (!strcasecmp(command, "volumedown")) sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, "down");
 		if (!strcasecmp(command, "shuffle_songs")) sq_notify(Device->SqueezeHandle, Device, SQ_SHUFFLE, NULL, NULL);
 		if (!strcasecmp(command, "beginff") || !strcasecmp(command, "beginrew")) {
 			Device->SkipStart = gettime_ms();

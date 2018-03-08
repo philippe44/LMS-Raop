@@ -296,7 +296,8 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 		break;
 	case 's':
 		{
-			sq_format_t	format;
+			u8_t codec, sample_size, channels, endianness;
+			u32_t sample_rate;
 			unsigned header_len = len - sizeof(struct strm_packet);
 			char *header = (char *)(pkt + sizeof(struct strm_packet));
 			in_addr_t ip = (in_addr_t)strm->server_ip; // keep in network byte order
@@ -307,27 +308,36 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 					  ctx, strm->autostart, strm->transition_period, strm->transition_type - '0', strm->format);
 
 			ctx->autostart = strm->autostart - '0';
+
 			sendSTAT("STMf", 0, ctx);
 			if (header_len > MAX_HEADER -1) {
 				LOG_WARN("[%p] header too long: %u", ctx, header_len);
 				break;
 			}
 
-			if (strm->format != 'a')
-				format.sample_size = (strm->pcm_sample_size != '?') ? pcm_sample_size[strm->pcm_sample_size - '0'] : 0xff;
-			else
-				format.sample_size = strm->pcm_sample_size;
-			format.sample_rate = (strm->pcm_sample_rate != '?') ? pcm_sample_rate[strm->pcm_sample_rate - '0'] : 0xff;
-			if (format.sample_rate > ctx->config.sample_rate) {
-				 LOG_WARN("[%p]: Sample rate %u error suspected, forcing to %u", ctx, format.sample_rate, ctx->config.sample_rate);
-				 format.sample_rate = ctx->config.sample_rate;
-			 }
-			format.channels = (strm->pcm_channels != '?') ? pcm_channels[strm->pcm_channels - '1'] : 0xff;
-			format.endianness = (strm->pcm_endianness != '?') ? strm->pcm_endianness - '0' : 0xff;
-			format.codec = strm->format;
+			LOCK_O;
+			ctx->output.threshold = strm->output_threshold;
+			ctx->output.next_replay_gain = unpackN(&strm->replay_gain);
+			ctx->output.fade_mode = strm->transition_type - '0';
+			ctx->output.fade_secs = strm->transition_period;
+			LOG_DEBUG("[%p]: set fade mode: %u", ctx, ctx->output.fade_mode);
+			UNLOCK_O;
 
 			if (strm->format != '?') {
-				codec_open(format.codec, format.sample_size, format.sample_rate, format.channels, format.endianness, ctx);
+				if (strm->format != 'a')
+					sample_size = (strm->pcm_sample_size != '?') ? pcm_sample_size[strm->pcm_sample_size - '0'] : 0xff;
+				else
+					sample_size = strm->pcm_sample_size;
+				sample_rate = (strm->pcm_sample_rate != '?') ? pcm_sample_rate[strm->pcm_sample_rate - '0'] : 0xff;
+				if (sample_rate > ctx->config.sample_rate) {
+					 LOG_WARN("[%p]: Sample rate %u error suspected, forcing to %u", ctx, sample_rate, ctx->config.sample_rate);
+					 sample_rate = ctx->config.sample_rate;
+				}
+				channels = (strm->pcm_channels != '?') ? pcm_channels[strm->pcm_channels - '1'] : 0xff;
+				endianness = (strm->pcm_endianness != '?') ? strm->pcm_endianness - '0' : 0xff;
+				codec = strm->format;
+				codec_open(codec, sample_size, sample_rate, channels, endianness, ctx);
+				LOG_INFO("[%p]: codec:%c, ch:%d, s:%d, r:%d", ctx, codec, channels, sample_size,sample_rate);
 			} else if (ctx->autostart >= 2) {
 				// extension to slimproto to allow server to detect codec from response header and send back in codc message
 				LOG_WARN("[%p] streaming unknown codec", ctx);
@@ -337,19 +347,12 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			}
 
 			// TODO: must be changed if one day direct streaming is enabled
-			ctx_callback(ctx, SQ_CONNECT, &format);
+			ctx_callback(ctx, SQ_CONNECT, NULL);
 
 			stream_sock(ip, port, header, header_len, strm->threshold * 1024, ctx->autostart >= 2, ctx);
 
 			sendSTAT("STMc", 0, ctx);
 			ctx->sentSTMu = ctx->sentSTMo = ctx->sentSTMl = ctx->sentSTMd = false;
-			LOCK_O;
-			ctx->output.threshold = strm->output_threshold;
-			ctx->output.next_replay_gain = unpackN(&strm->replay_gain);
-			ctx->output.fade_mode = strm->transition_type - '0';
-			ctx->output.fade_secs = strm->transition_period;
-			LOG_DEBUG("[%p]: set fade mode: %u", ctx, ctx->output.fade_mode);
-			UNLOCK_O;
 		}
 		break;
 	default:
@@ -383,18 +386,19 @@ static void process_cont(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 /*---------------------------------------------------------------------------*/
 static void process_codc(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	struct codc_packet *codc = (struct codc_packet *)pkt;
-	sq_format_t	format;
+	u8_t codec, sample_size, channels, endianness;
+	u32_t sample_rate;
 
 	if (codc->format != 'a')
-		format.sample_size = (codc->pcm_sample_size != '?') ? pcm_sample_size[codc->pcm_sample_size - '0'] : 0xff;
+		sample_size = (codc->pcm_sample_size != '?') ? pcm_sample_size[codc->pcm_sample_size - '0'] : 0xff;
 	else
-		format.sample_size = codc->pcm_sample_size;
-	format.sample_rate = (codc->pcm_sample_rate != '?') ? pcm_sample_rate[codc->pcm_sample_rate - '0'] : 0xff;
-	format.channels = (codc->pcm_channels != '?') ? pcm_channels[codc->pcm_channels - '1'] : 0xff;
-	format.endianness = (codc->pcm_endianness != '?') ? codc->pcm_channels - '0' : 0xff;
-	format.codec = codc->format;
+		sample_size = codc->pcm_sample_size;
+	sample_rate = (codc->pcm_sample_rate != '?') ? pcm_sample_rate[codc->pcm_sample_rate - '0'] : 0xff;
+	channels = (codc->pcm_channels != '?') ? pcm_channels[codc->pcm_channels - '1'] : 0xff;
+	endianness = (codc->pcm_endianness != '?') ? codc->pcm_channels - '0' : 0xff;
+	codec = codc->format;
 
-	codec_open(format.codec, format.sample_size, format.sample_rate, format.channels, format.endianness, ctx);
+	codec_open(codec, sample_size, sample_rate, channels, endianness, ctx);
 
 	LOG_DEBUG("[%p] codc: %c", ctx, codc->format);
 }
