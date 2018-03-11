@@ -36,7 +36,7 @@
 	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_LOGGING" desc="PLUGIN_RAOPBRIDGE_LOGGING_DESC" %]
 		<input name="logging" type="checkbox" [% IF logging %] checked [% END %]>&nbsp[% "PLUGIN_RAOPBRIDGE_LOGENABLE" | string %]
 		&nbsp<a href="[% webroot %]raopbridge-log.log" target="log">[% "PLUGIN_RAOPBRIDGE_LOGLINK" | string %]</a>
-		&nbsp[% "PLUGIN_RAOPBRIDGE_LOGSIZE" | string %]&nbsp<input type="text" class="stdedit" name="log_limit" id="log_limit" value="[% log_limit %]" size="2"> 
+		&nbsp[% "PLUGIN_RAOPBRIDGE_LOGSIZE" | string %]&nbsp<input [% IF !xmlparams %] disabled [% END %] type="text" class="stdedit" name="log_limit" id="log_limit" value="[% log_limit %]" size="2"> 
 		&nbsp<input name="eraselog" type="checkbox" [% IF eraselog %] checked [% END %]>&nbsp[% "PLUGIN_RAOPBRIDGE_ERASELOG" | string %]
 		&nbsp<input name="cleanlog" type="submit" value=[% "PLUGIN_RAOPBRIDGE_CLEANLOG" | string %]> 
 	[% END %]
@@ -51,6 +51,11 @@
 		&nbsp<input name="delconfig" type="submit" value=[% "PLUGIN_RAOPBRIDGE_DELCONFIG" | string %]>
 	[% END %]
 	
+	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_INTERFACE" desc="PLUGIN_RAOPBRIDGE_INTERFACE_DESC" %]
+		<input [% IF useLMSsocket || !xmlparams %] disabled [% END %] type="text" class="stdedit" name="interface" id="interface" value="[% interface %]" size="20">
+		&nbsp<input name="useLMSsocket" type="checkbox" [% IF useLMSsocket %] checked [% END %]>&nbsp[% "PLUGIN_RAOPBRIDGE_USELMSSOCKET" | string %]
+	[% END %]
+	
 	[% IF !xmlparams %]
 		[% WRAPPER settingSection %]
 			<b><font color=red>[% "PLUGIN_RAOPBRIDGE_NOCONFIG" | string %]</font></b>
@@ -59,11 +64,6 @@
 	
 	<input hidden type="text" class="stdedit" name="xmlparams" id="xmlparams" value="1" size="5">
 	<input hidden type="text" class="stdedit" name="prevseldevice" id="prevseldevice" value="[% prevseldevice %]" size="5">
-	
-	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_INTERFACE" desc="PLUGIN_RAOPBRIDGE_INTERFACE_DESC" %]
-		<input [% IF useLMSsocket %] disabled [% END %] type="text" class="stdedit" name="interface" id="interface" value="[% interface %]" size="20">
-		&nbsp<input name="useLMSsocket" type="checkbox" [% IF useLMSsocket %] checked [% END %]>&nbsp[% "PLUGIN_RAOPBRIDGE_USELMSSOCKET" | string %]
-	[% END %]
 	
 	<hr>
 
