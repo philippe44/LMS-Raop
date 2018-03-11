@@ -1551,7 +1551,7 @@ int main(int argc, char *argv[])
 				printf("%20.20s [r:%u] [l:%u] [sq:%u] [%s:%u] [mw:%u] [f:%u] [%p::%p]\n",
 						p->Config.Name, p->Running, Locked, p->sqState,
 						inet_ntoa(p->PlayerIP), p->PlayerPort, p->MetadataWait,
-						(now - p->LastFlush)/1000, "",
+						(now - p->LastFlush)/1000,
 						p, sq_get_ptr(p->SqueezeHandle));
 			}
 		}

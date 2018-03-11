@@ -90,11 +90,11 @@ u64_t timeval_to_ntp(struct timeval tv, struct ntp_s *ntp)
 	struct ntp_s local;
 
 	local.seconds  = tv.tv_sec + 0x83AA7E80;
-	local.fraction = (((__u64) tv.tv_usec) << 32) / 1000000;
+	local.fraction = (((u64_t) tv.tv_usec) << 32) / 1000000;
 
 	if (ntp) *ntp = local;
 
-	return (((__u64) local.seconds) << 32) + local.fraction;
+	return (((u64_t) local.seconds) << 32) + local.fraction;
 }
 
 u64_t get_ntp(struct ntp_s *ntp)

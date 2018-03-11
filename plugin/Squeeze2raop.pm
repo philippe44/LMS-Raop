@@ -28,6 +28,9 @@ sub binaries {
 		if ($os->{'binArch'} =~ /i386/) {
 			return qw(squeeze2raop-x86 squeeze2raop-x86-static);
 		}
+		if ($os->{'osArch'} =~ /aarch64/) {
+			return qw(squeeze2raop-aarch64 squeeze2raop-aarch64_static squeeze2raop-armv6hf squeeze2raop-armv6hf-static);
+		}
 		if ($os->{'binArch'} =~ /armhf/) {
 			return qw(squeeze2raop-armv6hf squeeze2raop-armv6hf-static);
 		}
@@ -36,7 +39,7 @@ sub binaries {
 		}
 		
 		# fallback to offering all linux options for case when architecture detection does not work
-		return qw(squeeze2raop-x86-64 squeeze2raop-x86-64-static squeeze2raop-x86 squeeze2raop-x86-static squeeze2raop-armv6hf squeeze2raop-armv6hf-static);
+		return qw(squeeze2raop-x86-64 squeeze2raop-x86-64-static squeeze2raop-x86 squeeze2raop-x86-static squeeze2raop-armv6hf squeeze2raop-armv6hf-static squeeze2raop-aarch64 squeeze2raop-aarch64_static);
 	}
 	
 	if ($os->{'os'} eq 'Darwin') {

@@ -431,7 +431,6 @@ void output_close_common(struct thread_ctx_s *ctx);
 // output_pack.c
 void _scale_frames(s16_t *outputptr, s16_t *inputptr, frames_t cnt, s32_t gainL, s32_t gainR);
 void _apply_cross(struct buffer *outputbuf, frames_t out_frames, s32_t cross_gain_in, s32_t cross_gain_out, s16_t **cross_ptr);
-inline s16_t gain(s32_t gain, s16_t sample);
 s32_t gain32(s32_t gain, s32_t value);
 s32_t to_gain(float f);
 

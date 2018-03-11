@@ -6,6 +6,9 @@
  - (4) MAX_CODECS was not set to 6 (no impact as MPG was not used)
  - (4) no volume mapping for HomePod
  - (4) VOLUME_DOWN command was wrong
+ - (5) add aarch64
+ - (5) unified standard types definition
+ - (5) dump command was using an extra parameter
 
 0.3.3.0
  - (1) volume was sent on trigger even in case of SOFT_VOLUME or initial volume not set
