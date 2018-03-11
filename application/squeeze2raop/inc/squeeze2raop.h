@@ -92,7 +92,7 @@ struct sMR {
 	s8_t			Volume;
 	u32_t			VolumeStamp;
 	float 			VolumeMapping[101];
-	bool			VolumeReady;
+	bool			VolumeReady, VolumeBackMap;
 	u8_t			VolumeReadyWait;
 	struct raopcl_s	*Raop;
 	struct in_addr 	PlayerIP;

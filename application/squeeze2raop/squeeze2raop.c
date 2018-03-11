@@ -758,10 +758,9 @@ static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s)
 	}
 
 	if (am && stristr(am, "AudioAccessory1")) {
-		int i;
 		LOG_INFO("[%p]: Found HomePod", Device);
-		for (i = 0; i < 101; i++) Device->VolumeMapping[i] = i;
-	} else SetVolumeMapping(Device);
+		Device->VolumeBackMap = false;
+	} else Device->VolumeBackMap = true;
 
 	NFREE(am);
 
@@ -803,6 +802,7 @@ static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s)
 	Device->Delete			= 0;
 
 	memset(Device->ActiveRemote, 0, 16);
+	SetVolumeMapping(Device);
 
 	strcpy(Device->UDN, s->name);
 	sprintf(Device->ActiveRemote, "%u", hash32(Device->UDN));
@@ -1044,7 +1044,8 @@ static void *ActiveRemoteThread(void *args)
 
 					Device->VolumeStamp = gettime_ms();
 					sscanf(command, "%*[^=]=%f", &volume);
-					for (i = 0; i < 100 && volume > Device->VolumeMapping[i]; i++ );
+					if (!Device->VolumeBackMap) i = (int) volume;
+					else for (i = 0; i < 100 && volume > Device->VolumeMapping[i]; i++);
 					sprintf(vol, "%d", i);
 					LOG_INFO("[%p]: volume feedback %s (%.2f)", Device, vol, volume);
 					sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, vol);
