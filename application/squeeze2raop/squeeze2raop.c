@@ -1012,7 +1012,7 @@ static void *ActiveRemoteThread(void *args)
 				setproperty?dmcp.volume=0..100
 				setproperty?dmcp.device-volume=-30..0 (or -144)
 			*/
-			if (stristr(command, "device-volume=") || stristr(command, "device.volume=")) {
+			if (stristr(command, "device-volume=") || stristr(command, ".volume=")) {
 				/*
 				 When waiting for a first feedback before sending volume, new
 				 value shall only be sent if volume is HARDWARE or an initial
@@ -1043,7 +1043,7 @@ static void *ActiveRemoteThread(void *args)
 
 					Device->VolumeStamp = gettime_ms();
 					sscanf(command, "%*[^=]=%f", &volume);
-					if (stristr(command, "device.volume=")) i = (int) volume;
+					if (stristr(command, ".volume=")) i = (int) volume;
 					else for (i = 0; i < 100 && volume > Device->VolumeMapping[i]; i++);
 					sprintf(vol, "%d", i);
 					LOG_INFO("[%p]: volume feedback %s (%.2f)", Device, vol, volume);
