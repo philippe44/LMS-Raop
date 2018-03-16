@@ -757,11 +757,6 @@ static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s)
 		NFREE(pk);
 	}
 
-	if (am && stristr(am, "AudioAccessory1")) {
-		LOG_INFO("[%p]: Found HomePod", Device);
-		Device->VolumeBackMap = false;
-	} else Device->VolumeBackMap = true;
-
 	NFREE(am);
 
 	if (stristr(s->name, "AirSonos")) {
@@ -1003,17 +998,21 @@ static void *ActiveRemoteThread(void *args)
 		}
 
 		// handle DMCP commands
-		if (stristr(command, "setproperty?dmcp.device")) {
+		if (stristr(command, "setproperty?dmcp")) {
 			// player is switched to something else, so require immediate disc
-			if (stristr(command, "-prevent-playback=1")) {
+			if (stristr(command, "device-prevent-playback=1")) {
 				Device->DiscWait = true;
 				sq_notify(Device->SqueezeHandle, Device,
 						!strcasecmp(Device->Config.PreventPlayback, "STOP") ? SQ_STOP : SQ_OFF,
 						NULL, NULL);
 			}
 
-			// volume remote command
-			if (stristr(command, "-volume=")) {
+			/*
+			 volume remote command in 2 formats
+				setproperty?dmcp.volume=0..100
+				setproperty?dmcp.device-volume=-30..0 (or -144)
+			*/
+			if (stristr(command, "device-volume=") || stristr(command, "device.volume=")) {
 				/*
 				 When waiting for a first feedback before sending volume, new
 				 value shall only be sent if volume is HARDWARE or an initial
@@ -1044,7 +1043,7 @@ static void *ActiveRemoteThread(void *args)
 
 					Device->VolumeStamp = gettime_ms();
 					sscanf(command, "%*[^=]=%f", &volume);
-					if (!Device->VolumeBackMap) i = (int) volume;
+					if (stristr(command, "device.volume=")) i = (int) volume;
 					else for (i = 0; i < 100 && volume > Device->VolumeMapping[i]; i++);
 					sprintf(vol, "%d", i);
 					LOG_INFO("[%p]: volume feedback %s (%.2f)", Device, vol, volume);
