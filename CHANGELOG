@@ -11,6 +11,7 @@
  - (5) dump command was using an extra parameter
  - (8) proper handling of HomePod volume feedback scale (using a different dmcp request)
  - (9) support stereo pairs
+ - (10) in stereo pairs, do not only mute inactive channel, but copy other channel and add -3dB gain
 
 0.3.3.0
  - (1) volume was sent on trigger even in case of SOFT_VOLUME or initial volume not set

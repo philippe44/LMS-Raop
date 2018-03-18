@@ -55,9 +55,23 @@ s32_t to_gain(float f) {
 /*---------------------------------------------------------------------------*/
 void _scale_frames(s16_t *outputptr, s16_t *inputptr, frames_t count, s32_t gainL, s32_t gainR)
 {
-	if (gainL == FIXED_ONE && gainR == FIXED_ONE)
+	if (gainL == FIXED_ONE && gainR == FIXED_ONE) {
 		memcpy(outputptr, inputptr, count * BYTES_PER_FRAME);
-	else {
+	} else if (gainL == MONO_MUTED) {
+		gainR /= 2;
+		while (count--) {
+			inputptr++;
+			*(outputptr + 1) = *outputptr = gain(gainR, *inputptr++);
+			outputptr += 2;
+		}
+	} else if (gainR == MONO_MUTED) {
+		gainL /= 2;
+		while (count--) {
+			*(outputptr + 1) = *outputptr = gain(gainL, *inputptr++);
+			inputptr++;
+			outputptr += 2;
+		}
+   } else {
 		while (count--) {
 			*outputptr++ = gain(gainL, *inputptr++);
 			*outputptr++ = gain(gainR, *inputptr++);

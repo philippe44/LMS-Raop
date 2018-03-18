@@ -199,7 +199,8 @@ struct wake {
 #endif
 
 #define MAX_SILENCE_FRAMES FRAMES_PER_BLOCK 		// 352 for RAOP protocol
-#define FIXED_ONE 0x10000
+#define FIXED_ONE  0x10000
+#define MONO_MUTED 0xFFFFFFFF
 
 #define BYTES_PER_FRAME 4
 
