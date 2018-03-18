@@ -193,6 +193,9 @@ frames_t _output_frames(frames_t avail, struct thread_ctx_s *ctx) {
 
 		out_frames = !silence ? min(size, cont_frames) : size;
 
+		if (ctx->output.channels & 0x01) gainR = 0;
+		else if (ctx->output.channels & 0x02) gainL = 0;
+
 		wrote = ctx->output.write_cb(ctx, out_frames, silence, gainL, gainR, cross_gain_in, cross_gain_out, &cross_ptr);
 
 		if (wrote <= 0) {

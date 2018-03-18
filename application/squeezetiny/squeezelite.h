@@ -413,6 +413,7 @@ struct outputstate {
 	bool delay_active;
 	int buf_frames;
 	u8_t *buf;
+	u8_t channels;
 };
 
 void output_init(const char *device, unsigned output_buf_size, unsigned rates[], struct thread_ctx_s *ctx);

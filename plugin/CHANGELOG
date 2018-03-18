@@ -9,6 +9,8 @@
  - (5) add aarch64
  - (5) unified standard types definition
  - (5) dump command was using an extra parameter
+ - (8) proper handling of HomePod volume feedback scale (using a different dmcp request)
+ - (9) support stereo pairs
 
 0.3.3.0
  - (1) volume was sent on trigger even in case of SOFT_VOLUME or initial volume not set

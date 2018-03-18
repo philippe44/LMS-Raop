@@ -320,6 +320,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			ctx->output.next_replay_gain = unpackN(&strm->replay_gain);
 			ctx->output.fade_mode = strm->transition_type - '0';
 			ctx->output.fade_secs = strm->transition_period;
+			ctx->output.channels = (strm->flags >> 2) & 0x03;
 			LOG_DEBUG("[%p]: set fade mode: %u", ctx, ctx->output.fade_mode);
 			UNLOCK_O;
 
