@@ -12,6 +12,7 @@
  - (8) proper handling of HomePod volume feedback scale (using a different dmcp request)
  - (9) support stereo pairs
  - (10) in stereo pairs, do not only mute inactive channel, but copy other channel
+ - (11) does not notify volume if it has not changed
 
 0.3.3.0
  - (1) volume was sent on trigger even in case of SOFT_VOLUME or initial volume not set

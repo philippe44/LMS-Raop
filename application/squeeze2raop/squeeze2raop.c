@@ -1038,16 +1038,18 @@ static void *ActiveRemoteThread(void *args)
 				*/
 				} else if (Device->Config.VolumeMode != VOLUME_SOFT && Device->Config.VolumeFeedback) {
 					float volume;
-					char vol[10];
 					int i;
 
 					Device->VolumeStamp = gettime_ms();
 					sscanf(command, "%*[^=]=%f", &volume);
 					if (stristr(command, ".volume=")) i = (int) volume;
 					else for (i = 0; i < 100 && volume > Device->VolumeMapping[i]; i++);
-					sprintf(vol, "%d", i);
-					LOG_INFO("[%p]: volume feedback %s (%.2f)", Device, vol, volume);
-					sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, vol);
+					LOG_INFO("[%p]: volume feedback %u (%.2f)", Device, i, volume);
+					if (i != Device->Volume) {
+						char vol[10];
+						sprintf(vol, "%d", i);
+						sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, vol);
+					}
 				}
 			}
 		}
