@@ -489,6 +489,33 @@ u32_t sq_get_time(sq_dev_handle_t handle)
 	return time;
 }
 
+
+/*---------------------------------------------------------------------------*/
+bool sq_set_time(sq_dev_handle_t handle, char *pos)
+{
+	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
+	char cmd[128];
+	char *rsp;
+
+	if (!handle || !ctx->in_use) {
+		LOG_ERROR("[%p]: no handle or cli socket %d", ctx, handle);
+		return false;
+	}
+
+	sprintf(cmd, "%s time %s", ctx->cli_id, pos);
+	LOG_INFO("[%p] time cmd %s", ctx, cmd);
+
+	rsp = cli_send_cmd(cmd, false, true, ctx);
+	if (!rsp) {
+		LOG_ERROR("[%p] cannot settime %d", ctx, time);
+		return false;
+	}
+
+	NFREE(rsp);
+	return true;
+}
+
+
 /*--------------------------------------------------------------------------*/
 void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *cookie, void *param)
 {
@@ -533,7 +560,8 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 			break;
 		}
 		case SQ_PREVIOUS: {
-			sprintf(cmd, "%s playlist index -1", ctx->cli_id);
+			//sprintf(cmd, "%s playlist index -1", ctx->cli_id);
+			sprintf(cmd, "%s button jump_rew", ctx->cli_id);
 			break;
 		}
 		case SQ_NEXT: {

@@ -13,6 +13,7 @@
  - (9) support stereo pairs
  - (10) in stereo pairs, do not only mute inactive channel, but copy other channel
  - (11) does not notify volume if it has not changed
+ - When usign AirPlay remote, "previous" command uses "button" instead of "playlist index" to restart at 0 or go to previous track, depnding how early "previous" is requested
 
 0.3.3.0
  - (1) volume was sent on trigger even in case of SOFT_VOLUME or initial volume not set
