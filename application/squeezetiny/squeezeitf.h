@@ -58,14 +58,12 @@ typedef struct sq_metadata_s {
 	char *album;
 	char *title;
 	char *genre;
-	char *path;
 	char *artwork;
 	u32_t index;
 	u32_t track;
 	u32_t duration;
 	u32_t file_size;
 	bool  remote;
-	u32_t track_hash;
 } sq_metadata_t;
 
 typedef	struct sq_dev_param_s {

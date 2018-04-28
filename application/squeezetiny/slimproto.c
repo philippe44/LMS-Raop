@@ -897,7 +897,7 @@ void slimproto_close(struct thread_ctx_s *ctx) {
 	LOG_INFO("[%p] slimproto stop for %s", ctx, ctx->config.name);
   	ctx->running = false;
 	wake_controller(ctx);
-	pthread_detach(ctx->thread);
+	pthread_join(ctx->thread, NULL);
 }
 
 
