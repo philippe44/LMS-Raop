@@ -1,7 +1,8 @@
-0.4.0.1.1
+0.4.0.1
  - (1) slimproto_close must join thread, not detach it otherwise other _close function might destroy buffer mutexes
  - (1) move to "status" cmd query to have only a single query for all metadata
  - (1) metadata path and track_has removed
+ - (2) duration in metadata for raop shall not be adjusted by current position 
 
 0.4.0.0
  - new mDNS discovery for instant player addition / removal
