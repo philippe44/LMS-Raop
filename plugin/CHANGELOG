@@ -3,6 +3,7 @@
  - (1) move to "status" cmd query to have only a single query for all metadata
  - (1) metadata path and track_has removed
  - (2) duration in metadata for raop shall not be adjusted by current position 
+ - add crypto libs for Perl 5.22 (aarch64) and Perl 5.26 (all except osx)
 
 0.4.0.0
  - new mDNS discovery for instant player addition / removal
