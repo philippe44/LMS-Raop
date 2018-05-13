@@ -1195,7 +1195,10 @@ static bool Start(void)
 	LOG_INFO("Binding to %s", inet_ntoa(glHost));
 
 	/* start the mDNS devices discovery thread */
-	glmDNSsearchHandle = init_mDNS(false, glHost);
+	if ((glmDNSsearchHandle = init_mDNS(false, glHost)) == NULL) {;
+		LOG_ERROR("Cannot start mDNS searcher", NULL);
+		return false;
+	}
 	pthread_create(&glmDNSsearchThread, NULL, &mDNSsearchThread, NULL);
 
 	// Start the ActiveRemote server

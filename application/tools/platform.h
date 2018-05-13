@@ -114,8 +114,7 @@ typedef __int64 s64_t;
 
 int gettimeofday(struct timeval *tv, struct timezone *tz);
 
-//#define poll(fds,numfds,timeout) WSAPoll(fds,numfds,timeout)
-#define usleep(x) Sleep((x)/1000)
+#define usleep(x) Sleep((x)/1000)
 #define sleep(x) Sleep((x)*1000)
 #define last_error() WSAGetLastError()
 #define ERROR_WOULDBLOCK WSAEWOULDBLOCK
