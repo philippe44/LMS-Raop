@@ -4,19 +4,12 @@ package Crypt::Mac::BLAKE2s;
 
 use strict;
 use warnings;
-our $VERSION = '0.048';
+our $VERSION = '0.060';
 
 use base qw(Crypt::Mac Exporter);
 our %EXPORT_TAGS = ( all => [qw( blake2s blake2s_hex blake2s_b64 blake2s_b64u )] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw();
-
-use CryptX;
-sub new { my $class = shift; _new(@_) }
-sub blake2s { Crypt::Mac::BLAKE2s->new(shift, shift)->add(@_)->mac }
-sub blake2s_hex  { Crypt::Mac::BLAKE2s->new(shift, shift)->add(@_)->hexmac }
-sub blake2s_b64  { Crypt::Mac::BLAKE2s->new(shift, shift)->add(@_)->b64mac }
-sub blake2s_b64u { Crypt::Mac::BLAKE2s->new(shift, shift)->add(@_)->b64umac }
 
 1;
 
@@ -147,10 +140,8 @@ Logically joins all arguments into a single string, and returns its BLAKE2s mess
 
 =item * L<CryptX|CryptX>
 
-=item * L<https://tools.ietf.org/html/rfc7693|https://tools.ietf.org/html/rfc7693>
+=item * L<https://tools.ietf.org/html/rfc7693>
 
 =back
 
 =cut
-
-__END__

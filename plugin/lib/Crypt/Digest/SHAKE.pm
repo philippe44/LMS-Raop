@@ -2,13 +2,11 @@ package Crypt::Digest::SHAKE;
 
 use strict;
 use warnings;
-our $VERSION = '0.048';
+our $VERSION = '0.060';
 
 use Carp;
 $Carp::Internal{(__PACKAGE__)}++;
 use CryptX;
-
-sub new { my $class = shift; _new(@_) }
 
 sub addfile {
   my ($self, $file) = @_;
@@ -102,5 +100,3 @@ Provides an interface to the SHA3's sponge function SHAKE.
 =back
 
 =cut
-
-__END__

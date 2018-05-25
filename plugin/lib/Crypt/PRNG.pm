@@ -2,41 +2,16 @@ package Crypt::PRNG;
 
 use strict;
 use warnings;
-our $VERSION = '0.048';
+our $VERSION = '0.060';
 
-use base qw(Exporter);
+require Exporter; our @ISA = qw(Exporter); ### use Exporter 'import';
 our %EXPORT_TAGS = ( all => [qw(random_bytes random_bytes_hex random_bytes_b64 random_bytes_b64u random_string random_string_from rand irand)] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw();
 
-#BEWARE: cannot use Crypt::Misc qw(encode_b64 encode_b64u);
+use Carp;
+$Carp::Internal{(__PACKAGE__)}++;
 use CryptX;
-
-sub _trans_prng_name {
-  my $name = shift;
-  $name =~ s/^Crypt::PRNG:://;
-  return lc($name);
-}
-
-### METHODS
-
-sub new {
-  my $pkg = shift;
-  my $prng_name = $pkg eq __PACKAGE__ ? _trans_prng_name(shift||'ChaCha20') : _trans_prng_name($pkg);
-  return _new($$, $prng_name, @_);
-}
-
-sub bytes  { return shift->_bytes($$, shift) }
-
-sub int32  { return shift->_int32($$) }
-
-sub double { return shift->_double($$, shift) }
-
-sub bytes_hex { return unpack("H*", shift->bytes(shift)) }
-
-sub bytes_b64 { return CryptX::_encode_base64(shift->bytes(shift)) }
-
-sub bytes_b64u { return CryptX::_encode_base64url(shift->bytes(shift)) }
 
 sub string {
   my ($self, $len) = @_;
@@ -53,7 +28,7 @@ sub string_from {
   my @ch = split(//, $chars);
   my $max_index = $#ch;
   return if $max_index > 65535;
-  
+
   my $mask;
   for my $n (1..31) {
     $mask = (1<<$n) - 1;
@@ -193,13 +168,13 @@ Similar to random_string_from, only C<$range> is fixed to C<'ABCDEFGHIJKLMNOPQRS
    #or
    $n = rand($limit);
 
-Returns a random floating point number from range C<[0,1)> (if called without param) or C<[0,$limit)>.
+Returns a random floating point number from range C<[0,1)> (if called without parameter) or C<[0,$limit)>.
 
 =head2 irand
 
    $i = irand;
 
-Returns a random unsigned 32bit integer - range 0 .. 0xFFFFFFFF.
+Returns a random unsigned 32bit integer - range C<0 .. 0xFFFFFFFF>.
 
 =head1 METHODS
 
@@ -281,3 +256,5 @@ See L<irand|/irand>
 =head1 SEE ALSO
 
 L<Crypt::PRNG::Fortuna>, L<Crypt::PRNG::RC4>, L<Crypt::PRNG::Sober128>, L<Crypt::PRNG::Yarrow>
+
+=cut

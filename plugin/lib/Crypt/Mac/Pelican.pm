@@ -4,19 +4,12 @@ package Crypt::Mac::Pelican;
 
 use strict;
 use warnings;
-our $VERSION = '0.048';
+our $VERSION = '0.060';
 
 use base qw(Crypt::Mac Exporter);
 our %EXPORT_TAGS = ( all => [qw( pelican pelican_hex pelican_b64 pelican_b64u )] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw();
-
-use CryptX;
-sub new { my $class = shift; _new(@_) }
-sub pelican { Crypt::Mac::Pelican->new(shift)->add(@_)->mac }
-sub pelican_hex  { Crypt::Mac::Pelican->new(shift)->add(@_)->hexmac }
-sub pelican_b64  { Crypt::Mac::Pelican->new(shift)->add(@_)->b64mac }
-sub pelican_b64u { Crypt::Mac::Pelican->new(shift)->add(@_)->b64umac }
 
 1;
 
@@ -147,10 +140,8 @@ Logically joins all arguments into a single string, and returns its Pelican mess
 
 =item * L<CryptX|CryptX>
 
-=item * L<http://eprint.iacr.org/2005/088.pdf|http://eprint.iacr.org/2005/088.pdf>
+=item * L<http://eprint.iacr.org/2005/088.pdf>
 
 =back
 
 =cut
-
-__END__

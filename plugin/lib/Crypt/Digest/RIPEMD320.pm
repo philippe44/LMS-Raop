@@ -4,7 +4,7 @@ package Crypt::Digest::RIPEMD320;
 
 use strict;
 use warnings;
-our $VERSION = '0.048';
+our $VERSION = '0.060';
 
 use base qw(Crypt::Digest Exporter);
 our %EXPORT_TAGS = ( all => [qw( ripemd320 ripemd320_hex ripemd320_b64 ripemd320_b64u ripemd320_file ripemd320_file_hex ripemd320_file_b64 ripemd320_file_b64u )] );
@@ -13,19 +13,17 @@ our @EXPORT = qw();
 
 use Carp;
 $Carp::Internal{(__PACKAGE__)}++;
-use CryptX;
+use Crypt::Digest;
 
-sub hashsize { Crypt::Digest::hashsize(__PACKAGE__) }
-
-sub ripemd320             { Crypt::Digest::digest_data(__PACKAGE__, @_) }
-sub ripemd320_hex         { Crypt::Digest::digest_data_hex(__PACKAGE__, @_) }
-sub ripemd320_b64         { Crypt::Digest::digest_data_b64(__PACKAGE__, @_) }
-sub ripemd320_b64u        { Crypt::Digest::digest_data_b64u(__PACKAGE__, @_) }
-
-sub ripemd320_file        { Crypt::Digest::digest_file(__PACKAGE__, @_) }
-sub ripemd320_file_hex    { Crypt::Digest::digest_file_hex(__PACKAGE__, @_) }
-sub ripemd320_file_b64    { Crypt::Digest::digest_file_b64(__PACKAGE__, @_) }
-sub ripemd320_file_b64u   { Crypt::Digest::digest_file_b64u(__PACKAGE__, @_) }
+sub hashsize                { Crypt::Digest::hashsize('RIPEMD320')             }
+sub ripemd320             { Crypt::Digest::digest_data('RIPEMD320', @_)      }
+sub ripemd320_hex         { Crypt::Digest::digest_data_hex('RIPEMD320', @_)  }
+sub ripemd320_b64         { Crypt::Digest::digest_data_b64('RIPEMD320', @_)  }
+sub ripemd320_b64u        { Crypt::Digest::digest_data_b64u('RIPEMD320', @_) }
+sub ripemd320_file        { Crypt::Digest::digest_file('RIPEMD320', @_)      }
+sub ripemd320_file_hex    { Crypt::Digest::digest_file_hex('RIPEMD320', @_)  }
+sub ripemd320_file_b64    { Crypt::Digest::digest_file_b64('RIPEMD320', @_)  }
+sub ripemd320_file_b64u   { Crypt::Digest::digest_file_b64u('RIPEMD320', @_) }
 
 1;
 
@@ -216,12 +214,10 @@ The OO interface provides the same set of functions as L<Crypt::Digest>.
 
 =over
 
-=item * L<CryptX|CryptX>, L<Crypt::Digest|Crypt::Digest>
+=item * L<CryptX|CryptX>, L<Crypt::Digest>
 
-=item * L<http://en.wikipedia.org/wiki/RIPEMD|http://en.wikipedia.org/wiki/RIPEMD>
+=item * L<https://en.wikipedia.org/wiki/RIPEMD>
 
 =back
 
 =cut
-
-__END__

@@ -2,60 +2,16 @@ package Crypt::KeyDerivation;
 
 use strict;
 use warnings;
-our $VERSION = '0.048';
+our $VERSION = '0.060';
 
 require Exporter; our @ISA = qw(Exporter); ### use Exporter 'import';
 our %EXPORT_TAGS = ( all => [qw(pbkdf1 pbkdf2 hkdf hkdf_expand hkdf_extract)] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw();
 
+use Carp;
+$Carp::Internal{(__PACKAGE__)}++;
 use CryptX;
-use Crypt::Digest;
-
-sub pbkdf1 {
-  my ($password, $salt, $iteration_count, $hash_name, $len) = @_;
-  $iteration_count ||= 5000;
-  $hash_name = Crypt::Digest::_trans_digest_name($hash_name||'SHA256');
-  $len ||= 32;
-  return _pkcs_5_alg1($password, $salt, $iteration_count, $hash_name, $len);
-}
-
-sub pbkdf2 {
-  my ($password, $salt, $iteration_count, $hash_name, $len) = @_;
-  $iteration_count ||= 5000;
-  $hash_name = Crypt::Digest::_trans_digest_name($hash_name||'SHA256');
-  $len ||= 32;
-  return _pkcs_5_alg2($password, $salt, $iteration_count, $hash_name, $len);
-}
-
-sub hkdf_extract {
-  # RFC: HKDF-Extract(salt, IKM, [Hash]) -> PRK
-  #my ($hash_name, $salt, $keying_material) = @_;
-  my ($keying_material, $salt, $hash_name) = @_;
-  $hash_name = Crypt::Digest::_trans_digest_name($hash_name||'SHA256');
-  $salt = pack("H*", "00" x Crypt::Digest->hashsize($hash_name)) unless defined $salt; # according to rfc5869 defaults to HashLen zero octets
-  return _hkdf_extract($hash_name, $salt, $keying_material);
-}
-
-sub hkdf_expand {
-  # RFC: HKDF-Expand(PRK, info, L, [Hash]) -> OKM
-  #my ($hash_name, $info, $keying_material, $len) = @_;
-  my ($keying_material, $hash_name, $len, $info) = @_;
-  $len ||= 32;
-  $info ||= '';
-  $hash_name = Crypt::Digest::_trans_digest_name($hash_name||'SHA256');
-  return _hkdf_expand($hash_name, $info, $keying_material, $len);
-}
-
-sub hkdf {
-  #my ($hash_name, $salt, $info, $keying_material, $len) = @_;
-  my ($keying_material, $salt, $hash_name, $len, $info) = @_;
-  $len ||= 32;
-  $info ||= '';
-  $hash_name = Crypt::Digest::_trans_digest_name($hash_name||'SHA256');
-  $salt = pack("H*", "00" x Crypt::Digest->hashsize($hash_name)) unless defined $salt; # according to rfc5869 defaults to HashLen zero octets
-  return _hkdf($hash_name, $salt, $info, $keying_material, $len);
-}
 
 1;
 
@@ -63,7 +19,7 @@ sub hkdf {
 
 =head1 NAME
 
-Crypt::KeyDerivation - PBKDF1, PBKFD2 and HKDF key derivation functions
+Crypt::KeyDerivation - PBKDF1, PBKDF2 and HKDF key derivation functions
 
 =head1 SYNOPSIS
 
@@ -82,7 +38,7 @@ Provides an interface to Key derivation functions:
 
 =over
 
-=item * PBKFD1 and PBKDF according to PKCS#5 v2.0 L<https://tools.ietf.org/html/rfc2898|https://tools.ietf.org/html/rfc2898>
+=item * PBKDF1 and PBKDF according to PKCS#5 v2.0 L<https://tools.ietf.org/html/rfc2898|https://tools.ietf.org/html/rfc2898>
 
 =item * HKDF (+ related) according to L<https://tools.ietf.org/html/rfc5869|https://tools.ietf.org/html/rfc5869>
 
@@ -165,3 +121,5 @@ B<BEWARE:> if you are not sure, do not use C<pbkdf1> but rather choose C<pbkdf2>
   # $hash_name .. optional, DEFAULT: 'SHA256'
   # $len ........ optional, derived key len, DEFAULT: 32
   # $info ....... optional context and application specific information, DEFAULT: ''
+
+=cut

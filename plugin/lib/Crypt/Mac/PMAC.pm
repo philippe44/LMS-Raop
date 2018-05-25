@@ -4,21 +4,12 @@ package Crypt::Mac::PMAC;
 
 use strict;
 use warnings;
-our $VERSION = '0.048';
+our $VERSION = '0.060';
 
 use base qw(Crypt::Mac Exporter);
 our %EXPORT_TAGS = ( all => [qw( pmac pmac_hex pmac_b64 pmac_b64u )] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw();
-
-use CryptX;
-use Crypt::Cipher;
-
-sub new { my $class = shift; _new(Crypt::Cipher::_trans_cipher_name(shift), @_) }
-sub pmac { Crypt::Mac::PMAC->new(shift, shift)->add(@_)->mac }
-sub pmac_hex  { Crypt::Mac::PMAC->new(shift, shift)->add(@_)->hexmac }
-sub pmac_b64  { Crypt::Mac::PMAC->new(shift, shift)->add(@_)->b64mac }
-sub pmac_b64u { Crypt::Mac::PMAC->new(shift, shift)->add(@_)->b64umac }
 
 1;
 
@@ -149,10 +140,8 @@ Logically joins all arguments into a single string, and returns its PMAC message
 
 =item * L<CryptX|CryptX>
 
-=item * L<https://en.wikipedia.org/wiki/PMAC_%28cryptography%29|https://en.wikipedia.org/wiki/PMAC_%28cryptography%29>
+=item * L<https://en.wikipedia.org/wiki/PMAC_%28cryptography%29>
 
 =back
 
 =cut
-
-__END__

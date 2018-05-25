@@ -4,16 +4,15 @@ package Crypt::Cipher::SAFERP;
 
 use strict;
 use warnings;
-our $VERSION = '0.048';
+our $VERSION = '0.060';
 
-use CryptX;
-use base 'Crypt::Cipher';
+use base qw(Crypt::Cipher);
 
-sub blocksize      { Crypt::Cipher::blocksize(__PACKAGE__) }
-sub keysize        { Crypt::Cipher::keysize(__PACKAGE__) }
-sub max_keysize    { Crypt::Cipher::max_keysize(__PACKAGE__) }
-sub min_keysize    { Crypt::Cipher::min_keysize(__PACKAGE__) }
-sub default_rounds { Crypt::Cipher::default_rounds(__PACKAGE__) }
+sub blocksize      { Crypt::Cipher::blocksize('SAFERP')      }
+sub keysize        { Crypt::Cipher::keysize('SAFERP')        }
+sub max_keysize    { Crypt::Cipher::max_keysize('SAFERP')    }
+sub min_keysize    { Crypt::Cipher::min_keysize('SAFERP')    }
+sub default_rounds { Crypt::Cipher::default_rounds('SAFERP') }
 
 1;
 
@@ -21,7 +20,7 @@ sub default_rounds { Crypt::Cipher::default_rounds(__PACKAGE__) }
 
 =head1 NAME
 
-Crypt::Cipher::SAFERP - Symetric cipher SAFER+, key size: 128/192/256 bits (Crypt::CBC compliant)
+Crypt::Cipher::SAFERP - Symmetric cipher SAFER+, key size: 128/192/256 bits (Crypt::CBC compliant)
 
 =head1 SYNOPSIS
 
@@ -33,7 +32,7 @@ Crypt::Cipher::SAFERP - Symetric cipher SAFER+, key size: 128/192/256 bits (Cryp
   my $cbc = Crypt::Mode::CBC->new('SAFERP');
   my $ciphertext = $cbc->encrypt("secret data", $key, $iv);
 
-  ### example 2
+  ### example 2 (slower)
   use Crypt::CBC;
   use Crypt::Cipher::SAFERP;
 
@@ -110,12 +109,10 @@ L<Crypt::Mode::CBC|Crypt::Mode::CBC>, L<Crypt::Mode::CTR|Crypt::Mode::CTR> or L<
 
 =over
 
-=item * L<CryptX|CryptX>, L<Crypt::Cipher|Crypt::Cipher>
+=item * L<CryptX|CryptX>, L<Crypt::Cipher>
 
-=item * L<http://en.wikipedia.org/wiki/SAFER|http://en.wikipedia.org/wiki/SAFER>
+=item * L<https://en.wikipedia.org/wiki/SAFER>
 
 =back
 
 =cut
-
-__END__

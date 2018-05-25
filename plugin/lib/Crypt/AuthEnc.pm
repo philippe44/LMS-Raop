@@ -2,14 +2,14 @@ package Crypt::AuthEnc;
 
 use strict;
 use warnings;
-our $VERSION = '0.048';
+our $VERSION = '0.060';
 
-sub CLONE_SKIP { 1 } # prevent cloning
+### not used
 
 1;
 
-__END__
- 
+=pod
+
 =head1 NAME
 
 Crypt::AuthEnc - [internal only]

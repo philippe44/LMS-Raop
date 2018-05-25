@@ -2,11 +2,9 @@ package Crypt::Stream::Sober128;
 
 use strict;
 use warnings;
-our $VERSION = '0.048';
+our $VERSION = '0.060';
 
 use CryptX;
-
-sub new { my $class = shift; _new(@_) }
 
 1;
 
@@ -62,7 +60,7 @@ Provides an interface to the Sober128 stream cipher.
 
 =over
 
-=item * L<Crypt::Stream::RC4>, L<Crypt::Stream::ChaCha>
+=item * L<Crypt::Stream::RC4>, L<Crypt::Stream::ChaCha>, L<Crypt::Stream::Salsa20>, L<Crypt::Stream::Sosemanuk>
 
 =item * L<https://en.wikipedia.org/wiki/SOBER-128|https://en.wikipedia.org/wiki/SOBER-128>
 

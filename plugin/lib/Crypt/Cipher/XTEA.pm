@@ -4,16 +4,15 @@ package Crypt::Cipher::XTEA;
 
 use strict;
 use warnings;
-our $VERSION = '0.048';
+our $VERSION = '0.060';
 
-use CryptX;
-use base 'Crypt::Cipher';
+use base qw(Crypt::Cipher);
 
-sub blocksize      { Crypt::Cipher::blocksize(__PACKAGE__) }
-sub keysize        { Crypt::Cipher::keysize(__PACKAGE__) }
-sub max_keysize    { Crypt::Cipher::max_keysize(__PACKAGE__) }
-sub min_keysize    { Crypt::Cipher::min_keysize(__PACKAGE__) }
-sub default_rounds { Crypt::Cipher::default_rounds(__PACKAGE__) }
+sub blocksize      { Crypt::Cipher::blocksize('XTEA')      }
+sub keysize        { Crypt::Cipher::keysize('XTEA')        }
+sub max_keysize    { Crypt::Cipher::max_keysize('XTEA')    }
+sub min_keysize    { Crypt::Cipher::min_keysize('XTEA')    }
+sub default_rounds { Crypt::Cipher::default_rounds('XTEA') }
 
 1;
 
@@ -21,7 +20,7 @@ sub default_rounds { Crypt::Cipher::default_rounds(__PACKAGE__) }
 
 =head1 NAME
 
-Crypt::Cipher::XTEA - Symetric cipher XTEA, key size: 128 bits (Crypt::CBC compliant)
+Crypt::Cipher::XTEA - Symmetric cipher XTEA, key size: 128 bits (Crypt::CBC compliant)
 
 =head1 SYNOPSIS
 
@@ -33,7 +32,7 @@ Crypt::Cipher::XTEA - Symetric cipher XTEA, key size: 128 bits (Crypt::CBC compl
   my $cbc = Crypt::Mode::CBC->new('XTEA');
   my $ciphertext = $cbc->encrypt("secret data", $key, $iv);
 
-  ### example 2
+  ### example 2 (slower)
   use Crypt::CBC;
   use Crypt::Cipher::XTEA;
 
@@ -110,12 +109,10 @@ L<Crypt::Mode::CBC|Crypt::Mode::CBC>, L<Crypt::Mode::CTR|Crypt::Mode::CTR> or L<
 
 =over
 
-=item * L<CryptX|CryptX>, L<Crypt::Cipher|Crypt::Cipher>
+=item * L<CryptX|CryptX>, L<Crypt::Cipher>
 
-=item * L<http://en.wikipedia.org/wiki/XTEA|http://en.wikipedia.org/wiki/XTEA>
+=item * L<https://en.wikipedia.org/wiki/XTEA>
 
 =back
 
 =cut
-
-__END__

@@ -2,7 +2,7 @@ package Crypt::PK::RSA;
 
 use strict;
 use warnings;
-our $VERSION = '0.048';
+our $VERSION = '0.060';
 
 require Exporter; our @ISA = qw(Exporter); ### use Exporter 'import';
 our %EXPORT_TAGS = ( all => [qw(rsa_encrypt rsa_decrypt rsa_sign_message rsa_verify_message rsa_sign_hash rsa_verify_hash)] );
@@ -10,16 +10,14 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw();
 
 use Carp;
-use CryptX qw(_encode_json _decode_json);
+use CryptX;
 use Crypt::Digest qw(digest_data digest_data_b64u);
 use Crypt::Misc qw(read_rawfile encode_b64u decode_b64u encode_b64 decode_b64 pem_to_der der_to_pem);
 use Crypt::PK;
 
 sub new {
-  my ($class, $f, $p) = @_;
-  my $self = _new();
-  $self->import_key($f, $p) if $f;
-  return  $self;
+  my $self = shift->_new();
+  return @_ > 0 ? $self->import_key(@_) : $self;
 }
 
 sub export_key_pem {
@@ -57,7 +55,7 @@ sub export_key_jwk {
       dq  => encode_b64u(pack("H*", $kh->{dQ})),
       qi  => encode_b64u(pack("H*", $kh->{qP})),
     };
-    return $wanthash ? $hash : _encode_json($hash);
+    return $wanthash ? $hash : CryptX::_encode_json($hash);
   }
   elsif ($type eq 'public') {
     return unless $kh->{N} && $kh->{e};
@@ -69,7 +67,7 @@ sub export_key_jwk {
       n   => encode_b64u(pack("H*", $kh->{N})),
       e   => encode_b64u(pack("H*", $kh->{e})),
     };
-    return $wanthash ? $hash : _encode_json($hash);
+    return $wanthash ? $hash : CryptX::_encode_json($hash);
   }
 }
 
@@ -77,7 +75,7 @@ sub export_key_jwk_thumbprint {
   my ($self, $hash_name) = @_;
   $hash_name ||= 'SHA256';
   my $h = $self->export_key_jwk('public', 1);
-  my $json = _encode_json({kty=>$h->{kty}, n=>$h->{n}, e=>$h->{e}});
+  my $json = CryptX::_encode_json({kty=>$h->{kty}, n=>$h->{n}, e=>$h->{e}});
   return digest_data_b64u($hash_name, $json);
 }
 
@@ -125,7 +123,7 @@ sub import_key {
   elsif ($data =~ /-----BEGIN PRIVATE KEY-----(.*?)-----END/sg) {
     # PKCS#8 PrivateKeyInfo      (PEM header: BEGIN PRIVATE KEY)
     $data = pem_to_der($data, $password);
-    return $self->_import_pkcs8($data) if $data;
+    return $self->_import_pkcs8($data, $password) if $data;
   }
   elsif ($data =~ /-----BEGIN ENCRYPTED PRIVATE KEY-----(.*?)-----END/sg) {
     # XXX-TODO: PKCS#8 EncryptedPrivateKeyInfo (PEM header: BEGIN ENCRYPTED PRIVATE KEY)
@@ -134,13 +132,17 @@ sub import_key {
   elsif ($data =~ /^\s*(\{.*?\})\s*$/s) {
     # JSON Web Key (JWK) - http://tools.ietf.org/html/draft-ietf-jose-json-web-key
     my $json = "$1";
-    my $h = _decode_json($json);
+    my $h = CryptX::_decode_json($json);
     if ($h && $h->{kty} eq "RSA") {
       for (qw/n e d p q dp dq qi/) {
         $h->{$_} = eval { unpack("H*", decode_b64u($h->{$_})) } if exists $h->{$_};
       }
       return $self->_import_hex($h->{n}, $h->{e}, $h->{d}, $h->{p}, $h->{q}, $h->{dp}, $h->{dq}, $h->{qi}) if $h->{n} && $h->{e};
     }
+  }
+  elsif ($data =~ /-----BEGIN CERTIFICATE-----(.*?)-----END CERTIFICATE-----/sg) {
+    $data = pem_to_der($data);
+    return $self->_import_x509($data);
   }
   elsif ($data =~ /---- BEGIN SSH2 PUBLIC KEY ----(.*?)---- END SSH2 PUBLIC KEY ----/sg) {
     $data = pem_to_der($data);
@@ -154,71 +156,18 @@ sub import_key {
   }
   else {
     # DER format
-    my $rv = eval { $self->_import($data) } || eval { $self->_import_pkcs8($data) };
+    my $rv = eval { $self->_import($data) } || eval { $self->_import_pkcs8($data, $password) } || eval { $self->_import_x509($data) };
     return $rv if $rv;
   }
 
   croak "FATAL: invalid or unsupported RSA key format";
 }
 
-sub encrypt {
-  my ($self, $data, $padding, $hash_name, $lparam) = @_;
-  $lparam ||= '';
-  $padding ||= 'oaep';
-  $hash_name = Crypt::Digest::_trans_digest_name($hash_name||'SHA1');
-
-  return $self->_encrypt($data, $padding, $hash_name, $lparam);
-}
-
-sub decrypt {
-  my ($self, $data, $padding, $hash_name, $lparam) = @_;
-  $lparam ||= '';
-  $padding ||= 'oaep';
-  $hash_name = Crypt::Digest::_trans_digest_name($hash_name||'SHA1');
-
-  return $self->_decrypt($data, $padding, $hash_name, $lparam);
-}
-
-sub sign_hash {
-  my ($self, $data, $hash_name, $padding, $saltlen) = @_;
-  $saltlen ||= 12;
-  $padding ||= 'pss';
-  $hash_name = Crypt::Digest::_trans_digest_name($hash_name||'SHA1');
-
-  return $self->_sign($data, $padding, $hash_name, $saltlen);
-}
-
-sub sign_message {
-  my ($self, $data, $hash_name, $padding, $saltlen) = @_;
-  $saltlen ||= 12;
-  $padding ||= 'pss';
-  $hash_name = Crypt::Digest::_trans_digest_name($hash_name||'SHA1');
-
-  return $self->_sign(digest_data($hash_name, $data), $padding, $hash_name, $saltlen);
-}
-
-sub verify_hash {
-  my ($self, $sig, $data, $hash_name, $padding, $saltlen) = @_;
-  $saltlen ||= 12;
-  $padding ||= 'pss';
-  $hash_name = Crypt::Digest::_trans_digest_name($hash_name||'SHA1');
-
-  return $self->_verify($sig, $data, $padding, $hash_name, $saltlen);
-}
-
-sub verify_message {
-  my ($self, $sig, $data, $hash_name, $padding, $saltlen) = @_;
-  $saltlen ||= 12;
-  $padding ||= 'pss';
-  $hash_name = Crypt::Digest::_trans_digest_name($hash_name||'SHA1');
-
-  return $self->_verify($sig, digest_data($hash_name, $data), $padding, $hash_name, $saltlen);
-}
-
 ### FUNCTIONS
 
 sub rsa_encrypt {
   my $key = shift;
+  local $SIG{__DIE__} = \&CryptX::_croak;
   $key = __PACKAGE__->new($key) unless ref $key;
   carp "FATAL: invalid 'key' param" unless ref($key) eq __PACKAGE__;
   return $key->encrypt(@_);
@@ -226,6 +175,7 @@ sub rsa_encrypt {
 
 sub rsa_decrypt {
   my $key = shift;
+  local $SIG{__DIE__} = \&CryptX::_croak;
   $key = __PACKAGE__->new($key) unless ref $key;
   carp "FATAL: invalid 'key' param" unless ref($key) eq __PACKAGE__;
   return $key->decrypt(@_);
@@ -233,6 +183,7 @@ sub rsa_decrypt {
 
 sub rsa_sign_hash {
   my $key = shift;
+  local $SIG{__DIE__} = \&CryptX::_croak;
   $key = __PACKAGE__->new($key) unless ref $key;
   carp "FATAL: invalid 'key' param" unless ref($key) eq __PACKAGE__;
   return $key->sign_hash(@_);
@@ -240,6 +191,7 @@ sub rsa_sign_hash {
 
 sub rsa_verify_hash {
   my $key = shift;
+  local $SIG{__DIE__} = \&CryptX::_croak;
   $key = __PACKAGE__->new($key) unless ref $key;
   carp "FATAL: invalid 'key' param" unless ref($key) eq __PACKAGE__;
   return $key->verify_hash(@_);
@@ -247,6 +199,7 @@ sub rsa_verify_hash {
 
 sub rsa_sign_message {
   my $key = shift;
+  local $SIG{__DIE__} = \&CryptX::_croak;
   $key = __PACKAGE__->new($key) unless ref $key;
   carp "FATAL: invalid 'key' param" unless ref($key) eq __PACKAGE__;
   return $key->sign_message(@_);
@@ -254,6 +207,7 @@ sub rsa_sign_message {
 
 sub rsa_verify_message {
   my $key = shift;
+  local $SIG{__DIE__} = \&CryptX::_croak;
   $key = __PACKAGE__->new($key) unless ref $key;
   carp "FATAL: invalid 'key' param" unless ref($key) eq __PACKAGE__;
   return $key->verify_message(@_);
@@ -479,6 +433,27 @@ Supported key formats:
  1HPwZX2d
  -----END ENCRYPTED PRIVATE KEY-----
 
+=item * RSA public key from X509 certificate
+
+ -----BEGIN CERTIFICATE-----
+ MIIC8zCCAdugAwIBAgIJAPi+LvMU3uGWMA0GCSqGSIb3DQEBCwUAMBAxDjAMBgNV
+ BAMMBXBva3VzMB4XDTE3MDcxNDE0MTAyMFoXDTIwMDQwOTE0MTAyMFowEDEOMAwG
+ A1UEAwwFcG9rdXMwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDCQima
+ SUIMIdz5uVevzcScbcj06xs1OLaFKUoPJ8v+xP6Ut61BQhAvc8GYuw2uRx223hZC
+ r3HYLfSdWIfmOIAtlL8cPYPVoSivJtpSGE6fBG1tlBjVgXWRmJGR/oxx6Y5QDwcB
+ Q4GZKga8TtHQoY5idZuatYOFZGfMIcIUC0Uoda+YSypnw7A90F/JvlpcTUh3Fnem
+ VinqEA6XOegU9dCZk/29sXqauBjbdGihh8DvpklOhY16eQoiR3909AywQ0KUmI+R
+ Sa9E8oIsmUDetFuXEvana+sD3y42tU+cd2nhBPRETbSXPcum0B3uF4yKgweuJy5D
+ cvtVQIFVkkh4+AWNAgMBAAGjUDBOMB0GA1UdDgQWBBSS6V5PVGyN92NoB0AVLcOb
+ pzR3SzAfBgNVHSMEGDAWgBSS6V5PVGyN92NoB0AVLcObpzR3SzAMBgNVHRMEBTAD
+ AQH/MA0GCSqGSIb3DQEBCwUAA4IBAQBIszrBjoJ39axsS6Btbvwvo8vAmgiSWsav
+ 7AmjXOAwknHPaCcDmrdOys5POD0DNRwNeRsnxFiZ/UL8Vmj2JGDLgAw+/v32MwfX
+ Ig7m+oIbO8KqDzlYvS5kd3suJ5C21hHy1/JUtfofZLovZH7ZRzhTAoRvCYaodW90
+ 2o8ZqmyCdcXPzjFmoJ2xYzs/Sf8/E1cHfb+4HjOpeRnKxDvG0gwWzcsXpUrw2pNO
+ Oztj6Rd0THNrf/anIeYVtAHX4aqZA8Kbv2TyJd+9g78usFw1cn+8vfmilm6Pn0DQ
+ a+I5GyGd7BJI8wYuWqIStzvrJHbQQaNrSk7hgjWYiYlcsPh6w2QP
+ -----END CERTIFICATE-----
+
 =item * SSH public RSA keys
 
  ssh-rsa AAAAB3NzaC1yc2EAAAADAQA...6mdYs5iJNGu/ltUdc=
@@ -586,7 +561,7 @@ I<Since: CryptX-0.031>
 
 Exports the key's JSON Web Key Thumbprint as a string.
 
-If you don't know what this is, see RFC 7638 (C<https://tools.ietf.org/html/rfc7638>).
+If you don't know what this is, see RFC 7638 L<https://tools.ietf.org/html/rfc7638>.
 
  my $thumbprint = $pk->export_key_jwk_thumbprint('SHA256');
 
@@ -829,10 +804,10 @@ Create encrypted file (from commandline):
 Decrypt file (Perl code):
 
   use Crypt::PK::RSA;
-  use File::Slurp 'read_file';
+  use Crypt::Misc 'read_rawfile';
 
   my $pkrsa = Crypt::PK::RSA->new("rsakey.priv.pem");
-  my $encfile = read_file("input.encrypted.rsa", binmode=>':raw');
+  my $encfile = read_rawfile("input.encrypted.rsa");
   my $plaintext = $pkrsa->decrypt($encfile, 'v1.5');
   print $plaintext;
 
@@ -841,12 +816,12 @@ Decrypt file (Perl code):
 Create encrypted file (Perl code):
 
   use Crypt::PK::RSA;
-  use File::Slurp 'write_file';
+  use Crypt::Misc 'write_rawfile';
 
   my $plaintext = 'secret message';
   my $pkrsa = Crypt::PK::RSA->new("rsakey.pub.pem");
   my $encrypted = $pkrsa->encrypt($plaintext, 'v1.5');
-  write_file("input.encrypted.rsa", {binmode=>':raw'}, $encrypted);
+  write_rawfile("input.encrypted.rsa", $encrypted);
 
 Decrypt file (from commandline):
 
@@ -862,10 +837,10 @@ Verify signature (Perl code):
 
  use Crypt::PK::RSA;
  use Crypt::Digest 'digest_file';
- use File::Slurp 'read_file';
+ use Crypt::Misc 'read_rawfile';
 
  my $pkrsa = Crypt::PK::RSA->new("rsakey.pub.pem");
- my $signature = read_file("input.sha1-rsa.sig", binmode=>':raw');
+ my $signature = read_rawfile("input.sha1-rsa.sig");
  my $valid = $pkrsa->verify_hash($signature, digest_file("SHA1", "input.data"), "SHA1", "v1.5");
  print $valid ? "SUCCESS" : "FAILURE";
 
@@ -875,11 +850,11 @@ Create signature (Perl code):
 
  use Crypt::PK::RSA;
  use Crypt::Digest 'digest_file';
- use File::Slurp 'write_file';
+ use Crypt::Misc 'write_rawfile';
 
  my $pkrsa = Crypt::PK::RSA->new("rsakey.priv.pem");
  my $signature = $pkrsa->sign_hash(digest_file("SHA1", "input.data"), "SHA1", "v1.5");
- write_file("input.sha1-rsa.sig", {binmode=>':raw'}, $signature);
+ write_rawfile("input.sha1-rsa.sig", $signature);
 
 Verify signature (from commandline):
 
@@ -890,15 +865,15 @@ Verify signature (from commandline):
 Generate keys (Perl code):
 
  use Crypt::PK::RSA;
- use File::Slurp 'write_file';
+ use Crypt::Misc 'write_rawfile';
 
  my $pkrsa = Crypt::PK::RSA->new;
  $pkrsa->generate_key(256, 65537);
- write_file("rsakey.pub.der",  {binmode=>':raw'}, $pkrsa->export_key_der('public'));
- write_file("rsakey.priv.der", {binmode=>':raw'}, $pkrsa->export_key_der('private'));
- write_file("rsakey.pub.pem",  $pkrsa->export_key_pem('public_x509'));
- write_file("rsakey.priv.pem", $pkrsa->export_key_pem('private'));
- write_file("rsakey-passwd.priv.pem", $pkrsa->export_key_pem('private', 'secret'));
+ write_rawfile("rsakey.pub.der",  $pkrsa->export_key_der('public'));
+ write_rawfile("rsakey.priv.der", $pkrsa->export_key_der('private'));
+ write_rawfile("rsakey.pub.pem",  $pkrsa->export_key_pem('public_x509'));
+ write_rawfile("rsakey.priv.pem", $pkrsa->export_key_pem('private'));
+ write_rawfile("rsakey-passwd.priv.pem", $pkrsa->export_key_pem('private', 'secret'));
 
 Use keys by OpenSSL:
 
@@ -921,7 +896,6 @@ Generate keys:
 Load keys (Perl code):
 
  use Crypt::PK::RSA;
- use File::Slurp 'write_file';
 
  my $pkrsa = Crypt::PK::RSA->new;
  $pkrsa->import_key("rsakey.pub.der");
@@ -937,3 +911,5 @@ Load keys (Perl code):
 =item * L<https://en.wikipedia.org/wiki/RSA_%28algorithm%29|https://en.wikipedia.org/wiki/RSA_%28algorithm%29>
 
 =back
+
+=cut

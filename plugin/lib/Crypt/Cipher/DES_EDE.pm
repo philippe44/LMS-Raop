@@ -4,16 +4,15 @@ package Crypt::Cipher::DES_EDE;
 
 use strict;
 use warnings;
-our $VERSION = '0.048';
+our $VERSION = '0.060';
 
-use CryptX;
-use base 'Crypt::Cipher';
+use base qw(Crypt::Cipher);
 
-sub blocksize      { Crypt::Cipher::blocksize(__PACKAGE__) }
-sub keysize        { Crypt::Cipher::keysize(__PACKAGE__) }
-sub max_keysize    { Crypt::Cipher::max_keysize(__PACKAGE__) }
-sub min_keysize    { Crypt::Cipher::min_keysize(__PACKAGE__) }
-sub default_rounds { Crypt::Cipher::default_rounds(__PACKAGE__) }
+sub blocksize      { Crypt::Cipher::blocksize('DES_EDE')      }
+sub keysize        { Crypt::Cipher::keysize('DES_EDE')        }
+sub max_keysize    { Crypt::Cipher::max_keysize('DES_EDE')    }
+sub min_keysize    { Crypt::Cipher::min_keysize('DES_EDE')    }
+sub default_rounds { Crypt::Cipher::default_rounds('DES_EDE') }
 
 1;
 
@@ -21,7 +20,7 @@ sub default_rounds { Crypt::Cipher::default_rounds(__PACKAGE__) }
 
 =head1 NAME
 
-Crypt::Cipher::DES_EDE - Symetric cipher DES_EDE (aka Tripple-DES, 3DES), key size: 192[168] bits (Crypt::CBC compliant)
+Crypt::Cipher::DES_EDE - Symmetric cipher DES_EDE (aka Triple-DES, 3DES), key size: 192[168] bits (Crypt::CBC compliant)
 
 =head1 SYNOPSIS
 
@@ -33,7 +32,7 @@ Crypt::Cipher::DES_EDE - Symetric cipher DES_EDE (aka Tripple-DES, 3DES), key si
   my $cbc = Crypt::Mode::CBC->new('DES_EDE');
   my $ciphertext = $cbc->encrypt("secret data", $key, $iv);
 
-  ### example 2
+  ### example 2 (slower)
   use Crypt::CBC;
   use Crypt::Cipher::DES_EDE;
 
@@ -110,12 +109,10 @@ L<Crypt::Mode::CBC|Crypt::Mode::CBC>, L<Crypt::Mode::CTR|Crypt::Mode::CTR> or L<
 
 =over
 
-=item * L<CryptX|CryptX>, L<Crypt::Cipher|Crypt::Cipher>
+=item * L<CryptX|CryptX>, L<Crypt::Cipher>
 
-=item * L<http://en.wikipedia.org/wiki/Triple_DES|http://en.wikipedia.org/wiki/Triple_DES>
+=item * L<https://en.wikipedia.org/wiki/Triple_DES>
 
 =back
 
 =cut
-
-__END__

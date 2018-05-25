@@ -4,12 +4,23 @@ package Crypt::Mode::CBC;
 
 use strict;
 use warnings;
-our $VERSION = '0.048';
+our $VERSION = '0.060';
 
 use Crypt::Cipher;
-use base 'Crypt::Mode';
 
-sub new { my $class = shift; _new(Crypt::Cipher::_trans_cipher_name(shift), @_) }
+sub encrypt {
+  my ($self, $pt) = (shift, shift);
+  local $SIG{__DIE__} = \&CryptX::_croak;
+  $self->start_encrypt(@_)->add($pt) . $self->finish;
+}
+
+sub decrypt {
+  my ($self, $ct) = (shift, shift);
+  local $SIG{__DIE__} = \&CryptX::_croak;
+  $self->start_decrypt(@_)->add($ct) . $self->finish;
+}
+
+sub CLONE_SKIP { 1 } # prevent cloning
 
 1;
 
@@ -48,12 +59,17 @@ This module implements CBC cipher mode. B<NOTE:> it works only with ciphers from
 
 =head2 new
 
- my $m = Crypt::Mode::CBC->new('AES');
+ my $m = Crypt::Mode::CBC->new($name);
  #or
- my $m = Crypt::Mode::CBC->new('AES', $padding);
+ my $m = Crypt::Mode::CBC->new($name, $padding);
  #or
- my $m = Crypt::Mode::CBC->new('AES', $padding, $cipher_rounds);
+ my $m = Crypt::Mode::CBC->new($name, $padding, $cipher_rounds);
 
+ # $name ....... one of 'AES', 'Anubis', 'Blowfish', 'CAST5', 'Camellia', 'DES', 'DES_EDE',
+ #               'KASUMI', 'Khazad', 'MULTI2', 'Noekeon', 'RC2', 'RC5', 'RC6',
+ #               'SAFERP', 'SAFER_K128', 'SAFER_K64', 'SAFER_SK128', 'SAFER_SK64',
+ #               'SEED', 'Skipjack', 'Twofish', 'XTEA', 'IDEA', 'Serpent'
+ #               simply any <NAME> for which there exists Crypt::Cipher::<NAME>
  # $padding .... 0 no padding (plaintext size has to be myltiple of block length)
  #               1 PKCS5 padding, Crypt::CBC's "standard" - DEFAULT
  #               2 Crypt::CBC's "oneandzeroes"
@@ -69,15 +85,19 @@ This module implements CBC cipher mode. B<NOTE:> it works only with ciphers from
 
 =head2 start_encrypt
 
-See example below L</finish>.
+   $m->start_encrypt($key, $iv);
 
 =head2 start_decrypt
 
-See example below L</finish>.
+   $m->start_decrypt($key, $iv);
 
 =head2 add
 
-See example below L</finish>.
+   # in encrypt mode
+   my $plaintext = $m->add($ciphertext);
+
+   # in decrypt mode
+   my $ciphertext = $m->add($plaintext);
 
 =head2 finish
 
@@ -99,10 +119,12 @@ See example below L</finish>.
 
 =over
 
-=item * L<CryptX|CryptX>, L<Crypt::Cipher|Crypt::Cipher>
+=item * L<CryptX|CryptX>, L<Crypt::Cipher>
 
-=item * L<Crypt::Cipher::AES|Crypt::Cipher::AES>, L<Crypt::Cipher::Blowfish|Crypt::Cipher::Blowfish>, ...
+=item * L<Crypt::Cipher::AES>, L<Crypt::Cipher::Blowfish>, ...
 
-=item * L<https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#Cipher-block_chaining_.28CBC.29|https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#Cipher-block_chaining_.28CBC.29>
+=item * L<https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#Cipher-block_chaining_.28CBC.29>
 
 =back
+
+=cut

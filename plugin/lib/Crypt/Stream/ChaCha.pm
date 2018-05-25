@@ -2,11 +2,9 @@ package Crypt::Stream::ChaCha;
 
 use strict;
 use warnings;
-our $VERSION = '0.048';
+our $VERSION = '0.060';
 
 use CryptX;
-
-sub new { my $class = shift; _new(@_) }
 
 1;
 
@@ -67,7 +65,7 @@ Provides an interface to the ChaCha stream cipher.
 
 =over
 
-=item * L<Crypt::Stream::RC4>, L<Crypt::Stream::Sober128>
+=item * L<Crypt::Stream::RC4>, L<Crypt::Stream::Sober128>, L<Crypt::Stream::Salsa20>, L<Crypt::Stream::Sosemanuk>
 
 =item * L<https://tools.ietf.org/html/rfc7539>
 

@@ -4,21 +4,12 @@ package Crypt::Mac::HMAC;
 
 use strict;
 use warnings;
-our $VERSION = '0.048';
+our $VERSION = '0.060';
 
 use base qw(Crypt::Mac Exporter);
 our %EXPORT_TAGS = ( all => [qw( hmac hmac_hex hmac_b64 hmac_b64u )] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw();
-
-use CryptX;
-use Crypt::Digest;
-
-sub new { my $class = shift; _new(Crypt::Digest::_trans_digest_name(shift), @_) }
-sub hmac { Crypt::Mac::HMAC->new(shift, shift)->add(@_)->mac }
-sub hmac_hex  { Crypt::Mac::HMAC->new(shift, shift)->add(@_)->hexmac }
-sub hmac_b64  { Crypt::Mac::HMAC->new(shift, shift)->add(@_)->b64mac }
-sub hmac_b64u { Crypt::Mac::HMAC->new(shift, shift)->add(@_)->b64umac }
 
 1;
 
@@ -77,6 +68,9 @@ Logically joins all arguments into a single string, and returns its HMAC message
  #or
  $hmac_raw = hmac($hash_name, $key, 'any data', 'more data', 'even more data');
 
+ # $hash_name ... any <NAME> for which there exists Crypt::Digest::<NAME>
+ # $key ......... the key (octets/bytes)
+
 =head2 hmac_hex
 
 Logically joins all arguments into a single string, and returns its HMAC message authentication code encoded as a hexadecimal string.
@@ -84,6 +78,9 @@ Logically joins all arguments into a single string, and returns its HMAC message
  $hmac_hex = hmac_hex($hash_name, $key, 'data buffer');
  #or
  $hmac_hex = hmac_hex($hash_name, $key, 'any data', 'more data', 'even more data');
+
+ # $hash_name ... any <NAME> for which there exists Crypt::Digest::<NAME>
+ # $key ......... the key (octets/bytes, not hex!)
 
 =head2 hmac_b64
 
@@ -93,6 +90,9 @@ Logically joins all arguments into a single string, and returns its HMAC message
  #or
  $hmac_b64 = hmac_b64($hash_name, $key, 'any data', 'more data', 'even more data');
 
+ # $hash_name ... any <NAME> for which there exists Crypt::Digest::<NAME>
+ # $key ......... the key (octets/bytes, not Base64!)
+
 =head2 hmac_b64u
 
 Logically joins all arguments into a single string, and returns its HMAC message authentication code encoded as a Base64 URL Safe string (see RFC 4648 section 5).
@@ -101,11 +101,17 @@ Logically joins all arguments into a single string, and returns its HMAC message
  #or
  $hmac_b64url = hmac_b64u($hash_name, $key, 'any data', 'more data', 'even more data');
 
+ # $hash_name ... any <NAME> for which there exists Crypt::Digest::<NAME>
+ # $key ......... the key (octets/bytes, not Base64url!)
+
 =head1 METHODS
 
 =head2 new
 
  $d = Crypt::Mac::HMAC->new($hash_name, $key);
+
+ # $hash_name ... any <NAME> for which there exists Crypt::Digest::<NAME>
+ # $key ......... the key (octets/bytes)
 
 =head2 clone
 
@@ -149,12 +155,10 @@ Logically joins all arguments into a single string, and returns its HMAC message
 
 =item * L<CryptX|CryptX>
 
-=item * L<https://en.wikipedia.org/wiki/Hmac|https://en.wikipedia.org/wiki/Hmac>
+=item * L<https://en.wikipedia.org/wiki/Hmac>
 
-=item * L<https://tools.ietf.org/html/rfc2104|https://tools.ietf.org/html/rfc2104>
+=item * L<https://tools.ietf.org/html/rfc2104>
 
 =back
 
 =cut
-
-__END__

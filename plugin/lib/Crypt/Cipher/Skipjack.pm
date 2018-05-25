@@ -4,16 +4,15 @@ package Crypt::Cipher::Skipjack;
 
 use strict;
 use warnings;
-our $VERSION = '0.048';
+our $VERSION = '0.060';
 
-use CryptX;
-use base 'Crypt::Cipher';
+use base qw(Crypt::Cipher);
 
-sub blocksize      { Crypt::Cipher::blocksize(__PACKAGE__) }
-sub keysize        { Crypt::Cipher::keysize(__PACKAGE__) }
-sub max_keysize    { Crypt::Cipher::max_keysize(__PACKAGE__) }
-sub min_keysize    { Crypt::Cipher::min_keysize(__PACKAGE__) }
-sub default_rounds { Crypt::Cipher::default_rounds(__PACKAGE__) }
+sub blocksize      { Crypt::Cipher::blocksize('Skipjack')      }
+sub keysize        { Crypt::Cipher::keysize('Skipjack')        }
+sub max_keysize    { Crypt::Cipher::max_keysize('Skipjack')    }
+sub min_keysize    { Crypt::Cipher::min_keysize('Skipjack')    }
+sub default_rounds { Crypt::Cipher::default_rounds('Skipjack') }
 
 1;
 
@@ -21,7 +20,7 @@ sub default_rounds { Crypt::Cipher::default_rounds(__PACKAGE__) }
 
 =head1 NAME
 
-Crypt::Cipher::Skipjack - Symetric cipher Skipjack, key size: 80 bits (Crypt::CBC compliant)
+Crypt::Cipher::Skipjack - Symmetric cipher Skipjack, key size: 80 bits (Crypt::CBC compliant)
 
 =head1 SYNOPSIS
 
@@ -33,7 +32,7 @@ Crypt::Cipher::Skipjack - Symetric cipher Skipjack, key size: 80 bits (Crypt::CB
   my $cbc = Crypt::Mode::CBC->new('Skipjack');
   my $ciphertext = $cbc->encrypt("secret data", $key, $iv);
 
-  ### example 2
+  ### example 2 (slower)
   use Crypt::CBC;
   use Crypt::Cipher::Skipjack;
 
@@ -110,12 +109,10 @@ L<Crypt::Mode::CBC|Crypt::Mode::CBC>, L<Crypt::Mode::CTR|Crypt::Mode::CTR> or L<
 
 =over
 
-=item * L<CryptX|CryptX>, L<Crypt::Cipher|Crypt::Cipher>
+=item * L<CryptX|CryptX>, L<Crypt::Cipher>
 
-=item * L<http://en.wikipedia.org/wiki/Skipjack_(cipher)|http://en.wikipedia.org/wiki/Skipjack_(cipher)>
+=item * L<https://en.wikipedia.org/wiki/Skipjack_(cipher)>
 
 =back
 
 =cut
-
-__END__

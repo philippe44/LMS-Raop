@@ -2,53 +2,18 @@ package Crypt::AuthEnc::GCM;
 
 use strict;
 use warnings;
-our $VERSION = '0.048';
+our $VERSION = '0.060';
 
-use base qw(Crypt::AuthEnc Exporter);
+require Exporter; our @ISA = qw(Exporter); ### use Exporter 'import';
 our %EXPORT_TAGS = ( all => [qw( gcm_encrypt_authenticate gcm_decrypt_verify )] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw();
 
+use Carp;
+$Carp::Internal{(__PACKAGE__)}++;
 use CryptX;
-use Crypt::Cipher;
 
-sub new {
-  my ($class, $cipher, $key, $iv) = @_;
-  my $self = _new(Crypt::Cipher::_trans_cipher_name($cipher), $key);
-  # for backwards compatibility the $iv is optional
-  $self->iv_add($iv) if defined $iv;
-  return $self;
-}
-
-sub gcm_encrypt_authenticate {
-  my $cipher_name = shift;
-  my $key = shift;
-  my $iv = shift;
-  my $adata = shift;
-  my $plaintext = shift;
-
-  my $m = Crypt::AuthEnc::GCM->new($cipher_name, $key);
-  $m->iv_add($iv);
-  $m->adata_add(defined $adata ? $adata : ''); #XXX-TODO if no aad we have to pass empty string
-  my $ct = $m->encrypt_add($plaintext);
-  my $tag = $m->encrypt_done;
-  return ($ct, $tag);
-}
-
-sub gcm_decrypt_verify {
-  my $cipher_name = shift;
-  my $key = shift;
-  my $iv = shift;
-  my $adata = shift;
-  my $ciphertext = shift;
-  my $tag = shift;
-
-  my $m = Crypt::AuthEnc::GCM->new($cipher_name, $key);
-  $m->iv_add($iv);
-  $m->adata_add(defined $adata ? $adata : ''); #XXX-TODO if no aad we have to pass empty string
-  my $ct = $m->decrypt_add($ciphertext);
-  return $m->decrypt_done($tag) ? $ct : undef;
-}
+sub CLONE_SKIP { 1 } # prevent cloning
 
 1;
 
@@ -65,25 +30,25 @@ Crypt::AuthEnc::GCM - Authenticated encryption in GCM mode
 
  # encrypt and authenticate
  my $ae = Crypt::AuthEnc::GCM->new("AES", $key, $iv);
- $ae->aad_add('additional_authenticated_data1');
- $ae->aad_add('additional_authenticated_data2');
- $ct = $ae->encrypt_add('data1');
- $ct = $ae->encrypt_add('data2');
- $ct = $ae->encrypt_add('data3');
- $tag = $ae->encrypt_done();
+ $ae->adata_add('additional_authenticated_data1');
+ $ae->adata_add('additional_authenticated_data2');
+ my $ct = $ae->encrypt_add('data1');
+ $ct .= $ae->encrypt_add('data2');
+ $ct .= $ae->encrypt_add('data3');
+ my $tag = $ae->encrypt_done();
 
  # decrypt and verify
  my $ae = Crypt::AuthEnc::GCM->new("AES", $key, $iv);
- $ae->aad_add('additional_authenticated_data1');
- $ae->aad_add('additional_authenticated_data2');
- $pt = $ae->decrypt_add('ciphertext1');
- $pt = $ae->decrypt_add('ciphertext2');
- $pt = $ae->decrypt_add('ciphertext3');
- $tag = $ae->decrypt_done();
+ $ae->adata_add('additional_authenticated_data1');
+ $ae->adata_add('additional_authenticated_data2');
+ my $pt = $ae->decrypt_add('ciphertext1');
+ $pt .= $ae->decrypt_add('ciphertext2');
+ $pt .= $ae->decrypt_add('ciphertext3');
+ my $tag = $ae->decrypt_done();
  die "decrypt failed" unless $tag eq $expected_tag;
 
  #or
- my $result = $ae->decrypt_done($expected_tag) die "decrypt failed";
+ my $result = $ae->decrypt_done($expected_tag); # 0 or 1
 
  ### functional interface
  use Crypt::AuthEnc::GCM qw(gcm_encrypt_authenticate gcm_decrypt_verify);
@@ -117,7 +82,6 @@ You can export selected functions:
 =head2 gcm_decrypt_verify
 
  my $plaintext = gcm_decrypt_verify($cipher, $key, $iv, $adata, $ciphertext, $tag);
-
  # on error returns undef
 
 =head1 METHODS
@@ -134,31 +98,34 @@ You can export selected functions:
 
 =head2 iv_add
 
- $ae->iv_add($iv_data);                 #can be called multiple times
+Set initialization vector (IV).
 
-=head2 aad_add
+ $ae->iv_add($iv_data);                        #can be called multiple times
 
-Can be called B<after> all C<iv_add> calls but before the first C<encrypt_add> or C<decrypt_add>;
+=head2 adata_add
 
- $ae->aad_add($aad_data);               #can be called multiple times
+Add B<additional authenticated data>.
+Can be called B<after> all C<iv_add> calls but before the first C<encrypt_add> or C<decrypt_add>.
+
+ $ae->adata_add($aad_data);                    # can be called multiple times
 
 =head2 encrypt_add
 
- $ciphertext = $ae->encrypt_add($data);        #can be called multiple times
+ $ciphertext = $ae->encrypt_add($data);        # can be called multiple times
 
 =head2 encrypt_done
 
- $tag = $ae->encrypt_done();
+ $tag = $ae->encrypt_done();                   # returns $tag value
 
 =head2 decrypt_add
 
- $plaintext = $ae->decrypt_add($ciphertext);   #can be called multiple times
+ $plaintext = $ae->decrypt_add($ciphertext);   # can be called multiple times
 
 =head2 decrypt_done
 
- my $result = $ae->decrypt_done($tag);  # returns 1 (success) or 0 (failure)
- #or
  my $tag = $ae->decrypt_done;           # returns $tag value
+ #or
+ my $result = $ae->decrypt_done($tag);  # returns 1 (success) or 0 (failure)
 
 =head2 reset
 
@@ -177,3 +144,5 @@ Can be called B<after> all C<iv_add> calls but before the first C<encrypt_add> o
 =item * L<https://en.wikipedia.org/wiki/Galois/Counter_Mode>
 
 =back
+
+=cut

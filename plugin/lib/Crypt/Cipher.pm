@@ -2,83 +2,23 @@ package Crypt::Cipher;
 
 use strict;
 use warnings;
-our $VERSION = '0.048';
+our $VERSION = '0.060';
+
+use Carp;
+$Carp::Internal{(__PACKAGE__)}++;
 use CryptX;
 
 ### the following methods/functions are implemented in XS:
-# - _new
+# - new
 # - DESTROY
-# - _keysize
-# - _max_keysize
-# - _min_keysize
-# - _blocksize
-# - _default_rounds
-# - encrypt
+# - blocksize
 # - decrypt
-#functions, not methods:
-# - _block_length_by_name
-# - _min_key_length_by_name
-# - _max_key_length_by_name
-# - _default_rounds_by_name
+# - default_rounds
+# - encrypt
+# - max_keysize
+# - min_keysize
 
-sub _trans_cipher_name {
-  my $name = shift;
-  my %trans = (
-    DES_EDE     => '3des',
-    SAFERP      => 'safer+',
-    SAFER_K128  => 'safer-k128',
-    SAFER_K64   => 'safer-k64',
-    SAFER_SK128 => 'safer-sk128',
-    SAFER_SK64  => 'safer-sk64',
-  );
-  $name =~ s/^Crypt::Cipher:://;
-  return $trans{uc($name)} if defined $trans{uc($name)};
-  return lc($name);
-}
-
-### METHODS
-
-sub new {
-  my $pkg = shift;
-  my $cipher_name = $pkg eq __PACKAGE__ ? _trans_cipher_name(shift) : _trans_cipher_name($pkg);
-  return _new($cipher_name, @_);
-}
-
-sub blocksize {
-  my $self = shift;
-  return $self->_blocksize if ref($self);
-  $self = _trans_cipher_name(shift) if $self eq __PACKAGE__;
-  return _block_length_by_name(_trans_cipher_name($self));
-}
-
-sub keysize {
-  max_keysize(@_);
-}
-
-sub max_keysize
-{
-  my $self = shift;
-  return unless defined $self;
-  return $self->_max_keysize if ref($self);
-  $self = _trans_cipher_name(shift) if $self eq __PACKAGE__;
-  return _max_key_length_by_name(_trans_cipher_name($self));
-}
-
-sub min_keysize {
-  my $self = shift;
-  return unless defined $self;
-  return $self->_min_keysize if ref($self);
-  $self = _trans_cipher_name(shift) if $self eq __PACKAGE__;
-  return _min_key_length_by_name(_trans_cipher_name($self));
-}
-
-sub default_rounds {
-  my $self = shift;
-  return unless defined $self;
-  return $self->_default_rounds if ref($self);
-  $self = _trans_cipher_name(shift) if $self eq __PACKAGE__;
-  return _default_rounds_by_name(_trans_cipher_name($self));
-}
+sub keysize { goto \&max_keysize; } # for Crypt::CBC compatibility
 
 sub CLONE_SKIP { 1 } # prevent cloning
 
@@ -121,7 +61,7 @@ Crypt::Cipher - Generic interface to cipher functions
 
 =head1 DESCRIPTION
 
-Provides an interface to various symetric cipher algorithms.
+Provides an interface to various symmetric cipher algorithms.
 
 B<BEWARE:> This module implements just elementary "one-block-(en|de)cryption" operation - if you want to
 encrypt/decrypt generic data you have to use some of the cipher block modes - check for example
@@ -138,11 +78,11 @@ Constructor, returns a reference to the cipher object.
  # $name = one of 'AES', 'Anubis', 'Blowfish', 'CAST5', 'Camellia', 'DES', 'DES_EDE',
  #                'KASUMI', 'Khazad', 'MULTI2', 'Noekeon', 'RC2', 'RC5', 'RC6',
  #                'SAFERP', 'SAFER_K128', 'SAFER_K64', 'SAFER_SK128', 'SAFER_SK64',
- #                'SEED', 'Skipjack', 'Twofish', 'XTEA'
- #                simply any <CNAME> for which there exists Crypt::Cipher::<NAME>
+ #                'SEED', 'Skipjack', 'Twofish', 'XTEA', 'IDEA', 'Serpent'
+ #                simply any <NAME> for which there exists Crypt::Cipher::<NAME>
  # $key = binary key (keysize should comply with selected cipher requirements)
 
- ## some of the ciphers (e.g. MULTI2, RC5, SAFER) allows to set number of rounds
+ ## some of the ciphers (e.g. MULTI2, RC5, SAFER) allow one to set number of rounds
  $d = Crypt::Cipher->new('MULTI2', $key, $rounds);
  # $rounds = positive integer (should comply with selected cipher requirements)
 
@@ -194,7 +134,7 @@ Returns block size (in bytes) for given cipher.
 
 =head2 default_rounds
 
-Returns default number of rounds for given cipher. NOTE: only some cipher (e.g. MULTI2, RC5, SAFER) allows to set number of rounds via new().
+Returns default number of rounds for given cipher. NOTE: only some ciphers (e.g. MULTI2, RC5, SAFER) allow one to set number of rounds via new().
 
  $d->default_rounds;
  #or
@@ -213,5 +153,3 @@ Returns default number of rounds for given cipher. NOTE: only some cipher (e.g. 
 =back
 
 =cut
-
-__END__

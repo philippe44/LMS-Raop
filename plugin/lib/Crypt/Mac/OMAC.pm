@@ -4,21 +4,12 @@ package Crypt::Mac::OMAC;
 
 use strict;
 use warnings;
-our $VERSION = '0.048';
+our $VERSION = '0.060';
 
 use base qw(Crypt::Mac Exporter);
 our %EXPORT_TAGS = ( all => [qw( omac omac_hex omac_b64 omac_b64u )] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw();
-
-use CryptX;
-use Crypt::Cipher;
-
-sub new { my $class = shift; _new(Crypt::Cipher::_trans_cipher_name(shift), @_) }
-sub omac { Crypt::Mac::OMAC->new(shift, shift)->add(@_)->mac }
-sub omac_hex  { Crypt::Mac::OMAC->new(shift, shift)->add(@_)->hexmac }
-sub omac_b64  { Crypt::Mac::OMAC->new(shift, shift)->add(@_)->b64mac }
-sub omac_b64u { Crypt::Mac::OMAC->new(shift, shift)->add(@_)->b64umac }
 
 1;
 
@@ -149,10 +140,8 @@ Logically joins all arguments into a single string, and returns its OMAC message
 
 =item * L<CryptX|CryptX>
 
-=item * L<https://en.wikipedia.org/wiki/OMAC_%28cryptography%29|https://en.wikipedia.org/wiki/OMAC_%28cryptography%29>
+=item * L<https://en.wikipedia.org/wiki/OMAC_%28cryptography%29>
 
 =back
 
 =cut
-
-__END__

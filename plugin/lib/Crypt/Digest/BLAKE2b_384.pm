@@ -4,7 +4,7 @@ package Crypt::Digest::BLAKE2b_384;
 
 use strict;
 use warnings;
-our $VERSION = '0.048';
+our $VERSION = '0.060';
 
 use base qw(Crypt::Digest Exporter);
 our %EXPORT_TAGS = ( all => [qw( blake2b_384 blake2b_384_hex blake2b_384_b64 blake2b_384_b64u blake2b_384_file blake2b_384_file_hex blake2b_384_file_b64 blake2b_384_file_b64u )] );
@@ -13,19 +13,17 @@ our @EXPORT = qw();
 
 use Carp;
 $Carp::Internal{(__PACKAGE__)}++;
-use CryptX;
+use Crypt::Digest;
 
-sub hashsize { Crypt::Digest::hashsize(__PACKAGE__) }
-
-sub blake2b_384             { Crypt::Digest::digest_data(__PACKAGE__, @_) }
-sub blake2b_384_hex         { Crypt::Digest::digest_data_hex(__PACKAGE__, @_) }
-sub blake2b_384_b64         { Crypt::Digest::digest_data_b64(__PACKAGE__, @_) }
-sub blake2b_384_b64u        { Crypt::Digest::digest_data_b64u(__PACKAGE__, @_) }
-
-sub blake2b_384_file        { Crypt::Digest::digest_file(__PACKAGE__, @_) }
-sub blake2b_384_file_hex    { Crypt::Digest::digest_file_hex(__PACKAGE__, @_) }
-sub blake2b_384_file_b64    { Crypt::Digest::digest_file_b64(__PACKAGE__, @_) }
-sub blake2b_384_file_b64u   { Crypt::Digest::digest_file_b64u(__PACKAGE__, @_) }
+sub hashsize                { Crypt::Digest::hashsize('BLAKE2b_384')             }
+sub blake2b_384             { Crypt::Digest::digest_data('BLAKE2b_384', @_)      }
+sub blake2b_384_hex         { Crypt::Digest::digest_data_hex('BLAKE2b_384', @_)  }
+sub blake2b_384_b64         { Crypt::Digest::digest_data_b64('BLAKE2b_384', @_)  }
+sub blake2b_384_b64u        { Crypt::Digest::digest_data_b64u('BLAKE2b_384', @_) }
+sub blake2b_384_file        { Crypt::Digest::digest_file('BLAKE2b_384', @_)      }
+sub blake2b_384_file_hex    { Crypt::Digest::digest_file_hex('BLAKE2b_384', @_)  }
+sub blake2b_384_file_b64    { Crypt::Digest::digest_file_b64('BLAKE2b_384', @_)  }
+sub blake2b_384_file_b64u   { Crypt::Digest::digest_file_b64u('BLAKE2b_384', @_) }
 
 1;
 
@@ -216,14 +214,12 @@ The OO interface provides the same set of functions as L<Crypt::Digest>.
 
 =over
 
-=item * L<CryptX|CryptX>, L<Crypt::Digest|Crypt::Digest>
+=item * L<CryptX|CryptX>, L<Crypt::Digest>
 
-=item * L<https://blake2.net/|https://blake2.net/>
+=item * L<https://blake2.net/>
 
-=item * L<https://tools.ietf.org/html/rfc7693|https://tools.ietf.org/html/rfc7693>
+=item * L<https://tools.ietf.org/html/rfc7693>
 
 =back
 
 =cut
-
-__END__

@@ -4,7 +4,7 @@ package Crypt::Digest::Whirlpool;
 
 use strict;
 use warnings;
-our $VERSION = '0.048';
+our $VERSION = '0.060';
 
 use base qw(Crypt::Digest Exporter);
 our %EXPORT_TAGS = ( all => [qw( whirlpool whirlpool_hex whirlpool_b64 whirlpool_b64u whirlpool_file whirlpool_file_hex whirlpool_file_b64 whirlpool_file_b64u )] );
@@ -13,19 +13,17 @@ our @EXPORT = qw();
 
 use Carp;
 $Carp::Internal{(__PACKAGE__)}++;
-use CryptX;
+use Crypt::Digest;
 
-sub hashsize { Crypt::Digest::hashsize(__PACKAGE__) }
-
-sub whirlpool             { Crypt::Digest::digest_data(__PACKAGE__, @_) }
-sub whirlpool_hex         { Crypt::Digest::digest_data_hex(__PACKAGE__, @_) }
-sub whirlpool_b64         { Crypt::Digest::digest_data_b64(__PACKAGE__, @_) }
-sub whirlpool_b64u        { Crypt::Digest::digest_data_b64u(__PACKAGE__, @_) }
-
-sub whirlpool_file        { Crypt::Digest::digest_file(__PACKAGE__, @_) }
-sub whirlpool_file_hex    { Crypt::Digest::digest_file_hex(__PACKAGE__, @_) }
-sub whirlpool_file_b64    { Crypt::Digest::digest_file_b64(__PACKAGE__, @_) }
-sub whirlpool_file_b64u   { Crypt::Digest::digest_file_b64u(__PACKAGE__, @_) }
+sub hashsize                { Crypt::Digest::hashsize('Whirlpool')             }
+sub whirlpool             { Crypt::Digest::digest_data('Whirlpool', @_)      }
+sub whirlpool_hex         { Crypt::Digest::digest_data_hex('Whirlpool', @_)  }
+sub whirlpool_b64         { Crypt::Digest::digest_data_b64('Whirlpool', @_)  }
+sub whirlpool_b64u        { Crypt::Digest::digest_data_b64u('Whirlpool', @_) }
+sub whirlpool_file        { Crypt::Digest::digest_file('Whirlpool', @_)      }
+sub whirlpool_file_hex    { Crypt::Digest::digest_file_hex('Whirlpool', @_)  }
+sub whirlpool_file_b64    { Crypt::Digest::digest_file_b64('Whirlpool', @_)  }
+sub whirlpool_file_b64u   { Crypt::Digest::digest_file_b64u('Whirlpool', @_) }
 
 1;
 
@@ -216,12 +214,10 @@ The OO interface provides the same set of functions as L<Crypt::Digest>.
 
 =over
 
-=item * L<CryptX|CryptX>, L<Crypt::Digest|Crypt::Digest>
+=item * L<CryptX|CryptX>, L<Crypt::Digest>
 
-=item * L<http://en.wikipedia.org/wiki/Whirlpool_(cryptography)|http://en.wikipedia.org/wiki/Whirlpool_(cryptography)>
+=item * L<https://en.wikipedia.org/wiki/Whirlpool_(cryptography)>
 
 =back
 
 =cut
-
-__END__

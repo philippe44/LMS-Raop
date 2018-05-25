@@ -2,7 +2,7 @@ package Crypt::PK::DSA;
 
 use strict;
 use warnings;
-our $VERSION = '0.048';
+our $VERSION = '0.060';
 
 require Exporter; our @ISA = qw(Exporter); ### use Exporter 'import';
 our %EXPORT_TAGS = ( all => [qw( dsa_encrypt dsa_decrypt dsa_sign_message dsa_verify_message dsa_sign_hash dsa_verify_hash )] );
@@ -10,16 +10,36 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw();
 
 use Carp;
-use CryptX qw(_encode_json _decode_json);
+$Carp::Internal{(__PACKAGE__)}++;
+use CryptX;
 use Crypt::Digest 'digest_data';
 use Crypt::Misc qw(read_rawfile encode_b64u decode_b64u encode_b64 decode_b64 pem_to_der der_to_pem);
 use Crypt::PK;
 
 sub new {
-  my ($class, $f, $p) = @_;
-  my $self = _new();
-  $self->import_key($f, $p) if $f;
-  return  $self;
+  my $self = shift->_new();
+  return @_ > 0 ? $self->import_key(@_) : $self;
+}
+
+sub generate_key {
+  my $self = shift;
+  return $self->_generate_key_size(@_) if @_ == 2;
+  if (@_ == 1 && ref $_[0] eq 'HASH') {
+    my $param = shift;
+    my $p = $param->{p} or croak "FATAL: 'p' param not specified";
+    my $q = $param->{q} or croak "FATAL: 'q' param not specified";
+    my $g = $param->{g} or croak "FATAL: 'g' param not specified";
+    $p =~ s/^0x//;
+    $q =~ s/^0x//;
+    $g =~ s/^0x//;
+    return $self->_generate_key_pqg_hex($p, $q, $g);
+  }
+  elsif (@_ == 1 && ref $_[0] eq 'SCALAR') {
+    my $data = ${$_[0]};
+    $data = pem_to_der($data) if $data =~ /-----BEGIN DSA PARAMETERS-----\s*(.+)\s*-----END DSA PARAMETERS-----/s;
+    return $self->_generate_key_dsaparam($data);
+  }
+  croak "FATAL: DSA generate_key - invalid args";
 }
 
 sub export_key_pem {
@@ -75,55 +95,11 @@ sub import_key {
   croak "FATAL: invalid or unsupported DSA key format";
 }
 
-sub encrypt {
-  my ($self, $data, $hash_name) = @_;
-  $hash_name = Crypt::Digest::_trans_digest_name($hash_name||'SHA1');
-  return $self->_encrypt($data, $hash_name);
-}
-
-sub decrypt {
-  my ($self, $data) = @_;
-  return $self->_decrypt($data);
-}
-
-sub _truncate {
-  my ($self, $hash) = @_;
-  ### section 4.6 of FIPS 186-4
-  # let N be the bit length of q
-  # z = the leftmost min(N, outlen) bits of Hash(M).
-  my $q = $self->size_q; # = size in bytes
-  return $hash if $q >= length($hash);
-  return substr($hash, 0, $q);
-}
-
-sub sign_message {
-  my ($self, $data, $hash_name) = @_;
-  $hash_name ||= 'SHA1';
-  my $data_hash = digest_data($hash_name, $data);
-  return $self->_sign($self->_truncate($data_hash));
-}
-
-sub verify_message {
-  my ($self, $sig, $data, $hash_name) = @_;
-  $hash_name ||= 'SHA1';
-  my $data_hash = digest_data($hash_name, $data);
-  return $self->_verify($sig, $self->_truncate($data_hash));
-}
-
-sub sign_hash {
-  my ($self, $data_hash) = @_;
-  return $self->_sign($self->_truncate($data_hash));
-}
-
-sub verify_hash {
-  my ($self, $sig, $data_hash) = @_;
-  return $self->_verify($sig, $self->_truncate($data_hash));
-}
-
 ### FUNCTIONS
 
 sub dsa_encrypt {
   my $key = shift;
+  local $SIG{__DIE__} = \&CryptX::_croak;
   $key = __PACKAGE__->new($key) unless ref $key;
   carp "FATAL: invalid 'key' param" unless ref($key) eq __PACKAGE__;
   return $key->encrypt(@_);
@@ -131,6 +107,7 @@ sub dsa_encrypt {
 
 sub dsa_decrypt {
   my $key = shift;
+  local $SIG{__DIE__} = \&CryptX::_croak;
   $key = __PACKAGE__->new($key) unless ref $key;
   carp "FATAL: invalid 'key' param" unless ref($key) eq __PACKAGE__;
   return $key->decrypt(@_);
@@ -138,6 +115,7 @@ sub dsa_decrypt {
 
 sub dsa_sign_message {
   my $key = shift;
+  local $SIG{__DIE__} = \&CryptX::_croak;
   $key = __PACKAGE__->new($key) unless ref $key;
   carp "FATAL: invalid 'key' param" unless ref($key) eq __PACKAGE__;
   return $key->sign_message(@_);
@@ -145,6 +123,7 @@ sub dsa_sign_message {
 
 sub dsa_verify_message {
   my $key = shift;
+  local $SIG{__DIE__} = \&CryptX::_croak;
   $key = __PACKAGE__->new($key) unless ref $key;
   carp "FATAL: invalid 'key' param" unless ref($key) eq __PACKAGE__;
   return $key->verify_message(@_);
@@ -152,6 +131,7 @@ sub dsa_verify_message {
 
 sub dsa_sign_hash {
   my $key = shift;
+  local $SIG{__DIE__} = \&CryptX::_croak;
   $key = __PACKAGE__->new($key) unless ref $key;
   carp "FATAL: invalid 'key' param" unless ref($key) eq __PACKAGE__;
   return $key->sign_hash(@_);
@@ -159,6 +139,7 @@ sub dsa_sign_hash {
 
 sub dsa_verify_hash {
   my $key = shift;
+  local $SIG{__DIE__} = \&CryptX::_croak;
   $key = __PACKAGE__->new($key) unless ref $key;
   carp "FATAL: invalid 'key' param" unless ref($key) eq __PACKAGE__;
   return $key->verify_hash(@_);
@@ -251,6 +232,14 @@ random data taken from C</dev/random> (UNIX) or C<CryptGenRandom> (Win32).
  # L = 2048, N = 224 => generate_key(28, 256)
  # L = 2048, N = 256 => generate_key(32, 256)
  # L = 3072, N = 256 => generate_key(32, 384)
+
+ $pk->generate_key($param_hash)
+ # $param_hash is { d => $d, p => $p, q => $q }
+ # where $d, $p, $q are hex strings
+
+ $pk->generate_key(\$dsa_param)
+ # $dsa_param is the content of DER or PEM file with DSA params
+ # e.g. openssl dsaparam 2048
 
 =head2 import_key
 
@@ -444,7 +433,12 @@ Support for password protected PEM keys
 =head2 size
 
  my $size = $pk->size;
- # returns key size in bytes or undef if no key loaded
+ # returns key size (length of the prime p) in bytes or undef if key not loaded
+
+=head2 size_q
+
+ my $size = $pk->size_q;
+ # returns length of the prime q in bytes or undef if key not loaded
 
 =head2 key2hash
 
@@ -540,10 +534,10 @@ Verify signature (Perl code):
 
  use Crypt::PK::DSA;
  use Crypt::Digest 'digest_file';
- use File::Slurp 'read_file';
+ use Crypt::Misc 'read_rawfile';
 
  my $pkdsa = Crypt::PK::DSA->new("dsakey.pub.pem");
- my $signature = read_file("input.sha1-dsa.sig", binmode=>':raw');
+ my $signature = read_rawfile("input.sha1-dsa.sig");
  my $valid = $pkdsa->verify_hash($signature, digest_file("SHA1", "input.data"), "SHA1", "v1.5");
  print $valid ? "SUCCESS" : "FAILURE";
 
@@ -553,11 +547,11 @@ Create signature (Perl code):
 
  use Crypt::PK::DSA;
  use Crypt::Digest 'digest_file';
- use File::Slurp 'write_file';
+ use Crypt::Misc 'write_rawfile';
 
  my $pkdsa = Crypt::PK::DSA->new("dsakey.priv.pem");
  my $signature = $pkdsa->sign_hash(digest_file("SHA1", "input.data"), "SHA1", "v1.5");
- write_file("input.sha1-dsa.sig", {binmode=>':raw'}, $signature);
+ write_rawfile("input.sha1-dsa.sig", $signature);
 
 Verify signature (from commandline):
 
@@ -568,15 +562,15 @@ Verify signature (from commandline):
 Generate keys (Perl code):
 
  use Crypt::PK::DSA;
- use File::Slurp 'write_file';
+ use Crypt::Misc 'write_rawfile';
 
  my $pkdsa = Crypt::PK::DSA->new;
  $pkdsa->generate_key(20, 128);
- write_file("dsakey.pub.der",  {binmode=>':raw'}, $pkdsa->export_key_der('public'));
- write_file("dsakey.priv.der", {binmode=>':raw'}, $pkdsa->export_key_der('private'));
- write_file("dsakey.pub.pem",  $pkdsa->export_key_pem('public_x509'));
- write_file("dsakey.priv.pem", $pkdsa->export_key_pem('private'));
- write_file("dsakey-passwd.priv.pem", $pkdsa->export_key_pem('private', 'secret'));
+ write_rawfile("dsakey.pub.der",  $pkdsa->export_key_der('public'));
+ write_rawfile("dsakey.priv.der", $pkdsa->export_key_der('private'));
+ write_rawfile("dsakey.pub.pem",  $pkdsa->export_key_pem('public_x509'));
+ write_rawfile("dsakey.priv.pem", $pkdsa->export_key_pem('private'));
+ write_rawfile("dsakey-passwd.priv.pem", $pkdsa->export_key_pem('private', 'secret'));
 
 Use keys by OpenSSL:
 
@@ -599,7 +593,6 @@ Generate keys:
 Load keys (Perl code):
 
  use Crypt::PK::DSA;
- use File::Slurp 'write_file';
 
  my $pkdsa = Crypt::PK::DSA->new;
  $pkdsa->import_key("dsakey.pub.der");
@@ -615,3 +608,5 @@ Load keys (Perl code):
 =item * L<https://en.wikipedia.org/wiki/Digital_Signature_Algorithm|https://en.wikipedia.org/wiki/Digital_Signature_Algorithm>
 
 =back
+
+=cut

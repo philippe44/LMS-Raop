@@ -4,16 +4,15 @@ package Crypt::Cipher::DES;
 
 use strict;
 use warnings;
-our $VERSION = '0.048';
+our $VERSION = '0.060';
 
-use CryptX;
-use base 'Crypt::Cipher';
+use base qw(Crypt::Cipher);
 
-sub blocksize      { Crypt::Cipher::blocksize(__PACKAGE__) }
-sub keysize        { Crypt::Cipher::keysize(__PACKAGE__) }
-sub max_keysize    { Crypt::Cipher::max_keysize(__PACKAGE__) }
-sub min_keysize    { Crypt::Cipher::min_keysize(__PACKAGE__) }
-sub default_rounds { Crypt::Cipher::default_rounds(__PACKAGE__) }
+sub blocksize      { Crypt::Cipher::blocksize('DES')      }
+sub keysize        { Crypt::Cipher::keysize('DES')        }
+sub max_keysize    { Crypt::Cipher::max_keysize('DES')    }
+sub min_keysize    { Crypt::Cipher::min_keysize('DES')    }
+sub default_rounds { Crypt::Cipher::default_rounds('DES') }
 
 1;
 
@@ -21,7 +20,7 @@ sub default_rounds { Crypt::Cipher::default_rounds(__PACKAGE__) }
 
 =head1 NAME
 
-Crypt::Cipher::DES - Symetric cipher DES, key size: 64[56] bits (Crypt::CBC compliant)
+Crypt::Cipher::DES - Symmetric cipher DES, key size: 64[56] bits (Crypt::CBC compliant)
 
 =head1 SYNOPSIS
 
@@ -33,7 +32,7 @@ Crypt::Cipher::DES - Symetric cipher DES, key size: 64[56] bits (Crypt::CBC comp
   my $cbc = Crypt::Mode::CBC->new('DES');
   my $ciphertext = $cbc->encrypt("secret data", $key, $iv);
 
-  ### example 2
+  ### example 2 (slower)
   use Crypt::CBC;
   use Crypt::Cipher::DES;
 
@@ -110,12 +109,10 @@ L<Crypt::Mode::CBC|Crypt::Mode::CBC>, L<Crypt::Mode::CTR|Crypt::Mode::CTR> or L<
 
 =over
 
-=item * L<CryptX|CryptX>, L<Crypt::Cipher|Crypt::Cipher>
+=item * L<CryptX|CryptX>, L<Crypt::Cipher>
 
-=item * L<http://en.wikipedia.org/wiki/Data_Encryption_Standard|http://en.wikipedia.org/wiki/Data_Encryption_Standard>
+=item * L<https://en.wikipedia.org/wiki/Data_Encryption_Standard>
 
 =back
 
 =cut
-
-__END__

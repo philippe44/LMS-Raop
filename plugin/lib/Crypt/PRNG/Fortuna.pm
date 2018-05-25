@@ -2,7 +2,7 @@ package Crypt::PRNG::Fortuna;
 
 use strict;
 use warnings;
-our $VERSION = '0.048';
+our $VERSION = '0.060';
 
 use base qw(Crypt::PRNG Exporter);
 our %EXPORT_TAGS = ( all => [qw(random_bytes random_bytes_hex random_bytes_b64 random_bytes_b64u random_string random_string_from rand irand)] );
@@ -10,7 +10,6 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw();
 
 use CryptX;
-use base 'Crypt::PRNG';
 
 {
   ### stolen from Bytes::Random::Secure
@@ -158,3 +157,5 @@ See L<Crypt::PRNG/int32>.
 =item * L<https://en.wikipedia.org/wiki/Fortuna_%28PRNG%29|https://en.wikipedia.org/wiki/Fortuna_%28PRNG%29>
 
 =back
+
+=cut

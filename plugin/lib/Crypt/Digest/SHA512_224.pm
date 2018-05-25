@@ -4,7 +4,7 @@ package Crypt::Digest::SHA512_224;
 
 use strict;
 use warnings;
-our $VERSION = '0.048';
+our $VERSION = '0.060';
 
 use base qw(Crypt::Digest Exporter);
 our %EXPORT_TAGS = ( all => [qw( sha512_224 sha512_224_hex sha512_224_b64 sha512_224_b64u sha512_224_file sha512_224_file_hex sha512_224_file_b64 sha512_224_file_b64u )] );
@@ -13,19 +13,17 @@ our @EXPORT = qw();
 
 use Carp;
 $Carp::Internal{(__PACKAGE__)}++;
-use CryptX;
+use Crypt::Digest;
 
-sub hashsize { Crypt::Digest::hashsize(__PACKAGE__) }
-
-sub sha512_224             { Crypt::Digest::digest_data(__PACKAGE__, @_) }
-sub sha512_224_hex         { Crypt::Digest::digest_data_hex(__PACKAGE__, @_) }
-sub sha512_224_b64         { Crypt::Digest::digest_data_b64(__PACKAGE__, @_) }
-sub sha512_224_b64u        { Crypt::Digest::digest_data_b64u(__PACKAGE__, @_) }
-
-sub sha512_224_file        { Crypt::Digest::digest_file(__PACKAGE__, @_) }
-sub sha512_224_file_hex    { Crypt::Digest::digest_file_hex(__PACKAGE__, @_) }
-sub sha512_224_file_b64    { Crypt::Digest::digest_file_b64(__PACKAGE__, @_) }
-sub sha512_224_file_b64u   { Crypt::Digest::digest_file_b64u(__PACKAGE__, @_) }
+sub hashsize                { Crypt::Digest::hashsize('SHA512_224')             }
+sub sha512_224             { Crypt::Digest::digest_data('SHA512_224', @_)      }
+sub sha512_224_hex         { Crypt::Digest::digest_data_hex('SHA512_224', @_)  }
+sub sha512_224_b64         { Crypt::Digest::digest_data_b64('SHA512_224', @_)  }
+sub sha512_224_b64u        { Crypt::Digest::digest_data_b64u('SHA512_224', @_) }
+sub sha512_224_file        { Crypt::Digest::digest_file('SHA512_224', @_)      }
+sub sha512_224_file_hex    { Crypt::Digest::digest_file_hex('SHA512_224', @_)  }
+sub sha512_224_file_b64    { Crypt::Digest::digest_file_b64('SHA512_224', @_)  }
+sub sha512_224_file_b64u   { Crypt::Digest::digest_file_b64u('SHA512_224', @_) }
 
 1;
 
@@ -216,12 +214,10 @@ The OO interface provides the same set of functions as L<Crypt::Digest>.
 
 =over
 
-=item * L<CryptX|CryptX>, L<Crypt::Digest|Crypt::Digest>
+=item * L<CryptX|CryptX>, L<Crypt::Digest>
 
-=item * L<http://en.wikipedia.org/wiki/SHA-2|http://en.wikipedia.org/wiki/SHA-2>
+=item * L<https://en.wikipedia.org/wiki/SHA-2>
 
 =back
 
 =cut
-
-__END__
