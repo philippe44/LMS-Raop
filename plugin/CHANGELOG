@@ -1,8 +1,9 @@
-note:
-	- BEWARE OF VERSION NUMBER FOR PERL LIBS
-
 0.4.1.0
- - Update Perl libraries
+ - CryptX and Ed25519 upgraded to 0.60
+ - added binaries for various Perl & CPU
+ 
+0.4.0.3
+ - Change binaries to match CryptX (0.51) and ED25519 (1.04)
  
 0.4.0.2
  - for Windows XP IP_ADD_MULTICAST must be after binding
