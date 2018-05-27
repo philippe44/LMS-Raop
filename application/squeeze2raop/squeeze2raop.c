@@ -308,7 +308,7 @@ static void BusyDrop(struct sMR *Device);
 			for (LMSVolume = 100; Volume < LMSVolumeMap[LMSVolume] && LMSVolume; LMSVolume--);
 
 			if (device->Config.VolumeMode == VOLUME_HARD &&
-				(device->Config.VolumeFeedback == VOLUME_UNFILTERED || device->VolumeStamp + 1000 - gettime_ms() > 0x7fffffff) &&
+				(device->Config.VolumeFeedback == VOLUME_UNFILTERED || (device->VolumeStamp + 1000) - gettime_ms() > 1000) &&
 				(Volume || device->Config.MuteOnPause || sq_get_mode(device->SqueezeHandle) == device->sqState)) {
 				tRaopReq *Req = malloc(sizeof(tRaopReq));
 
@@ -384,7 +384,7 @@ static void *PlayerThread(void *args)
 
 			LOG_DEBUG("[%p]: tick %u", Device, now);
 
-			if (Device->DiscWait && (Device->LastFlush + Device->Config.IdleTimeout * 1000 - now > 0x7fffffff) ) {
+			if (Device->DiscWait && (Device->LastFlush + (Device->Config.IdleTimeout * 1000) - now > 1000) ) {
 				Device->VolumeReady = !Device->Config.VolumeTrigger;
 				LOG_INFO("[%p]: Disconnecting %u", Device, now);
 				raopcl_disconnect(Device->Raop);
