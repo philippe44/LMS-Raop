@@ -227,7 +227,7 @@ void _checkfade(bool start, struct thread_ctx_s *ctx) {
 
 	bytes = ctx->output.current_sample_rate * BYTES_PER_FRAME * ctx->output.fade_secs;
 	if (ctx->output.fade_mode == FADE_INOUT) {
-		bytes /= 2;
+		bytes = ((bytes / 2) / BYTES_PER_FRAME) * BYTES_PER_FRAME;
 	}
 
 	if (start && (ctx->output.fade_mode == FADE_IN || (ctx->output.fade_mode == FADE_INOUT && _buf_used(ctx->outputbuf) == 0))) {

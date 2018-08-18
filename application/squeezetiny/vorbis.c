@@ -198,17 +198,21 @@ static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
 
 	if (n > 0) {
 
+		frames_t count;
+		s16_t *iptr, *optr;
+
 		frames = n / 2 / v->channels;
+		count = frames * v->channels;
 
-		// required output is 16 bits, just expand when one channel only
-		if (v->channels == 1) {
-			s16_t *iptr, *optr;
-			frames_t count = frames;
+		// work backward to unpack samples to 4 bytes per sample
+		iptr = (s16_t *)write_buf + count;
+		optr = (s16_t *)write_buf + frames * 2;
 
-			// work backward to unpack samples to 4 bytes per sample
-			iptr = (s16_t *)write_buf + count;
-			optr = (s16_t *)write_buf + frames * 2;
-
+		if (v->channels == 2) {
+			while (count--) {
+				*--optr = *--iptr;
+			}
+		} else if (v->channels == 1) {
 			while (count--) {
 				*--optr = *--iptr;
 				*--optr = *iptr;

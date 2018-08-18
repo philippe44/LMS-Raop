@@ -1,3 +1,7 @@
+0.4.2.0
+ - add mono for vorbis
+ - fade start might be missed in case bytes / 2 does not align with frame boundary (FADE IN-OUT)
+ 
 0.4.1.0
  - CryptX and Ed25519 upgraded to 0.60
  - added binaries for various Perl & CPU
