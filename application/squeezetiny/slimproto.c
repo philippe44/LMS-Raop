@@ -750,17 +750,17 @@ void wake_controller(struct thread_ctx_s *ctx) {
 void discover_server(struct thread_ctx_s *ctx) {
 	struct sockaddr_in d;
 	struct sockaddr_in s;
-	char buf[32], vers[] = "VERS", port[] = "JSON";
+	char buf[32], vers[] = "VERS", port[] = "JSON", clip[] = "CLIP";
 	struct pollfd pollinfo;
 	u8_t len;
-
 	int disc_sock = socket(AF_INET, SOCK_DGRAM, 0);
-
 	socklen_t enable = 1;
+
+	ctx->cli_port = 9090;
+
 	setsockopt(disc_sock, SOL_SOCKET, SO_BROADCAST, (const void *)&enable, sizeof(enable));
 
-	len = sprintf(buf,"e%s\xff%s", vers, port) + 1;
-	*strchr(buf, 0xff) = '\0';
+	len = sprintf(buf,"e%s%c%s%c%s", vers, '\0', port, '\0', clip) + 1;
 
 	memset(&d, 0, sizeof(d));
 	d.sin_family = AF_INET;
@@ -788,16 +788,19 @@ void discover_server(struct thread_ctx_s *ctx) {
 
 			if ((p = strstr(readbuf, vers)) != NULL) {
 				p += strlen(vers);
-				len = *p;
 				strncpy(ctx->server_version, p + 1, min(SERVER_VERSION_LEN, *p));
 				ctx->server_version[min(SERVER_VERSION_LEN, *p)] = '\0';
 			}
 
 			 if ((p = strstr(readbuf, port)) != NULL) {
 				p += strlen(port);
-				len = *p;
 				strncpy(ctx->server_port, p + 1, min(5, *p));
 				ctx->server_port[min(6, *p)] = '\0';
+			}
+
+			if ((p = strstr(readbuf, clip)) != NULL) {
+				p += strlen(clip);
+				ctx->cli_port = atoi(p + 1);
 			}
 
 			strcpy(ctx->server_ip, inet_ntoa(s.sin_addr));

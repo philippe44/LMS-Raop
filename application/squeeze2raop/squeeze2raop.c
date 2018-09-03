@@ -770,15 +770,8 @@ static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s)
 		return false;
 	}
 
-#if 0
-	if (!stristr(s->name, "JBL")) {
-		printf("ONLY JBL %s\n", data->name);
-		return false;
-	}
-#endif
-
 	Device->Magic 			= MAGIC;
-	Device->on 				= false;
+	Device->on 				= false;
 	Device->SqueezeHandle 	= 0;
 	Device->Running 		= true;
 	// make sure that 1st volume is not missed

@@ -1,3 +1,6 @@
+4.3.0
+ - get cli port from server
+
 0.4.2.0
  - add mono for vorbis
  - fade start might be missed in case bytes / 2 does not align with frame boundary (FADE IN-OUT)
