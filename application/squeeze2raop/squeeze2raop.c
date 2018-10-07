@@ -66,8 +66,8 @@ log_level	raop_loglevel = lINFO;
 tMRConfig			glMRConfig = {
 							true,
 							"",
-							false,
-							false,
+							true,
+							true,
 							false,
 							30,
 							false,
@@ -733,9 +733,8 @@ static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s)
 	pthread_attr_t pattr;
 	raop_crypto_t Crypto;
 	bool Auth = false;
-	char *p;
+	char *p, *am, *md, *pk;
 	u32_t mac_size = 6;
-	char *am = GetmDNSAttribute(s->attr, s->attr_count, "am");
 	char Secret[SQ_STR_LENGTH] = "";
 
 	// read parameters from default then config file
@@ -745,33 +744,31 @@ static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s)
 
 	if (!Device->Config.Enabled) return false;
 
-	 // if airport express, forece auth
-	 if (am && stristr(am, "airport")) {
-		LOG_INFO("[%p]: AirPort Express", Device);
-		Auth = true;
-	}
-
-	 if (am && stristr(am, "appletv")) {
-		char *pk = GetmDNSAttribute(s->attr, s->attr_count, "pk");
-		if (pk && *pk) {
-			char *token = strchr(Device->Config.Credentials, '@');
-			LOG_INFO("[%p]: AppleTV with authentication (pairing must be done separately)", Device);
-			if (Device->Config.Credentials[0]) sscanf(Device->Config.Credentials, "%[a-fA-F0-9]", Secret);
-			if (token) *token = '\0';
-			sprintf(Device->Config.Credentials + strlen(Device->Config.Credentials), "@%s:%d", inet_ntoa(s->addr), s->port);
-		}
-		NFREE(pk);
-	}
-
-	NFREE(am);
-
-	if (stristr(s->name, "AirSonos")) {
-		LOG_DEBUG("[%p]: skipping AirSonos player (please use uPnPBridge)", Device);
+	if (stristr(s->name, "AirSonos")) {
+		LOG_DEBUG("[%p]: skipping AirSonos player (please use uPnPBridge)", Device);
 		return false;
 	}
 
-	Device->Magic 			= MAGIC;
-	Device->on 				= false;
+	am = GetmDNSAttribute(s->attr, s->attr_count, "am");
+	pk = GetmDNSAttribute(s->attr, s->attr_count, "pk");
+	md = GetmDNSAttribute(s->attr, s->attr_count, "md");
+
+	// if airport express, forece auth
+	if (am && stristr(am, "airport")) {
+		LOG_INFO("[%p]: AirPort Express", Device);
+		Auth = true;
+	}
+
+	if (am && stristr(am, "appletv") && pk && *pk) {
+		char *token = strchr(Device->Config.Credentials, '@');
+		LOG_INFO("[%p]: AppleTV with authentication (pairing must be done separately)", Device);
+		if (Device->Config.Credentials[0]) sscanf(Device->Config.Credentials, "%[a-fA-F0-9]", Secret);
+		if (token) *token = '\0';
+		sprintf(Device->Config.Credentials + strlen(Device->Config.Credentials), "@%s:%d", inet_ntoa(s->addr), s->port);
+	}
+
+	Device->Magic 			= MAGIC;
+	Device->on 				= false;
 	Device->SqueezeHandle 	= 0;
 	Device->Running 		= true;
 	// make sure that 1st volume is not missed
@@ -838,11 +835,15 @@ static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s)
 	Device->Raop = raopcl_create(glHost, glDACPid, Device->ActiveRemote,
 								 RAOP_ALAC, Device->Config.AlacEncode, FRAMES_PER_BLOCK,
 								 (u32_t) MS2TS(Device->Config.ReadAhead, Device->SampleRate ? atoi(Device->SampleRate) : 44100),
-								 Crypto, Auth, Secret,
+								 Crypto, Auth, Secret, pk, md,
 								 Device->SampleRate ? atoi(Device->SampleRate) : 44100,
 								 Device->SampleSize ? atoi(Device->SampleSize) : 16,
 								 Device->Channels ? atoi(Device->Channels) : 2,
 								 raopcl_float_volume(Device->Volume));
+
+	NFREE(am);
+	NFREE(md);
+	NFREE(pk);
 
 	if (!Device->Raop) {
 		LOG_ERROR("[%p]: cannot create raop device", Device);
