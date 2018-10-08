@@ -1,5 +1,5 @@
 4.4.1
- - need to verify POST capability *and* pk to send auth-setup for non AppleTV
+ - use 'et' field to decide auth-setup sending (this MFi)
  
 4.4.0
  - send auth-setup when "pk" key found and not AppleTV is needed for AirPlay2 compatibility
