@@ -835,7 +835,7 @@ static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s)
 	Device->Raop = raopcl_create(glHost, glDACPid, Device->ActiveRemote,
 								 RAOP_ALAC, Device->Config.AlacEncode, FRAMES_PER_BLOCK,
 								 (u32_t) MS2TS(Device->Config.ReadAhead, Device->SampleRate ? atoi(Device->SampleRate) : 44100),
-								 Crypto, Auth, Secret, pk, md,
+								 Crypto, Auth, Secret, Device->Crypto, md,
 								 Device->SampleRate ? atoi(Device->SampleRate) : 44100,
 								 Device->SampleSize ? atoi(Device->SampleSize) : 16,
 								 Device->Channels ? atoi(Device->Channels) : 2,
@@ -905,7 +905,6 @@ void DelRaopDevice(struct sMR *Device)
 /*----------------------------------------------------------------------------*/
 static void *ActiveRemoteThread(void *args)
 {
-	int n;
 	char buf[1024], command[128], ActiveRemote[16];
 	char response[] = "HTTP/1.1 204 No Content\r\nDate: %s,%02d %s %4d %02d:%02d:%02d "
 					  "GMT\r\nDAAP-Server: iTunes/7.6.2 (Windows; N;)\r\nContent-Type: "
@@ -915,7 +914,7 @@ static void *ActiveRemoteThread(void *args)
 	char *month[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sept", "Oct", "Nov", "Dec" };
 
 	if (listen(glActiveRemoteSock, 1) < 0) {
-		LOG_ERROR("Cannot listen", NULL);
+		LOG_ERROR("Cannot listen %d", glActiveRemoteSock);
 		return NULL;
 	}
 
@@ -938,7 +937,7 @@ static void *ActiveRemoteThread(void *args)
 		}
 
 		// receive data, all should be in a single receive, hopefully
-		n = recv(sd, (void*) buf, sizeof(buf) - 1, 0);
+		recv(sd, (void*) buf, sizeof(buf) - 1, 0);
 		buf[sizeof(buf) - 1] = '\0';
 		strlwr(buf);
 
@@ -1061,7 +1060,7 @@ static void *ActiveRemoteThread(void *args)
 		gmt = *gmtime(&now);
 		sprintf(buf, response, day[gmt.tm_wday], gmt.tm_mday, month[gmt.tm_mon],
 								gmt.tm_year + 1900, gmt.tm_hour, gmt.tm_min, gmt.tm_sec);
-		n = send(sd, buf, strlen(buf), 0);
+		send(sd, buf, strlen(buf), 0);
 
 		close_socket(sd);
 	}
