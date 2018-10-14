@@ -527,7 +527,7 @@ struct thread_ctx_s {
 extern struct thread_ctx_s thread_ctx[MAX_PLAYER];
 
 // codecs
-#define MAX_CODECS 5
+#define MAX_CODECS 16
 
 extern struct codec *codecs[MAX_CODECS];
 
@@ -543,6 +543,8 @@ struct codec*	register_faad(void);
 void 			deregister_faad(void);
 struct codec*	register_vorbis(void);
 void 			deregister_vorbis(void);
+struct codec*	register_alac(void);
+void 			deregister_alac(void);
 
 #if RESAMPLE
 bool register_soxr(void);

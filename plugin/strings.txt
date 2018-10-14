@@ -155,7 +155,7 @@ PLUGIN_RAOPBRIDGE_CODECS
 
 PLUGIN_RAOPBRIDGE_AUDIOPARAM_DESC
 	EN	Several codecs are supported by an AirPlay player. They will be reported to LMS that will decide 
-	EN	when to do transcoding. 
+	EN	when to do transcoding. They can be a combination of <b>lossy</b>:aac,ogg,mp3 <b>lossless</b>:flc,alc <b>uncompressed</b>:pcm,aif 
 
 PLUGIN_RAOPBRIDGE_VOLUMEMGMT
 	EN	Volume management

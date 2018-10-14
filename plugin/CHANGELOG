@@ -1,7 +1,10 @@
-4.4.1
+0.4.5.0
+ - add alac support
+ 
+0.4.4.1
  - use 'et' field to decide auth-setup sending (this MFi)
  
-4.4.0
+0.4.4.0
  - send auth-setup when "pk" key found and not AppleTV is needed for AirPlay2 compatibility
  - use "md" field to block text, artwork or progress sending
  - enable metadata and coverart by default, now that it's protected
