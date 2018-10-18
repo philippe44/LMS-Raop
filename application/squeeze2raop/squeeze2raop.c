@@ -349,7 +349,7 @@ static void BusyDrop(struct sMR *Device);
 			device->TrackStartTime = *((u32_t*) param);
 			device->TrackRunning = true;
 			device->TrackElapsed = 0;
-			device->MetadataWait = 1;
+			device->MetadataWait = 2;
 			device->MetadataHash++;
 			break;
 		case SQ_SETNAME:
