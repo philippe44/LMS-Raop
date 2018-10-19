@@ -29,5 +29,5 @@ ALAC codec: https://github.com/macosforge/alac
 
 Curve25519 crypto: https://github.com/msotoodeh/curve25519
  
-Use also faad, limad, mpg123 and libflac, libsoxr, libogg and libvorbis  (use headers only if you do shared libs, 
+Use also faad, libmad, mpg123 and libflac, libsoxr, libogg and libvorbis  (use headers only if you do shared libs, 
 full library if you want static link)
