@@ -14,19 +14,12 @@ Support thread is here: http://forums.slimdevices.com/showthread.php?105198-ANNO
 To re-compile, use makefile (none available for Windows, I use Embarcadero IDE) and add
 
 mDNS query: https://github.com/philippe44/mDNS-SD (use fork v2)
-
 mDNS announce: https://github.com/philippe44/TinySVCmDNS
-
 HTTP download: https://github.com/philippe44/HTTP-Fetcher
-
 RAOP client library: https://github.com/philippe44/RAOP-Player
-
 libupnp: https://sourceforge.net/projects/pupnp (you just need the libixml part of libupnp)
-
 pthread for Windows: https://www.sourceware.org/pthreads-win32
-
 ALAC codec: https://github.com/macosforge/alac
-
 Curve25519 crypto: https://github.com/msotoodeh/curve25519
  
 Use also faad, libmad, mpg123 and libflac, libsoxr, libogg and libvorbis  (use headers only if you do shared libs, 
