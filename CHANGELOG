@@ -1,5 +1,8 @@
+0.4.5.2
+ - add SO_REUSEPORT for all except Windows
+ 
 0.4.5.1
- - small alac corrctions (could have run over buffer output)
+ - small alac corrections (could have run over buffer output)
  - metadata wait is 2 sec
  
 0.4.5.0

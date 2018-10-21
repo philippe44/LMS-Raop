@@ -1106,6 +1106,7 @@ void StartActiveRemote(struct in_addr host)
 	// start mDNS responder
 	if ((gl_mDNSResponder = mdnsd_start(host)) == NULL) {
 		LOG_ERROR("mdnsd responder start error", NULL);
+		return;
 	}
 
 	sprintf(buf, "%s.local", glHostName);
