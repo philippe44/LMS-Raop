@@ -1,3 +1,6 @@
+0.4.5.4
+ - getsockoption for SO_REUSEPORT was resetting parameter
+ 
 0.4.5.3
  - set SO_REUSEPORT only if option supported
  - full cross-compiling
