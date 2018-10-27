@@ -51,7 +51,6 @@ typedef struct sRaopReq {
 	char Type[20];
 	union {
 		float Volume;
-		raop_codec_t Codec;
 		u64_t FlushTS;
 	} Data;
 } tRaopReq;

@@ -300,7 +300,6 @@ static void BusyDrop(struct sMR *Device);
 				raopcl_start_at(device->Raop, TIME_MS2NTP(*((unsigned*) param)) -
 								TS2NTP(raopcl_latency(device->Raop), raopcl_sample_rate(device->Raop)));
 
-			Req->Data.Codec = RAOP_NOCODEC;
 			strcpy(Req->Type, "CONNECT");
 			QueueInsert(&device->Queue, Req);
 			pthread_cond_signal(&device->Cond);
@@ -335,7 +334,6 @@ static void BusyDrop(struct sMR *Device);
 
 			device->sqState = SQ_PLAY;
 
-			Req->Data.Codec = RAOP_ALAC;
 			strcpy(Req->Type, "CONNECT");
 			QueueInsert(&device->Queue, Req);
 			pthread_cond_signal(&device->Cond);
@@ -496,7 +494,7 @@ static void *PlayerThread(void *args)
 			// if we need to wait for a volume, set a timout in case player does not send it
 			if (!Device->VolumeReady) Device->VolumeReadyWait = 3;
 
-			if (raopcl_connect(Device->Raop, Device->PlayerIP, Device->PlayerPort, req->Data.Codec, !Device->Config.VolumeTrigger)) {
+			if (raopcl_connect(Device->Raop, Device->PlayerIP, Device->PlayerPort, !Device->Config.VolumeTrigger)) {
 				Device->DiscWait = false;
 				LOG_INFO("[%p]: raop connected", Device);
 			}
@@ -833,7 +831,7 @@ static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s)
 		Crypto = RAOP_CLEAR;
 
 	Device->Raop = raopcl_create(glHost, glDACPid, Device->ActiveRemote,
-								 RAOP_ALAC, Device->Config.AlacEncode, FRAMES_PER_BLOCK,
+								 Device->Config.AlacEncode ? RAOP_ALAC : RAOP_PCM , FRAMES_PER_BLOCK,
 								 (u32_t) MS2TS(Device->Config.ReadAhead, Device->SampleRate ? atoi(Device->SampleRate) : 44100),
 								 Crypto, Auth, Secret, Device->Crypto, md,
 								 Device->SampleRate ? atoi(Device->SampleRate) : 44100,

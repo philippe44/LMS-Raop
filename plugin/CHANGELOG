@@ -1,3 +1,6 @@
+0.4.5.5
+ - codec management simplification in raop_client
+ 
 0.4.5.4
  - getsockoption for SO_REUSEPORT was resetting parameter
  
