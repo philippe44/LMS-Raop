@@ -344,7 +344,6 @@ static void BusyDrop(struct sMR *Device);
 			device->MetadataWait = 5;
 			break;
 		case SQ_STARTED:
-			device->TrackStartTime = *((u32_t*) param);
 			device->TrackRunning = true;
 			device->TrackElapsed = 0;
 			device->MetadataWait = 2;
@@ -434,9 +433,6 @@ static void *PlayerThread(void *args)
 					continue;
 				}
 
-				// on live stream, gather metadata every 5 seconds
-				if (metadata.remote && !metadata.duration) Device->MetadataWait = 5;
-
 				hash = hash32(metadata.title) ^ hash32(metadata.artwork);
 
 				if (Device->MetadataHash != hash) {
@@ -463,6 +459,18 @@ static void *PlayerThread(void *args)
 						NFREE(contentType);
 					}
 
+					/*
+					Set refresh rate to 5 sec for true live streams and song
+					duration + 5s for others that might be either live but with
+					real duration from plugin helpers or streaming services
+					*/
+					if (metadata.remote) {
+						Device->MetadataWait = 5;
+						if (metadata.duration) {
+							Device->MetadataWait += (metadata.duration - sq_get_time(Device->SqueezeHandle)) /1000;
+						}
+					}
+
 					LOG_INFO("[%p]: idx %d\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n"
 								"\tgenre:%s\n\tduration:%d.%03d\n\tsize:%d\n\tcover:%s",
 								 Device, metadata.index, metadata.artist,
@@ -471,9 +479,12 @@ static void *PlayerThread(void *args)
 								 div(metadata.duration,1000).rem, metadata.file_size,
 								 metadata.artwork ? metadata.artwork : "");
 
-				}
+				} else Device->MetadataWait = 5;
 
 				sq_free_metadata(&metadata);
+
+				LOG_DEBUG("[%p]: next metadata update %u", Device, Device->MetadataWait);
+
 			} else pthread_mutex_unlock(&Device->Mutex);
 
 			// was waiting for volume trigger, never received
@@ -774,7 +785,7 @@ static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s)
 	Device->PlayerIP 		= s->addr;
 	Device->PlayerPort 		= s->port;
 	Device->DiscWait 		= false;
-	Device->TrackDuration 	= Device->TrackElapsed = Device->TrackStartTime = 0;
+	Device->TrackDuration 	= Device->TrackElapsed = 0;
 	Device->TrackRunning 	= false;
 	Device->VolumeReady 	= !Device->Config.VolumeTrigger;
 	Device->VolumeReadyWait = 0;
@@ -831,7 +842,7 @@ static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s)
 		Crypto = RAOP_CLEAR;
 
 	Device->Raop = raopcl_create(glHost, glDACPid, Device->ActiveRemote,
-								 Device->Config.AlacEncode ? RAOP_ALAC : RAOP_PCM , FRAMES_PER_BLOCK,
+								 Device->Config.AlacEncode ? RAOP_ALAC : RAOP_ALAC_RAW , FRAMES_PER_BLOCK,
 								 (u32_t) MS2TS(Device->Config.ReadAhead, Device->SampleRate ? atoi(Device->SampleRate) : 44100),
 								 Crypto, Auth, Secret, Device->Crypto, md,
 								 Device->SampleRate ? atoi(Device->SampleRate) : 44100,

@@ -105,7 +105,6 @@ struct sMR {
 	u32_t 			LastFlush;
 	bool			DiscWait;
 	int				Sane;
-	u32_t			TrackStartTime;
 	u32_t			TrackDuration;
 	u32_t			TrackElapsed;
 	bool			TrackRunning;
