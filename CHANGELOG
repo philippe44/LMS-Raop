@@ -1,3 +1,6 @@
+0.4.6.1
+ - keep-alive must be used if no Connection header is present
+ 
 0.4.6.0
  - check of keep-alive was incorrect in copied Async::HTTP.pm (no impact on ATV pairing though)
  - move back PCM mode to RAW_ALAC, not just PCM as cheap players don't support PCM (no fmtp)
