@@ -26,21 +26,31 @@
 #define OSX       0
 #define WIN       0
 #define FREEBSD   0
+#define SUNOS	  0
 #elif defined (__APPLE__)
 #define LINUX     0
 #define OSX       1
 #define WIN       0
 #define FREEBSD   0
+#define SUNOS	  0
 #elif defined (_MSC_VER) || defined(__BORLANDC__)
 #define LINUX     0
 #define OSX       0
 #define WIN       1
 #define FREEBSD   0
+#define SUNOS	  0
 #elif defined(__FreeBSD__)
 #define LINUX     0
 #define OSX       0
 #define WIN       0
 #define FREEBSD   1
+#define SUNOS	  0
+#elif defined(sun)
+#define LINUX     0
+#define OSX       0
+#define WIN       0
+#define FREEBSD   0
+#define SUNOS	  1
 #else
 #error unknown target
 #endif
@@ -49,7 +59,7 @@
 #include <signal.h>
 #include <sys/stat.h>
 
-#if LINUX || OSX || FREEBSD
+#if LINUX || OSX || FREEBSD || SUNOS
 #include <sys/types.h>
 #include <unistd.h>
 #include <netinet/in.h>
@@ -68,14 +78,28 @@
 #define min(a,b) (((a) < (b)) ? (a) : (b))
 #define max(a,b) (((a) > (b)) ? (a) : (b))
 
+#if SUNOS
+typedef uint8_t  u8_t;
+typedef uint16_t u16_t;
+typedef uint32_t u32_t;
+typedef uint64_t u64_t;
+typedef int8_t    s8_t;
+typedef int16_t   s16_t;
+typedef int32_t   s32_t;
+typedef int64_t   s64_t;
+#if !defined PTHREAD_STACK_MIN
+#define PTHREAD_STACK_MIN 0
+#endif
+#else
 typedef u_int8_t  u8_t;
 typedef u_int16_t u16_t;
 typedef u_int32_t u32_t;
 typedef u_int64_t u64_t;
-typedef int16_t   s16_t;
 typedef int8_t    s8_t;
+typedef int16_t   s16_t;
 typedef int32_t   s32_t;
 typedef int64_t   s64_t;
+#endif
 
 #define last_error() errno
 #define ERROR_WOULDBLOCK EWOULDBLOCK

@@ -1,3 +1,6 @@
+0.4.6.2
+ - mad and flac correction, following squeezelite
+ 
 0.4.6.1
  - keep-alive must be used if no Connection header is present
  

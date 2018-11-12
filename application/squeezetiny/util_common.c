@@ -31,11 +31,14 @@
 #include <winsock2.h>
 #endif
 
-#if LINUX || OSX || FREEBSD
+#if LINUX || OSX || FREEBSD || SUNOS
 #include <sys/ioctl.h>
 #include <net/if.h>
 #include <net/if_arp.h>
 #include <netdb.h>
+#if SUNOS
+#include <sys/sockio.h>
+#endif
 #if FREEBSD
 #include <ifaddrs.h>
 #include <net/if_dl.h>
@@ -148,7 +151,7 @@ char *url_decode(char *str) {
   return buf;
 }
 
-#if LINUX || OSX || FREEBSD
+#if LINUX || OSX || FREEBSD || SUNOS
 /*---------------------------------------------------------------------------*/
 char *strlwr(char *str)
 {

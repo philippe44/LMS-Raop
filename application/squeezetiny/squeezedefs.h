@@ -23,7 +23,7 @@
 #ifndef __SQUEEZEDEFS_H
 #define __SQUEEZEDEFS_H
 
-#define VERSION "v0.4.6.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.4.6.2"" ("__DATE__" @ "__TIME__")"
 
 #include <pthread.h>
 #include "platform.h"
@@ -43,7 +43,7 @@
 #define mutex_timedlock(m, t) _mutex_timedlock(&m, t)
 int _mutex_timedlock(mutex_type *m, u32_t wait);
 
-#if LINUX || OSX || FREEBSD
+#if LINUX || OSX || FREEBSD || SUNOS
 
 #define last_error() errno
 #define ERROR_WOULDBLOCK EWOULDBLOCK

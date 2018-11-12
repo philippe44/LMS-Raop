@@ -79,7 +79,7 @@ int pthread_cond_reltimedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, u32_
 	_ftime(&SysTime);
 	ts.tv_sec = (long) SysTime.time;
 	ts.tv_nsec = 1000000 * SysTime.millitm;
-#elif LINUX || FREEBSD
+#elif LINUX || FREEBSD || SUNOS
 	clock_gettime(CLOCK_REALTIME, &ts);
 #elif OSX
 	gettimeofday(&tv, NULL);

@@ -24,11 +24,14 @@
 #include "util.h"
 #include "log_util.h"
 
-#if LINUX || OSX || FREEBSD
+#if LINUX || OSX || FREEBSD || SUNOS
 #include <sys/ioctl.h>
 #include <net/if.h>
 #include <net/if_arp.h>
 #include <netdb.h>
+#if SUNOS
+#include <sys/sockio.h>
+#endif
 #if FREEBSD
 #include <ifaddrs.h>
 #include <net/if_dl.h>
@@ -106,7 +109,7 @@ u64_t get_ntp(struct ntp_s *ntp)
 }
 
 // mutex wait with timeout
-#if LINUX || FREEBSD
+#if LINUX || FREEBSD || SUNOS
 int _mutex_timedlock(pthread_mutex_t *m, u32_t ms_wait)
 {
 	int rc = -1;
@@ -418,7 +421,7 @@ void touch_memory(u8_t *buf, size_t size) {
 }
 #endif
 
-#if LINUX || FREEBSD
+#if LINUX || FREEBSD || SUNOS
 int SendARP(in_addr_t src, in_addr_t dst, u32_t *mac, u32_t *size) {
 	int                 s;
 	struct arpreq       areq;
@@ -438,7 +441,9 @@ int SendARP(in_addr_t src, in_addr_t dst, u32_t *mac, u32_t *size) {
 	sin = (struct sockaddr_in *) &areq.arp_ha;
 	sin->sin_family = ARPHRD_ETHER;
 
+#if !SUNOS
 	strncpy(areq.arp_dev, "eth0", 15);
+#endif
 
 	if (ioctl(s, SIOCGARP, (caddr_t) &areq) == -1) {
 		return -1;
@@ -499,7 +504,7 @@ int SendARP(in_addr_t src, in_addr_t dst, u32_t *mac, u32_t *size)
 }
 #endif
 
-#if LINUX || FREEBSD || OSX
+#if LINUX || FREEBSD || OSX || SUNOS
 char *GetTempPath(u16_t size, char *path)
 {
 	strncpy(path, P_tmpdir, size);

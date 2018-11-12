@@ -118,7 +118,7 @@ sq_dev_param_t glDeviceParam = {
 /* locals */
 /*----------------------------------------------------------------------------*/
 static log_level 			*loglevel = &main_loglevel;
-#if LINUX || FREEBSD
+#if LINUX || FREEBSD || SUNOS
 static bool			 		glDaemonize = false;
 #endif
 static bool					glMainRunning = true;
@@ -155,7 +155,7 @@ static char usage[] =
 		   "  -f <logfile>\t\tWrite debug to logfile\n"
   		   "  -p <pid file>\t\twrite PID in file\n"
 		   "  -d <log>=<level>\tSet logging level, logs: all|slimproto|stream|decode|output|web|main|util|raop, level: error|warn|info|debug|sdebug\n"
-#if LINUX || FREEBSD
+#if LINUX || FREEBSD || SUNOS
 		   "  -z \t\t\tDaemonize\n"
 #endif
 		   "  -Z \t\t\tNOT interactive\n"
@@ -174,6 +174,9 @@ static char usage[] =
 #endif
 #if FREEBSD
 		   " FREEBSD"
+#endif
+#if SUNOS
+		   " SUNOS"
 #endif
 #if EVENTFD
 		   " EVENTFD"
@@ -1347,7 +1350,7 @@ bool ParseArgs(int argc, char **argv) {
 		case 'm':
 			strcpy(glExcluded, optarg);
 			break;
-#if LINUX || FREEBSD
+#if LINUX || FREEBSD || SUNOS
 		case 'z':
 			glDaemonize = true;
 			break;
@@ -1453,7 +1456,7 @@ int main(int argc, char *argv[])
 		return(0);
 	}
 
-#if LINUX || FREEBSD
+#if LINUX || FREEBSD || SUNOS
 	if (glDaemonize) {
 		if (daemon(1, glLogFile ? 1 : 0)) {
 			fprintf(stderr, "error daemonizing: %s\n", strerror(errno));
@@ -1482,7 +1485,7 @@ int main(int argc, char *argv[])
 
 	while (strcmp(resp, "exit")) {
 
-#if LINUX || FREEBSD
+#if LINUX || FREEBSD || SUNOS
 		if (!glDaemonize && glInteractive)
 			i = scanf("%s", resp);
 		else
