@@ -490,9 +490,9 @@ static void *PlayerThread(void *args)
 
 			} else pthread_mutex_unlock(&Device->Mutex);
 
-			// was waiting for volume trigger, never received
+			// repeating a volume after CONNECT or volume trigger never received
 			if (Device->VolumeReadyWait && !--Device->VolumeReadyWait) {
-				LOG_WARN("[%p]: volume trigger timeout", Device);
+				LOG_WARN("[%p]: volume repeat or trigger timeout", Device);
 				Device->VolumeReady = true;
 				// only send 'last' command if required (might be -1 in config)
 				if (Device->Volume != -1) raopcl_set_volume(Device->Raop, Device->VolumeMapping[Device->Volume]);
@@ -505,8 +505,12 @@ static void *PlayerThread(void *args)
 
 			LOG_INFO("[%p]: raop connecting ...", Device);
 
-			// if we need to wait for a volume, set a timout in case player does not send it
+			/*
+			if needed to wait for a volume, set a timoeut in case player does
+			not send it otherwise repeat volume command for "stubborn" players
+            */
 			if (!Device->VolumeReady) Device->VolumeReadyWait = 3;
+			else Device->VolumeReadyWait = 1;
 
 			if (raopcl_connect(Device->Raop, Device->PlayerIP, Device->PlayerPort, !Device->Config.VolumeTrigger)) {
 				Device->DiscWait = false;
@@ -1056,7 +1060,7 @@ static void *ActiveRemoteThread(void *args)
 					if (stristr(command, ".volume=")) i = (int) volume;
 					else for (i = 0; i < 100 && volume > Device->VolumeMapping[i]; i++);
 					LOG_INFO("[%p]: volume feedback %u (%.2f)", Device, i, volume);
-					if (i != Device->Volume) {
+					if (i != Device->Volume && !Device->VolumeReadyWait) {
 						char vol[10];
 						sprintf(vol, "%d", i);
 						sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, vol);
