@@ -65,7 +65,6 @@ log_level	raop_loglevel = lINFO;
 
 tMRConfig			glMRConfig = {
 							true,
-							"",
 							true,
 							true,
 							false,
@@ -1531,7 +1530,7 @@ int main(int argc, char *argv[])
 				if (!Locked) pthread_mutex_unlock(&p->Mutex);
 				if (!p->Running && !all) continue;
 				printf("%20.20s [r:%u] [l:%u] [sq:%u] [%s:%u] [mw:%u] [f:%u] [%p::%p]\n",
-						p->Config.Name, p->Running, Locked, p->sqState,
+						p->FriendlyName, p->Running, Locked, p->sqState,
 						inet_ntoa(p->PlayerIP), p->PlayerPort, p->MetadataWait,
 						(now - p->LastFlush)/1000,
 						p, sq_get_ptr(p->SqueezeHandle));

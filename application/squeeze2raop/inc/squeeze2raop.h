@@ -57,8 +57,7 @@ typedef struct sRaopReq {
 
 typedef struct sMRConfig
 {
-	bool		Enabled;			//
-	char		Name[SQ_STR_LENGTH];
+	bool		Enabled;
 	bool		SendMetaData;
 	bool		SendCoverArt;
 	bool		AutoPlay;

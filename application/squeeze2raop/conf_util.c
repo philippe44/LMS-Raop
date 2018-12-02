@@ -225,7 +225,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "read_ahead")) Conf->ReadAhead = atol(val);
 	if (!strcmp(name, "send_metadata")) Conf->SendMetaData = atol(val);
 	if (!strcmp(name, "send_coverart")) Conf->SendCoverArt = atol(val);
-	if (!strcmp(name, "friendly_name")) strcpy(Conf->Name, val);
+//	if (!strcmp(name, "friendly_name")) strcpy(Conf->Name, val);
 	if (!strcmp(name, "player_volume")) Conf->Volume = atol(val);
 	if (!strcmp(name, "volume_mapping")) strcpy(Conf->VolumeMapping, val);
 	if (!strcmp(name, "volume_feedback")) Conf->VolumeFeedback = atol(val);

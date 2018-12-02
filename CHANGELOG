@@ -1,3 +1,6 @@
+0.4.7.1
+ - merge FriendlyName and Name in main context (FriendlyName is not a config item as such)
+ 
 0.4.7.0
  - add perl 5.28
  - add solaris build
