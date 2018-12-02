@@ -50,6 +50,10 @@ sub binaries {
 		return qw(squeeze2raop-win.exe);
 	}	
 	
+	if ($os->{'os'} eq 'Unix' && $os->{'osName'} eq 'solaris') {
+		return qw(squeeze2raop-i86pc-solaris squeeze2raop-i86pc-solaris-static);
+	}	
+	
 =comment	
 		if ($os->{'isWin6+'} ne '') {
 			return qw(squeeze2raop-win.exe);

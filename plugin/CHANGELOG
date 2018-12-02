@@ -1,5 +1,6 @@
 0.4.7.0
  - add perl 5.28
+ - add solaris build
  - some players (eg Riva) requires 2 volume commands after RECORD and the first one must be sent "at least 1 sec" after the first one, or the volume is ignored. There is no way to find out a proper trigger mechanism, only timeout is usable. The trigger timeout variable is reused then to repeat the LMS volume command, unless Trigger is explicitely set. This also means that volume feedback is ignored while the repeat volume is pending. Normally, volume trigger should have been used for that, waiting for the 1st setproperty before sending the actual volume, but for some unknown reason that does not work either, only timeout does. iTunes seems to have the same problem
  
 0.4.6.2
