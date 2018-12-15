@@ -823,9 +823,6 @@ static void slimproto(struct thread_ctx_s *ctx) {
 	bool reconnect = false;
 	unsigned failed_connect = 0;
 
-	mutex_create(ctx->mutex);
-	mutex_create(ctx->cli_mutex);
-
 	discover_server(ctx);
 	LOG_INFO("squeezelite [%p] <=> player [%p]", ctx, ctx->MR);
 	LOG_INFO("[%p] connecting to %s:%d", ctx, inet_ntoa(ctx->serv_addr.sin_addr), ntohs(ctx->serv_addr.sin_port));
@@ -841,7 +838,6 @@ static void slimproto(struct thread_ctx_s *ctx) {
 			LOG_INFO("[%p] switching server to %s:%d", ctx, inet_ntoa(ctx->serv_addr.sin_addr), ntohs(ctx->serv_addr.sin_port));
 		}
 
-		ctx->cli_sock = -1;
 		ctx->sock = socket(AF_INET, SOCK_STREAM, 0);
 		set_nonblock(ctx->sock);
 		set_nosigpipe(ctx->sock);
@@ -871,7 +867,7 @@ static void slimproto(struct thread_ctx_s *ctx) {
 				ctx->new_server_cap = NULL;
 			}
 
-			sendHELO(reconnect, ctx->fixed_cap, ctx->var_cap, ctx->mac, ctx);
+			sendHELO(reconnect, ctx->fixed_cap, ctx->var_cap, ctx->config.mac, ctx);
 
 			slimproto_run(ctx);
 
@@ -882,25 +878,30 @@ static void slimproto(struct thread_ctx_s *ctx) {
 			usleep(100000);
 		}
 
+		mutex_lock(ctx->cli_mutex);
+		if (ctx->cli_sock != -1) {
+			closesocket(ctx->cli_sock);
+			ctx->cli_sock = -1;
+		}
+		mutex_unlock(ctx->cli_mutex);
 		closesocket(ctx->sock);
-		if (ctx->cli_sock != -1) closesocket(ctx->cli_sock);
+
 		if (ctx->new_server_cap)	{
 			free(ctx->new_server_cap);
 			ctx->new_server_cap = NULL;
 		}
 	}
-
-	mutex_destroy(ctx->mutex);
-	mutex_destroy(ctx->cli_mutex);
 }
 
 
 /*---------------------------------------------------------------------------*/
 void slimproto_close(struct thread_ctx_s *ctx) {
 	LOG_INFO("[%p] slimproto stop for %s", ctx, ctx->config.name);
-  	ctx->running = false;
+	ctx->running = false;
 	wake_controller(ctx);
 	pthread_join(ctx->thread, NULL);
+	mutex_destroy(ctx->mutex);
+	mutex_destroy(ctx->cli_mutex);
 }
 
 
@@ -910,11 +911,13 @@ void slimproto_thread_init(struct thread_ctx_s *ctx) {
 	char *codec, *buf;
 
 	wake_create(ctx->wake_e);
+	mutex_create(ctx->mutex);
+	mutex_create(ctx->cli_mutex);
 
-	ctx->running = true;
 	ctx->slimproto_ip = 0;
 	ctx->slimproto_port = PORT;
-	ctx->sock = -1;
+	ctx->cli_sock = ctx->sock = -1;
+	ctx->running = true;
 
 	if (strcmp(ctx->config.server, "?")) {
 		server_addr(ctx->config.server, &ctx->slimproto_ip, &ctx->slimproto_port);
@@ -945,8 +948,6 @@ void slimproto_thread_init(struct thread_ctx_s *ctx) {
 	free(buf);
 
 	UNLOCK_O;
-
-	memcpy(ctx->mac, ctx->config.mac, 6);
 
 	ctx->new_server = 0;
 

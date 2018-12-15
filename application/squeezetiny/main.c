@@ -602,8 +602,8 @@ bool sq_run_device(sq_dev_handle_t handle, struct raopcl_s *raopcl, sq_dev_param
 	memcpy(&ctx->config, param, sizeof(sq_dev_param_t));
 
 	sprintf(ctx->cli_id, "%02x:%02x:%02x:%02x:%02x:%02x",
-										  ctx->config.mac[0], ctx->config.mac[1], ctx->config.mac[2],
-										  ctx->config.mac[3], ctx->config.mac[4], ctx->config.mac[5]);
+						  ctx->config.mac[0], ctx->config.mac[1], ctx->config.mac[2],
+						  ctx->config.mac[3], ctx->config.mac[4], ctx->config.mac[5]);
 
 	stream_thread_init(ctx->config.stream_buf_size, ctx);
 	output_raop_thread_init(raopcl, ctx->config.output_buf_size, ctx);

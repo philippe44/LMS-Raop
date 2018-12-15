@@ -1,3 +1,7 @@
+0.4.7.2
+ - move mutex and cli_mutex creation/deletion out of the slimprot thread as Volume detection to make sure cli_send_cmd is not called before
+ - rename lib sub-directory (aarch64)
+ 
 0.4.7.1
  - merge FriendlyName and Name in main context (FriendlyName is not a config item as such)
  
