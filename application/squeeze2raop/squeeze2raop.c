@@ -597,10 +597,14 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 		// ignore excluded and announces made on behalf
 		if (!s->name || excluded || s->host.s_addr != s->addr.s_addr) continue;
 
-		// is that device already here
+		// is that device already here
 		if ((Device = SearchUDN(s->name)) != NULL) {
 			// device disconnected
 			if (s->expired) {
+				if (raopcl_is_connected(Device->Raop)) {
+					LOG_WARN("[%p]: keeping playing renderer (%s)", Device, Device->FriendlyName);
+					continue;
+				}
 				LOG_INFO("[%p]: removing renderer (%s)", Device, Device->FriendlyName);
 				if (Device->SqueezeHandle) sq_delete_device(Device->SqueezeHandle);
 				DelRaopDevice(Device);

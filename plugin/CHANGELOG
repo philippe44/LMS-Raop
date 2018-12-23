@@ -1,3 +1,7 @@
+0.4.8.0
+ - rtspcl_connect was setting the URI to the local address ???
+ - do not disconnect a playing player even if mDNS ttl expires
+ 
 0.4.7.2
  - move mutex and cli_mutex creation/deletion out of the slimprot thread as Volume detection to make sure cli_send_cmd is not called before
  - rename lib sub-directory (aarch64)
