@@ -68,7 +68,8 @@ tMRConfig			glMRConfig = {
 							true,
 							true,
 							false,
-							30,
+							30, 			// IdleTimeout
+							0,				// RemoveTimeout
 							false,
 							"",				 // credentials
 							1000,			 // read_ahead
@@ -586,11 +587,12 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 {
 	struct sMR *Device;
 	mDNSservice_t *s;
+	u32_t now = gettime_ms();
+	int j;
 
 	for (s = slist; s && glMainRunning; s = s->next) {
 		char *am = GetmDNSAttribute(s->attr, s->attr_count, "am");
 		bool excluded = IsExcluded(am);
-		int j;
 
 		NFREE(am);
 
@@ -599,15 +601,17 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 
 		// is that device already here
 		if ((Device = SearchUDN(s->name)) != NULL) {
+			Device->Expired = 0;
 			// device disconnected
 			if (s->expired) {
-				if (raopcl_is_connected(Device->Raop)) {
-					LOG_WARN("[%p]: keeping playing renderer (%s)", Device, Device->FriendlyName);
-					continue;
+				if (!raopcl_is_connected(Device->Raop) && !Device->Config.RemoveTimeout) {
+					LOG_INFO("[%p]: removing renderer (%s)", Device, Device->FriendlyName);
+					if (Device->SqueezeHandle) sq_delete_device(Device->SqueezeHandle);
+					DelRaopDevice(Device);
+				} else {
+					LOG_INFO("[%p]: keep missing renderer (%s)", Device, Device->FriendlyName);
+					Device->Expired = now ? now : 1;
 				}
-				LOG_INFO("[%p]: removing renderer (%s)", Device, Device->FriendlyName);
-				if (Device->SqueezeHandle) sq_delete_device(Device->SqueezeHandle);
-				DelRaopDevice(Device);
 			// device update - ignore changes in TXT
 			} else if (s->port != Device->PlayerPort || s->addr.s_addr != Device->PlayerIP.s_addr) {
 				LOG_INFO("[%p]: changed ip:port %s:%d", Device, inet_ntoa(s->addr), s->port);
@@ -657,7 +661,18 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 		}
 	}
 
-	if (glAutoSaveConfigFile || glDiscovery) {
+	// walk through the list for device whose timeout expired
+	for (j = 0; j < MAX_RENDERERS; j++) {
+		Device = glMRDevices + j;
+		if (!Device->Running || Device->Config.RemoveTimeout <= 0 || !Device->Expired ||
+			now < Device->Expired + Device->Config.RemoveTimeout*1000) continue;
+
+		LOG_INFO("[%p]: removing renderer (%s) on timeout", Device, Device->FriendlyName);
+		if (Device->SqueezeHandle) sq_delete_device(Device->SqueezeHandle);
+		DelRaopDevice(Device);
+	}
+
+	if (glAutoSaveConfigFile || glDiscovery) {
 		LOG_DEBUG("Updating configuration %s", glConfigName);
 		SaveConfig(glConfigName, glConfigID, false);
 	}
@@ -806,6 +821,7 @@ static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s)
 	Device->sqState 		= SQ_STOP;
 	Device->Raop 			= NULL;
 	Device->LastFlush 		= 0;
+	Device->Expired			= 0;
 	Device->Sane 			= true;
 	Device->MetadataWait 	= Device->MetadataHash = 0;
 	Device->Busy			= 0;

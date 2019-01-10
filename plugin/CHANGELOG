@@ -1,3 +1,6 @@
+0.4.9.0
+ - add a timeout option to remove renderers
+ 
 0.4.8.0
  - rtspcl_connect was setting the URI to the local address ???
  - do not disconnect a playing player even if mDNS ttl expires

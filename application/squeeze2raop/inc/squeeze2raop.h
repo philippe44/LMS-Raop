@@ -62,6 +62,7 @@ typedef struct sMRConfig
 	bool		SendCoverArt;
 	bool		AutoPlay;
 	int			IdleTimeout;
+	int			RemoveTimeout;
 	bool		Encryption;
 	char		Credentials[SQ_STR_LENGTH];
 	int 		ReadAhead;
@@ -79,6 +80,7 @@ typedef struct sMRConfig
 struct sMR {
 	u32_t Magic;
 	bool  Running;
+	u32_t Expired;
 	tMRConfig Config;
 	sq_dev_param_t	sq_config;
 	bool on;

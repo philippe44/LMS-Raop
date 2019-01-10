@@ -127,6 +127,7 @@ void SaveConfig(char *name, void *ref, int mode)
 	XMLUpdateNode(doc, common, force, "send_coverart", "%d", (int) glMRConfig.SendCoverArt);
 	XMLUpdateNode(doc, common, force, "auto_play", "%d", (int) glMRConfig.AutoPlay);
 	XMLUpdateNode(doc, common, force, "idle_timeout", "%d", (int) glMRConfig.IdleTimeout);
+	XMLUpdateNode(doc, common, force, "remove_timeout", "%d", (int) glMRConfig.RemoveTimeout);
 	XMLUpdateNode(doc, common, force, "alac_encode", "%d", (int) glMRConfig.AlacEncode);
 	XMLUpdateNode(doc, common, force, "volume_trigger", "%d", (int) glMRConfig.VolumeTrigger);
 	XMLUpdateNode(doc, common, force, "prevent_playback", glMRConfig.PreventPlayback);
@@ -220,6 +221,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "enabled")) Conf->Enabled = atol(val);
 	if (!strcmp(name, "auto_play")) Conf->AutoPlay = atol(val);
 	if (!strcmp(name, "idle_timeout")) Conf->IdleTimeout = atol(val);
+	if (!strcmp(name, "remove_timeout")) Conf->RemoveTimeout = atol(val);
 	if (!strcmp(name, "encryption")) Conf->Encryption = atol(val);
 	if (!strcmp(name, "credentials")) strcpy(Conf->Credentials, val);
 	if (!strcmp(name, "read_ahead")) Conf->ReadAhead = atol(val);
