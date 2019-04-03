@@ -342,7 +342,8 @@ void output_flush(struct thread_ctx_s *ctx) {
 		}
 		ctx->output.delay_active = false;
 	}
-	ctx->output.frames_played = 0;
+	ctx->output.frames_played = ctx->output.frames_played_dmp = 0;
+	ctx->output.track_start_time = -1;
 	UNLOCK;
 }
 

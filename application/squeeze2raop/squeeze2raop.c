@@ -264,13 +264,11 @@ static void BusyDrop(struct sMR *Device);
 			device->LastFlush = gettime_ms();
 			device->DiscWait = true;
 			device->TrackRunning = false;
-			device->TrackDuration = 0;
 			break;
 		case SQ_STOP: {
 			tRaopReq *Req = malloc(sizeof(tRaopReq));
 
 			device->TrackRunning = false;
-			device->TrackDuration = 0;
 			device->sqState = SQ_STOP;
 			// see note in raop_client.h why this 2-stages stop is needed
 			raopcl_stop(device->Raop);
@@ -348,7 +346,6 @@ static void BusyDrop(struct sMR *Device);
 			break;
 		case SQ_STARTED:
 			device->TrackRunning = true;
-			device->TrackElapsed = 0;
 			device->MetadataWait = 2;
 			device->MetadataHash++;
 			break;
@@ -406,18 +403,6 @@ static void *PlayerThread(void *args)
 			// after that, only check what's needed when running
 			if (!Device->TrackRunning) continue;
 
-			if (Device->Config.SendMetaData) {
-				u32_t Time;
-
-				if (!(Device->TrackElapsed % 5) && ((Time = sq_get_time(Device->SqueezeHandle)) != 0)) {
-					Device->TrackElapsed = Time / 1000;
-				}
-				else Device->TrackElapsed++;
-
-				raopcl_set_progress_ms(Device->Raop, Device->TrackElapsed * 1000,
-									   Device->TrackDuration);
-			}
-
 			pthread_mutex_lock(&Device->Mutex);
 
 			if (Device->MetadataWait && !--Device->MetadataWait && Device->Config.SendMetaData) {
@@ -436,10 +421,12 @@ static void *PlayerThread(void *args)
 					continue;
 				}
 
+				// only need to set progress once
+				raopcl_set_progress_ms(Device->Raop, sq_get_time(Device->SqueezeHandle), metadata.duration);
+
 				hash = hash32(metadata.title) ^ hash32(metadata.artwork);
 
 				if (Device->MetadataHash != hash) {
-					Device->TrackDuration = metadata.duration;
 					raopcl_set_daap(Device->Raop, 5, "minm", 's', metadata.title,
 													 "asar", 's', metadata.artist,
 													 "asal", 's', metadata.album,
@@ -810,7 +797,6 @@ static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s)
 	Device->PlayerIP 		= s->addr;
 	Device->PlayerPort 		= s->port;
 	Device->DiscWait 		= false;
-	Device->TrackDuration 	= Device->TrackElapsed = 0;
 	Device->TrackRunning 	= false;
 	Device->VolumeReady 	= !Device->Config.VolumeTrigger;
 	Device->VolumeReadyWait = 0;

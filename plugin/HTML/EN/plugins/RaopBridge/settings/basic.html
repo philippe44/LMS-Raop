@@ -1,7 +1,6 @@
 [% PROCESS settings/header.html %]
 
-	[% YESNOBOX = [['',''], ['yes','1'], ['no','0']] %]
-
+[% YESNOBOX = [['',''], ['PLUGIN_RAOPBRIDGE_YES','1'], ['PLUGIN_RAOPBRIDGE_NO','0']] %]
 		
 	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_AUTORUN" desc="PLUGIN_RAOPBRIDGE_AUTORUN_DESC" %]
 		<input name="autorun" type="checkbox" [% IF autorun %] checked [% END %]> [% "PLUGIN_RAOPBRIDGE_RUNNING_$running" | string %] [% IF binary %] ([% binary %]) [% END %]
@@ -94,8 +93,8 @@
 	
 	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_VOLUMEMGMT" desc="PLUGIN_RAOPBRIDGE_VOLUMEMGMT_DESC" %]
 		[% "PLUGIN_RAOPBRIDGE_VOLUMEMODE" | string %]&nbsp<select class="stdedit" name="volume_mode" id="volume_mode">
-		[% FOREACH entry IN [ ['',''], ['ignore','0'], ['software','1'], ['hardware','2'] ] %]
-			<option [% IF entry.1 == volume_mode %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+		[% FOREACH entry IN [ ['',''], ['PLUGIN_RAOPBRIDGE_VOLUMEIGNORE','0'], ['PLUGIN_RAOPBRIDGE_VOLUMESOFT','1'], ['PLUGIN_RAOPBRIDGE_VOLUMEHARD','2'] ] %]
+			<option [% IF entry.1 == volume_mode %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 		[% END %]</select>
 		&nbsp[% "PLUGIN_RAOPBRIDGE_PLAYERVOLUME" | string %]&nbsp<input type="text" class="stdedit" name="player_volume" id="player_volume" value="[% player_volume %]" size="2">
 		&nbsp[% "PLUGIN_RAOPBRIDGE_VOLUMEMAPPING" | string %]&nbsp<input type="text" class="stdedit" name="volume_mapping" id="volume_mapping" value="[% volume_mapping %]" size="30">
@@ -103,19 +102,19 @@
 		[% "PLUGIN_RAOPBRIDGE_MUTEONPAUSE" | string %]
 		<select class="stdedit" name="mute_on_pause" id="mute_on_pause">
 		[% FOREACH entry IN YESNOBOX %] 
-			<option [% IF entry.1 == mute_on_pause %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+			<option [% IF entry.1 == mute_on_pause %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 		[% END %]
 		</select>
 		&nbsp[% "PLUGIN_RAOPBRIDGE_VOLUMETRIGGER" | string %]
 		<select class="stdedit" name="volume_trigger" id="volume_trigger">
 		[% FOREACH entry IN YESNOBOX %] 
-			<option [% IF entry.1 == volume_trigger %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+			<option [% IF entry.1 == volume_trigger %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 		[% END %]
 		</select>
 		&nbsp[% "PLUGIN_RAOPBRIDGE_VOLUMEFEEDBACK" | string %]&nbsp<select class="stdedit" name="volume_feedback" id="volume_feedback">
-		[% FEEDBACKBOX = [['',''], ['no','0'], ['yes','1'] ['raw','2']] %]
+		[% FEEDBACKBOX = [['',''], ['PLUGIN_RAOPBRIDGE_NO','0'], ['PLUGIN_RAOPBRIDGE_YES','1'] ['PLUGIN_RAOPBRIDGE_VOLUMERAW','2']] %]
 		[% FOREACH entry IN FEEDBACKBOX %] 
-			<option [% IF entry.1 == volume_feedback %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+			<option [% IF entry.1 == volume_feedback %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 		[% END %]</select>
 	[% END %]
 	
@@ -124,7 +123,7 @@
 		&nbsp[% "PLUGIN_RAOPBRIDGE_ENABLEDEFS" | string %]
 		<select class="stdedit" name="enabled" id="enabled">
 		[% FOREACH entry IN YESNOBOX %] 
-			<option [% IF entry.1 == enabled %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+			<option [% IF entry.1 == enabled %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 		[% END %]
 		</select>
 		&nbsp&nbsp[% "PLUGIN_RAOPBRIDGE_REMOVETIMEOUT" | string %]
@@ -137,13 +136,13 @@
 		&nbsp&nbsp[% "PLUGIN_RAOPBRIDGE_ENCRYPTION" | string %]
 		<select class="stdedit" name="encryption" id="encryption">
 		[% FOREACH entry IN YESNOBOX %] 
-			<option [% IF entry.1 == encryption %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+			<option [% IF entry.1 == encryption %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 		[% END %]
 		</select>
 		&nbsp&nbsp[% "PLUGIN_RAOPBRIDGE_ALACENCODE" | string %]
 		<select class="stdedit" name="alac_encode" id="alac_encode">
 		[% FOREACH entry IN YESNOBOX %] 
-			<option [% IF entry.1 == alac_encode %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+			<option [% IF entry.1 == alac_encode %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 		[% END %]
 		</select>
 		&nbsp&nbsp[% "PLUGIN_RAOPBRIDGE_IDLETIMEOUT" | string %]
@@ -154,22 +153,22 @@
 	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_SENDMETADATA" desc="PLUGIN_RAOPBRIDGE_SENDMETADATA_DESC" %]
 		<select class="stdedit" name="send_metadata" id="send_metadata">
 		[% FOREACH entry IN YESNOBOX %] 
-			<option [% IF entry.1 == send_metadata %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+			<option [% IF entry.1 == send_metadata %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 		[% END %]
 		</select>
 		&nbsp&nbsp[% "PLUGIN_RAOPBRIDGE_SEND_COVERART" | string %]&nbsp
 		<select class="stdedit" name="send_coverart" id="send_coverart">
 		[% FOREACH entry IN YESNOBOX %] 
-			<option [% IF entry.1 == send_coverart %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+			<option [% IF entry.1 == send_coverart %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 		[% END %]
 		</select>
 	[% END %]
 	
 	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_OTHEROPTIONS" desc="PLUGIN_RAOPBRIDGE_OTHEROPTIONS_DESC" %]
-		[% PREVENTPLAYBACKBOX = [['',''], ['Stop','stop'], ['Power OFF','off']] %]
+		[% PREVENTPLAYBACKBOX = [['',''], ['PLUGIN_RAOPBRIDGE_OTHERSTOP','stop'], ['PLUGIN_RAOPBRIDGE_OTHEROFF','off']] %]
 		<select class="stdedit" name="prevent_playback" id="prevent_playback">
 		[% FOREACH entry IN PREVENTPLAYBACKBOX %] 
-			<option [% IF entry.1 == prevent_playback %]selected[% END %] value="[% entry.1 %]">[% entry.0 %]</option>
+			<option [% IF entry.1 == prevent_playback %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 		[% END %]
 		</select>
 		[% "PLUGIN_RAOPBRIDGE_PREVENTPLAYBACK" | string %]&nbsp

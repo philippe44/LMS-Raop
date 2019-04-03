@@ -688,6 +688,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 			if (ctx->output.state == OUTPUT_RUNNING && !ctx->sentSTMo && ctx->status.output_full == 0 && ctx->status.stream_state == STREAMING_HTTP) {
 				_sendSTMo = true;
 				ctx->sentSTMo = true;
+				LOG_WARN("[%p]: output underrun", ctx);
 			}
 			UNLOCK_O;
 
