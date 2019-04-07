@@ -309,15 +309,17 @@ static void BusyDrop(struct sMR *Device);
 		case SQ_VOLUME: {
 			u32_t Volume = *(u16_t*) param;
 			int LMSVolume;
+			u32_t now = gettime_ms();
 
 			// first convert to 0..100 value
 			for (LMSVolume = 100; Volume < LMSVolumeMap[LMSVolume] && LMSVolume; LMSVolume--);
 
 			if (device->Config.VolumeMode == VOLUME_HARD &&
-				(device->Config.VolumeFeedback == VOLUME_UNFILTERED || (device->VolumeStamp + 1000) - gettime_ms() > 1000) &&
+				(device->Config.VolumeFeedback == VOLUME_UNFILTERED || now > device->VolumeStampRx + 1000) &&
 				(Volume || device->Config.MuteOnPause || sq_get_mode(device->SqueezeHandle) == device->sqState)) {
 				tRaopReq *Req = malloc(sizeof(tRaopReq));
 
+				device->VolumeStampTx = now;
 				device->Volume = LMSVolume;
 
 				Req->Data.Volume = device->VolumeMapping[device->Volume];
@@ -793,7 +795,7 @@ static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s)
 	Device->SqueezeHandle 	= 0;
 	Device->Running 		= true;
 	// make sure that 1st volume is not missed
-	Device->VolumeStamp 	= gettime_ms() - 2000;
+	Device->VolumeStampRx 	= Device->VolumeStampTx = gettime_ms() - 2000;
 	Device->PlayerIP 		= s->addr;
 	Device->PlayerPort 		= s->port;
 	Device->DiscWait 		= false;
@@ -1059,15 +1061,16 @@ static void *ActiveRemoteThread(void *args)
 				} else if (Device->Config.VolumeMode != VOLUME_SOFT && Device->Config.VolumeFeedback) {
 					float volume;
 					int i;
+					u32_t now = gettime_ms();
 
-					Device->VolumeStamp = gettime_ms();
 					sscanf(command, "%*[^=]=%f", &volume);
 					if (stristr(command, ".volume=")) i = (int) volume;
 					else for (i = 0; i < 100 && volume > Device->VolumeMapping[i]; i++);
 					LOG_INFO("[%p]: volume feedback %u (%.2f)", Device, i, volume);
-					if (i != Device->Volume && !Device->VolumeReadyWait) {
+					if (i != Device->Volume && !Device->VolumeReadyWait && now > Device->VolumeStampTx + 1000) {
 						char vol[10];
 						sprintf(vol, "%d", i);
+						Device->VolumeStampRx = now;
 						sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, vol);
 					}
 				}

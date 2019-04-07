@@ -90,7 +90,7 @@ struct sMR {
 	int	 			SqueezeHandle;
 	sq_action_t		sqState;
 	s8_t			Volume;
-	u32_t			VolumeStamp;
+	u32_t			VolumeStampRx, VolumeStampTx;
 	float 			VolumeMapping[101];
 	bool			VolumeReady;
 	u8_t			VolumeReadyWait;

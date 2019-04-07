@@ -1,3 +1,6 @@
+0.4.11.0
+ - Bi-directionnal volume filtering
+
 0.4.10.0
  - move all strings from basic.html to strings.txt
  - output_flush resets frames counter dmp and sets start_time to max value to make sure ms_played does not report incorrect (previous) value
