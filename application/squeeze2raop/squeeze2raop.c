@@ -370,6 +370,7 @@ static void BusyDrop(struct sMR *Device);
 static void *PlayerThread(void *args)
 {
 	struct sMR *Device = (struct sMR*) args;
+	u32_t KeepAlive = 0;
 
 	Device->Running = true;
 
@@ -405,26 +406,27 @@ static void *PlayerThread(void *args)
 			// after that, only check what's needed when running
 			if (!Device->TrackRunning) continue;
 
+			// seems that HomePod requires regular RTSP exchange
+			if (!(KeepAlive++ & 0x0f)) raopcl_keepalive(Device->Raop);
+
 			pthread_mutex_lock(&Device->Mutex);
 
 			if (Device->MetadataWait && !--Device->MetadataWait && Device->Config.SendMetaData) {
 				sq_metadata_t metadata;
-				u32_t hash;
-				bool valid;
+				u32_t hash, Time;
 
 				pthread_mutex_unlock(&Device->Mutex);
 
-				valid = sq_get_metadata(Device->SqueezeHandle, &metadata, false);
-
 				// not a valid metadata, nothing to update
-				if (!valid) {
+				if (!sq_get_metadata(Device->SqueezeHandle, &metadata, false)) {
 					Device->MetadataWait = 5;
 					sq_free_metadata(&metadata);
 					continue;
 				}
 
-				// only need to set progress once
-				raopcl_set_progress_ms(Device->Raop, sq_get_time(Device->SqueezeHandle), metadata.duration);
+				// set progress at every metadata check (for live streams)
+				Time = sq_get_time(Device->SqueezeHandle);
+				raopcl_set_progress_ms(Device->Raop, Time, metadata.duration);
 
 				hash = hash32(metadata.title) ^ hash32(metadata.artwork);
 
@@ -459,7 +461,7 @@ static void *PlayerThread(void *args)
 					if (metadata.remote) {
 						Device->MetadataWait = 5;
 						if (metadata.duration) {
-							Device->MetadataWait += (metadata.duration - sq_get_time(Device->SqueezeHandle)) /1000;
+							Device->MetadataWait += (metadata.duration - Time) / 1000;
 						}
 					}
 
