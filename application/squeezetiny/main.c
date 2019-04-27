@@ -392,7 +392,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 			}
 		}
 
-		if (metadata->artwork && !strncmp(metadata->artwork, "/imageproxy/", strlen("/imageproxy/"))) {
+		if (metadata->artwork && strncmp(metadata->artwork, "http", 4)) {
 			char *artwork = malloc(SQ_STR_LENGTH);
 
 			snprintf(artwork, SQ_STR_LENGTH, "http://%s:%s%s", ctx->server_ip, ctx->server_port, metadata->artwork);

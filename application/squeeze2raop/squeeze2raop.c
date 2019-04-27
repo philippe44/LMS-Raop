@@ -23,12 +23,18 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <limits.h>
+
+#include "squeezedefs.h"
+
+#if USE_SSL
+#include <openssl/ssl.h>
+#endif
+
 #if WIN
 #include <process.h>
 #endif
 
 #include "ixml.h"
-#include "squeezedefs.h"
 #include "squeeze2raop.h"
 #include "conf_util.h"
 #include "util_common.h"
@@ -186,6 +192,9 @@ static char usage[] =
 #endif
 #if WINEVENT
 		   " WINEVENT"
+#endif
+#if USE_SSL
+		   " SSL"
 #endif
 		   "\n\n";
 
@@ -1205,6 +1214,10 @@ void BusyDrop(struct sMR *Device)
 static bool Start(void)
 {
 	int i;
+
+#if USE_SSL
+	SSL_library_init();
+#endif
 
 	memset(&glMRDevices, 0, sizeof(glMRDevices));
 

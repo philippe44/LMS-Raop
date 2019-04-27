@@ -23,10 +23,17 @@
 #ifndef __SQUEEZEDEFS_H
 #define __SQUEEZEDEFS_H
 
-#define VERSION "v0.4.12.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.4.13.0"" ("__DATE__" @ "__TIME__")"
 
 #include <pthread.h>
 #include "platform.h"
+
+#if defined(USE_SSL)
+#undef USE_SSL
+#define USE_SSL 1
+#else
+#define USE_SSL 0
+#endif
 
 #define STREAM_THREAD_STACK_SIZE (1024 * 64)
 #define DECODE_THREAD_STACK_SIZE (1024 * 128)
