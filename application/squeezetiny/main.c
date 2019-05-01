@@ -142,7 +142,7 @@ static char *cli_decode(char *str) {
 
 	strcpy(buf, tag);
 	strcat(buf, "%3a");
-	if ((p = stristr(str, buf)) != NULL) {
+	if ((p = strcasestr(str, buf)) != NULL) {
 		int i = 0;
 		p += strlen(buf);
 		while (*(p+i) != ' ' && *(p+i) != '\n' && *(p+i)) i++;
@@ -231,7 +231,7 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 
 		len += k;
 		packet[len] = '\0';
-		if (strchr(packet, '\n') && stristr(packet, cmd)) {
+		if (strchr(packet, '\n') && strcasestr(packet, cmd)) {
 			rsp = packet;
 			break;
 		}
@@ -243,7 +243,7 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 
 	LOG_SDEBUG("[%p]: rsp %s", ctx, rsp);
 
-	if (rsp && ((rsp = stristr(rsp, cmd)) != NULL)) {
+	if (rsp && ((rsp = strcasestr(rsp, cmd)) != NULL)) {
 		rsp += strlen(cmd);
 		while (*rsp && *rsp == ' ') rsp++;
 
@@ -352,7 +352,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 
 	sprintf(cmd, "playlist%%20index%%3a%d ", metadata->index);
 
-	if ((cur = stristr(rsp, cmd)) != NULL) {
+	if ((cur = strcasestr(rsp, cmd)) != NULL) {
 		metadata->title = cli_find_tag(cur, "title");
 		metadata->artist = cli_find_tag(cur, "artist");
 		metadata->album = cli_find_tag(cur, "album");

@@ -592,7 +592,7 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 
 	for (s = slist; s && glMainRunning; s = s->next) {
 		char *am = GetmDNSAttribute(s->attr, s->attr_count, "am");
-		bool excluded = IsExcluded(am);
+		bool excluded = am ? IsExcluded(am) : false;
 
 		NFREE(am);
 
@@ -778,7 +778,7 @@ static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s)
 
 	if (!Device->Config.Enabled) return false;
 
-	if (stristr(s->name, "AirSonos")) {
+	if (strcasestr(s->name, "AirSonos")) {
 		LOG_DEBUG("[%p]: skipping AirSonos player (please use uPnPBridge)", Device);
 		return false;
 	}
@@ -788,12 +788,12 @@ static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s)
 	md = GetmDNSAttribute(s->attr, s->attr_count, "md");
 
 	// if airport express, forece auth
-	if (am && stristr(am, "airport")) {
+	if (am && strcasestr(am, "airport")) {
 		LOG_INFO("[%p]: AirPort Express", Device);
 		Auth = true;
 	}
 
-	if (am && stristr(am, "appletv") && pk && *pk) {
+	if (am && strcasestr(am, "appletv") && pk && *pk) {
 		char *token = strchr(Device->Config.Credentials, '@');
 		LOG_INFO("[%p]: AppleTV with authentication (pairing must be done separately)", Device);
 		if (Device->Config.Credentials[0]) sscanf(Device->Config.Credentials, "%[a-fA-F0-9]", Secret);
@@ -833,7 +833,7 @@ static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s)
 	sprintf(Device->ActiveRemote, "%u", hash32(Device->UDN));
 	strcpy(Device->FriendlyName, s->hostname);
 
-	p = stristr(Device->FriendlyName, ".local");
+	p = strcasestr(Device->FriendlyName, ".local");
 	if (p) *p = '\0';
 
 	LOG_INFO("[%p]: adding renderer (%s)", Device, Device->FriendlyName);
@@ -1031,9 +1031,9 @@ static void *ActiveRemoteThread(void *args)
 		}
 
 		// handle DMCP commands
-		if (stristr(command, "setproperty?dmcp")) {
+		if (strcasestr(command, "setproperty?dmcp")) {
 			// player is switched to something else, so require immediate disc
-			if (stristr(command, "device-prevent-playback=1")) {
+			if (strcasestr(command, "device-prevent-playback=1")) {
 				Device->DiscWait = true;
 				sq_notify(Device->SqueezeHandle, Device,
 						!strcasecmp(Device->Config.PreventPlayback, "STOP") ? SQ_STOP : SQ_OFF,
@@ -1045,7 +1045,7 @@ static void *ActiveRemoteThread(void *args)
 				setproperty?dmcp.volume=0..100
 				setproperty?dmcp.device-volume=-30..0 (or -144)
 			*/
-			if (stristr(command, "device-volume=") || stristr(command, ".volume=")) {
+			if (strcasestr(command, "device-volume=") || strcasestr(command, ".volume=")) {
 				/*
 				 When waiting for a first feedback before sending volume, new
 				 value shall only be sent if volume is HARDWARE or an initial
@@ -1075,7 +1075,7 @@ static void *ActiveRemoteThread(void *args)
 					u32_t now = gettime_ms();
 
 					sscanf(command, "%*[^=]=%f", &volume);
-					if (stristr(command, ".volume=")) i = (int) volume;
+					if (strcasestr(command, ".volume=")) i = (int) volume;
 					else for (i = 0; i < 100 && volume > Device->VolumeMapping[i]; i++);
 					LOG_INFO("[%p]: volume feedback %u (%.2f)", Device, i, volume);
 					if (i != Device->Volume && !Device->VolumeReadyWait && now > Device->VolumeStampTx + 1000) {
@@ -1180,7 +1180,7 @@ static bool IsExcluded(char *Model)
 
 	do {
 		sscanf(p, "%[^,]", item);
-		if (stristr(Model, item)) return true;
+		if (strcasestr(Model, item)) return true;
 		p += strlen(item);
 	} while (*p++);
 
@@ -1456,7 +1456,7 @@ int main(int argc, char *argv[])
 	// do some parameters migration
 	if (!glMigration || glMigration == 1) {
 		glMigration = 2;
-		if (!stristr(glDeviceParam.codecs, "ogg")) strcat(glDeviceParam.codecs, ",ogg");
+		if (!strcasestr(glDeviceParam.codecs, "ogg")) strcat(glDeviceParam.codecs, ",ogg");
 		SaveConfig(glConfigName, glConfigID, CONFIG_MIGRATE);
 	}
 

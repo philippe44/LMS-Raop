@@ -212,9 +212,9 @@ u64_t hash64_buf(char *str, size_t len)
 }
 
 /*---------------------------------------------------------------------------*/
-char *stristr(char *s1, char *s2)
+#if WIN
+char *strcasestr(const char *haystack, const char *needle)
 {
-	char *s1_lwr, *s2_lwr, *p;
 
 	if (!s1 || !s2) return NULL;
 
