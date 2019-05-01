@@ -1,5 +1,6 @@
 0.4.13.1 
  - support SNI for SSL
+ - use strcasestr instead of stristr (do not check for NULL strings)
  
 0.4.13.0 
  - add SSL support

@@ -215,21 +215,17 @@ u64_t hash64_buf(char *str, size_t len)
 #if WIN
 char *strcasestr(const char *haystack, const char *needle)
 {
+ char *haystack_lwr = strlwr(strdup(haystack));
+ char *needle_lwr = strlwr(strdup(needle));
+ char *p = strstr(haystack_lwr, needle_lwr);
 
-	if (!s1 || !s2) return NULL;
-
-	s1_lwr = strlwr(strdup(s1));
-	s2_lwr = strlwr(strdup(s2));
-	p = strstr(s1_lwr, s2_lwr);
-
-	if (p)
-		p = s1 + (p - s1_lwr);
-
-	free(s1_lwr);
-	free(s2_lwr);
-
-	return p;
+ if (p) p = haystack + (p - haystack_lwr);
+ free(haystack_lwr);
+ free(needle_lwr);
+ return p;
 }
+#endif
+
 
 /*---------------------------------------------------------------------------*/
 /* IMPORTANT: be sure to free() the returned string after use */
