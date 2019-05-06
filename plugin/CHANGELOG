@@ -1,3 +1,6 @@
+0.4.13.2
+ - no updated, but seems to have a problem with SF files, not need to bump up version
+ 
 0.4.13.1 
  - support SNI for SSL
  - use strcasestr instead of stristr (do not check for NULL strings)
