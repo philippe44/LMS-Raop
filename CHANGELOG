@@ -1,3 +1,6 @@
+0.4.14.0
+ - openSSL loaded manually for compatibility 
+ 
 0.4.13.2
  - no updated, but seems to have a problem with SF files, not need to bump up version
  

@@ -45,6 +45,7 @@
 #include "http_fetcher.h"
 #include "mdns.h"
 #include "mdnsd.h"
+#include "sslsym.h"
 
 #define DISCOVERY_TIME 20
 
@@ -1215,6 +1216,12 @@ static bool Start(void)
 {
 	int i;
 
+	// manually load openSSL symbols to accept multiple versions
+	if (!load_ssl_symbols()) {
+		LOG_ERROR("Cannot load SSL libraries", NULL);
+		return false;
+	}
+
 #if USE_SSL
 	SSL_library_init();
 #endif
@@ -1286,6 +1293,8 @@ static bool Stop(void)
 #if WIN
 	winsock_close();
 #endif
+
+	free_ssl_symbols();
 
 	return true;
 }
