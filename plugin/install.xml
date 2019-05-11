@@ -1,16 +1,16 @@
 <?xml version='1.0' standalone='yes'?>
 <extensions>
   <creator>Philippe</creator>
+  <version>0.4.14.2</version>
+  <name>PLUGIN_RAOPBRIDGE</name>
   <email>philippe_44@outlook.com</email>
-  <description>PLUGIN_RAOPBRIDGE_DESC</description>
   <optionsURL>plugins/RaopBridge/settings/basic.html</optionsURL>
-  <version>0.4.14.1</version>
-  <targetApplication>
-    <minVersion>7.7</minVersion>
-    <maxVersion>*.*</maxVersion>
-    <id>SlimServer</id>
-  </targetApplication>
   <module>Plugins::RaopBridge::Plugin</module>
   <defaultState>enabled</defaultState>
-  <name>PLUGIN_RAOPBRIDGE</name>
+  <description>PLUGIN_RAOPBRIDGE_DESC</description>
+  <targetApplication>
+    <id>SlimServer</id>
+    <maxVersion>*.*</maxVersion>
+    <minVersion>7.7</minVersion>
+  </targetApplication>
 </extensions>
