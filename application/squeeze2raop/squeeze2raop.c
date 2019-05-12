@@ -1302,6 +1302,16 @@ static bool Stop(void)
 
 /*---------------------------------------------------------------------------*/
 static void sighandler(int signum) {
+	static bool quit = false;
+
+	// give it some time to finish ...
+	if (quit) {
+		LOG_INFO("Please wait for clean exit!", NULL);
+		return;
+	}
+
+	quit = true;
+
 	if (!glGracefullShutdown) {
 		LOG_INFO("forced exit", NULL);
 		exit(EXIT_SUCCESS);

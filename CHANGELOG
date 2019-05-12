@@ -1,3 +1,6 @@
+0.4.14.3
+ - do nothing in sighandler when already stopping threads
+ 
 0.4.14.2
  - add these $*%!@~ dll for good this time
  
