@@ -1,3 +1,7 @@
+0.4.15.0
+ - (P) load Aync::HTTP only when LMS version is too old (HTTP 1.1 support for keep-alive)
+ - (P) force CryptX to be loaded to have dll active (Windows 10)
+ 
 0.4.14.3
  - do nothing in sighandler when already stopping threads
  

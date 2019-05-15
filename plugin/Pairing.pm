@@ -7,31 +7,40 @@ use File::Spec::Functions;
 use XML::Simple;
 use Data::Plist::BinaryWriter;
 use Data::Plist::BinaryReader;
+use Date::Parse;
 use Encode qw(decode encode);
+use version;
 
 use base qw(Slim::Plugin::Base);
 
 use Slim::Utils::Prefs;
 use Slim::Utils::Log;
 use Slim::Networking::Async::HTTP;
-use Plugins::RaopBridge::Async::HTTP;
+use Slim::Utils::Misc qw(parseRevision);
 
 my $prefs = preferences('plugin.raopbridge');
 my $log   = logger('plugin.raopbridge');
 
-Plugins::RaopBridge::Async::HTTP::init();
+eval {
+	my (undef, $build) = parseRevision();
+	my ($month, $day, $time, $year) = $build =~ /\S+ (\S+) (\S+) (\S+) \S+ (\S+)/;
+	if (str2time("$day $month $year") < str2time('11 May 2019')) {
+		require Plugins::RaopBridge::Async::HTTP;
+		$log->error("LMS version is too old ($build), need own Aync::HTTP");
+		Plugins::RaopBridge::Async::HTTP::init();
+	}	
+};	
 
 sub displayPIN {
 	my ($host) = @_;
 
 	eval {
+		require CryptX;
 		require Crypt::SRP;
-		Crypt::SRP->import();
 		require Crypt::Digest::SHA512;
-		Crypt::Digest::SHA512->import( qw(sha512) );
 		require Crypt::Ed25519;
-		Crypt::Ed25519->import();		
 		require Crypt::AuthEnc::GCM;
+		Crypt::Digest::SHA512->import( qw(sha512) );
 		Crypt::AuthEnc::GCM->import( qw(gcm_encrypt_authenticate gcm_decrypt_verify) );
 	};
 	
