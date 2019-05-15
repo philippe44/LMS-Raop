@@ -2,6 +2,8 @@ package Plugins::RaopBridge::Pairing;
 
 use strict;
 
+use base qw(Slim::Plugin::Base);
+
 use Data::Dumper;
 use File::Spec::Functions;
 use XML::Simple;
@@ -11,7 +13,7 @@ use Date::Parse;
 use Encode qw(decode encode);
 use version;
 
-use base qw(Slim::Plugin::Base);
+eval "use CryptX";
 
 use Slim::Utils::Prefs;
 use Slim::Utils::Log;
