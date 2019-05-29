@@ -23,7 +23,7 @@
 #ifndef __SQUEEZEDEFS_H
 #define __SQUEEZEDEFS_H
 
-#define VERSION "v0.4.14.3"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.4.16.0"" ("__DATE__" @ "__TIME__")"
 
 #include <pthread.h>
 #include "platform.h"
@@ -33,6 +33,11 @@
 #define USE_SSL 1
 #else
 #define USE_SSL 0
+#endif
+
+#if defined(LOOPBACK)
+#undef LOOPBACK
+#define LOOPBACK 1
 #endif
 
 #define STREAM_THREAD_STACK_SIZE (1024 * 64)
