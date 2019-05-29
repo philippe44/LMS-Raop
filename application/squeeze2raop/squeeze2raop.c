@@ -194,6 +194,9 @@ static char usage[] =
 #if WINEVENT
 		   " WINEVENT"
 #endif
+#if LOOPBACK
+		   " LOOPBACK"
+#endif
 #if USE_SSL
 		   " SSL"
 #endif

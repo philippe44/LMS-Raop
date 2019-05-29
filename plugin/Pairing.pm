@@ -47,7 +47,7 @@ sub displayPIN {
 	};
 	
 	if ($@) {
-		$log->error("Cannot load crypto modules, please check your configuration");
+		$log->error("Cannot load crypto modules, please check your configuration", $@);
 		return undef;
 	}	
 	

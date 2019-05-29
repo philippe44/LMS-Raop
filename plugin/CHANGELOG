@@ -1,5 +1,11 @@
+0.4.16.0
+ - alac.c did not set blocksize to NULL
+ - add LOOPBACK option
+ - update Windows dll to remove msvc dependencies
+ - (P) add -static version first
+ 
 0.4.15.1
- - force use and require of CryptX to force dll loading
+ - (P) force use and require of CryptX to force dll loading
  
 0.4.15.0
  - (P) load Aync::HTTP only when LMS version is too old (HTTP 1.1 support for keep-alive)

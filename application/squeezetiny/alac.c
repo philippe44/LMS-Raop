@@ -298,8 +298,6 @@ static decode_state alac_decode(struct thread_ctx_s *ctx) {
 	if (ctx->decode.new_stream) {
 		int found = 0;
 
-		LOG_INFO("[%p]: setting track_start", ctx);
-
 		// mp4 - read header
 		found = read_mp4_header(ctx);
 
@@ -446,7 +444,7 @@ static decode_state alac_decode(struct thread_ctx_s *ctx) {
 		} else if (l->sample_size == 16) {
 			while (count--) {
 				*optr++ = (*(u16_t*) iptr);
-				*optr++ = (*(u32_t*) (iptr + 2));
+				*optr++ = (*(u16_t*) (iptr + 2));
 				iptr += 4;
 			}
 		} else if (l->sample_size == 24) {
@@ -503,6 +501,7 @@ static void alac_open(u8_t sample_size, u32_t sample_rate, u8_t channels, u8_t e
 	if (l->stsc) free(l->stsc);
 	l->chunkinfo = NULL;
 	l->stsc = NULL;
+	l->block_size = NULL;
 	l->skip = 0;
 	l->samples = l->sttssamples = 0;
 	l->empty = false;

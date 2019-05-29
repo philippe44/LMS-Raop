@@ -23,19 +23,19 @@ sub binaries {
 	if ($os->{'os'} eq 'Linux') {
 
 		if ($os->{'osArch'} =~ /x86_64/) {
-			return qw(squeeze2raop-x86-64 squeeze2raop-x86-64-static);
+			return qw(squeeze2raop-x86-64-static squeeze2raop-x86-64);
 		}
 		if ($os->{'binArch'} =~ /i386/) {
-			return qw(squeeze2raop-x86 squeeze2raop-x86-static);
+			return qw(squeeze2raop-x86-static squeeze2raop-x86);
 		}
 		if ($os->{'osArch'} =~ /aarch64/) {
-			return qw(squeeze2raop-aarch64 squeeze2raop-aarch64_static squeeze2raop-armv6hf squeeze2raop-armv6hf-static);
+			return qw(squeeze2raop-aarch64_static squeeze2raop-armv6hf-static squeeze2raop-aarch64 squeeze2raop-armv6hf);
 		}
 		if ($os->{'binArch'} =~ /armhf/) {
-			return qw(squeeze2raop-armv6hf squeeze2raop-armv6hf-static);
+			return qw(squeeze2raop-armv6hf-static squeeze2raop-armv6hf);
 		}
 		if ($os->{'binArch'} =~ /arm/) {
-			return qw(squeeze2raop-armv5te squeeze2raop-armv5te-static);
+			return qw(squeeze2raop-armv5te-static squeeze2raop-armv5te);
 		}
 		
 		# fallback to offering all linux options for case when architecture detection does not work
@@ -43,7 +43,7 @@ sub binaries {
 	}
 	
 	if ($os->{'os'} eq 'Darwin') {
-		return qw(squeeze2raop-osx-multi squeeze2raop-osx-multi-static);
+		return qw(squeeze2raop-osx-multi-static squeeze2raop-osx-multi);
 	}
 	
 	if ($os->{'os'} eq 'Windows') {
@@ -51,18 +51,8 @@ sub binaries {
 	}	
 	
 	if ($os->{'os'} eq 'Unix' && $os->{'osName'} eq 'solaris') {
-		return qw(squeeze2raop-i86pc-solaris squeeze2raop-i86pc-solaris-static);
+		return qw(squeeze2raop-i86pc-solaris-static squeeze2raop-i86pc-solaris);
 	}	
-	
-=comment	
-		if ($os->{'isWin6+'} ne '') {
-			return qw(squeeze2raop-win.exe);
-		} else {
-			return qw(squeeze2raop-winxp.exe);
-		}	
-	}
-=cut	
-	
 }
 
 sub bin {

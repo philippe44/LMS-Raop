@@ -48,7 +48,7 @@ frames_t _output_frames(frames_t avail, struct thread_ctx_s *ctx) {
 	silence = false;
 
 	// start when threshold met
-	if (ctx->output.state == OUTPUT_BUFFER && frames > ctx->output.threshold * ctx->output.current_sample_rate / 100 && frames > ctx->output.start_frames) {
+	if (ctx->output.state == OUTPUT_BUFFER && frames > ctx->output.threshold * ctx->output.current_sample_rate / 10 && frames > ctx->output.start_frames) {
 		ctx->output.state = OUTPUT_RUNNING;
 		LOG_INFO("[%p]: start buffer frames: %u", ctx, frames);
 		wake_controller(ctx);
