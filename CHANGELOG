@@ -1,3 +1,6 @@
+0.4.16.1 
+ - mad was using new decoder structure but librariy was not updated
+ 
 0.4.16.0
  - alac.c did not set blocksize to NULL
  - add LOOPBACK option
