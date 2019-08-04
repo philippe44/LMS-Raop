@@ -105,14 +105,12 @@ static long _tell_cb(void *datasource) { return 0; }
 
 static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
 	struct vorbis *v = ctx->decode.handle;
-	bool end;
 	frames_t frames;
 	int bytes, s, n;
 	u8_t *write_buf;
 
 	LOCK_S;
 	LOCK_O_direct;
-	end = (ctx->stream.state <= DISCONNECT);
 
 	IF_DIRECT(
 		frames = min(_buf_space(ctx->outputbuf), _buf_cont_write(ctx->outputbuf)) / BYTES_PER_FRAME;
@@ -121,9 +119,10 @@ static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
 		frames = ctx->process.max_in_frames;
 	);
 
-	if (!frames && end) {
+	if (!frames && ctx->stream.state <= DISCONNECT) {
 		UNLOCK_O_direct;
 		UNLOCK_S;
+		LOG_INFO("[%p]: end of stream", ctx);
 		return DECODE_COMPLETE;
 	}
 
@@ -204,7 +203,7 @@ static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
 		frames = n / 2 / v->channels;
 		count = frames * v->channels;
 
-		// work backward to unpack samples to 4 bytes per sample
+		// work backward although no unpack is needed
 		iptr = (s16_t *)write_buf + count;
 		optr = (s16_t *)write_buf + frames * 2;
 
@@ -230,10 +229,7 @@ static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
 
 	} else if (n == 0) {
 
-		LOG_INFO("[%p]: end of stream", ctx);
-		UNLOCK_O_direct;
-		UNLOCK_S;
-		return DECODE_COMPLETE;
+		LOG_INFO("[%p]: no frame decoded", ctx);
 
 	} else if (n == OV_HOLE) {
 

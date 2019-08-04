@@ -88,6 +88,7 @@
 #define LIBMAD  "libmad.so.0"
 #define LIBMPG "libmpg123.so.0"
 #define LIBVORBIS "libvorbisfile.so.3"
+#define LIBOPUS "libopusfile.so.0"
 #define LIBTREMOR "libvorbisidec.so.1"
 #define LIBFAAD "libfaad.so.2"
 #define LIBAVUTIL   "libavutil.so.%d"
@@ -102,6 +103,7 @@
 #define LIBMPG "libmpg123.0.dylib"
 #define LIBVORBIS "libvorbisfile.3.dylib"
 #define LIBTREMOR "libvorbisidec.1.dylib"
+#define LIBOPUS "libopusfile.0.dylib"
 #define LIBFAAD "libfaad.2.dylib"
 #define LIBAVUTIL   "libavutil.%d.dylib"
 #define LIBAVCODEC  "libavcodec.%d.dylib"
@@ -115,6 +117,7 @@
 #define LIBMPG "libmpg123-0.dll"
 #define LIBVORBIS "libvorbisfile.dll"
 #define LIBTREMOR "libvorbisidec.dll"
+#define LIBOPUS "libopusfile-0.dll"
 #define LIBFAAD "libfaad2.dll"
 #define LIBAVUTIL   "avutil-%d.dll"
 #define LIBAVCODEC  "avcodec-%d.dll"
@@ -128,6 +131,7 @@
 #define LIBMPG "libmpg123.so.0"
 #define LIBVORBIS "libvorbisfile.so.6"
 #define LIBTREMOR "libvorbisidec.so.1"
+#define LIBOPUS "libopusfile.so.1"
 #define LIBFAAD "libfaad.so.2"
 #define LIBAVUTIL   "libavutil.so.%d"
 #define LIBAVCODEC  "libavcodec.so.%d"
@@ -569,6 +573,8 @@ struct codec*	register_vorbis(void);
 void 			deregister_vorbis(void);
 struct codec*	register_alac(void);
 void 			deregister_alac(void);
+struct codec*	register_opus(void);
+void 			deregister_opus(void);
 
 #if RESAMPLE
 bool register_soxr(void);
