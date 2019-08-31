@@ -57,7 +57,7 @@ enum { VOLUME_FEEDBACK = 1, VOLUME_UNFILTERED = 2};
 /*----------------------------------------------------------------------------*/
 s32_t				glLogLimit = -1;
 char 				glInterface[16] = "?";
-char				glExcluded[SQ_STR_LENGTH] = "aircast,airupnp,shairtunes2";
+char				glExcluded[SQ_STR_LENGTH] = "aircast,airupnp,shairtunes2,airesp32";
 int					glMigration = 0;
 struct sMR			glMRDevices[MAX_RENDERERS];
 

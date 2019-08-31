@@ -235,7 +235,7 @@ static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
 			return DECODE_COMPLETE;
 		} else {
 			LOG_INFO("[%p]: no frame decoded", ctx);
-        }
+	    }
 
 	} else if (n == OV_HOLE) {
 

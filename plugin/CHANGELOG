@@ -1,7 +1,11 @@
 0.4.20.0
+ - add "airesp32" from excluded model list
+ 
+0.4.20.0
  - add opus decoder
  - change vorbis codec min input
  - vorbis does not exit on no frame decoded
+ - alac encoder produces more data than expected when supplied with few frames (for sure 4 creates a problem)
  
 0.4.16.1 
  - mad was using new decoder structure but librariy was not updated
