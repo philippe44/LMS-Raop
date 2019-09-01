@@ -1,4 +1,7 @@
-0.4.20.0
+0.4.21.1
+ - raop_client hacks for squeezelite-esp32 were left by mistake
+ 
+0.4.21.0
  - add "airesp32" from excluded model list
  
 0.4.20.0
