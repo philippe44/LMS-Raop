@@ -1,4 +1,8 @@
+0.4.21.2
+ - improve mDNS detection
+
 0.4.21.1
+ - tabulate volume conversion
  - raop_client hacks for squeezelite-esp32 were left by mistake
  
 0.4.21.0
