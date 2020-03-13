@@ -22,7 +22,9 @@ use Slim::Utils::Misc qw(parseRevision);
 
 my $prefs = preferences('plugin.raopbridge');
 my $log   = logger('plugin.raopbridge');
+my $use_async = 0;
 
+=comment
 eval {
 	my (undef, $build) = parseRevision();
 	my ($month, $day, $time, $year) = $build =~ /\S+ (\S+) (\S+) (\S+) \S+ (\S+)/;
@@ -30,8 +32,13 @@ eval {
 		require Plugins::RaopBridge::Async::HTTP;
 		$log->error("LMS version is too old ($build), need own Aync::HTTP");
 		Plugins::RaopBridge::Async::HTTP::init();
+		$use_async = 0;
 	}	
 };	
+=cut
+require Plugins::RaopBridge::Async::HTTP;
+Plugins::RaopBridge::Async::HTTP::init();
+$use_async = 1;
 
 sub displayPIN {
 	my ($host) = @_;
@@ -54,7 +61,7 @@ sub displayPIN {
 	my $request = HTTP::Request->new( POST => "$host/pair-pin-start" ); 
 	$request->header( 'Connection' => 'Keep-Alive', 'Content-Type' => 'application/octet-stream' );
 				
-	my $session = Plugins::RaopBridge::Async::HTTP->new;
+	my $session = $use_async ? Plugins::RaopBridge::Async::HTTP->new : Slim::Networking::Async::HTTP->new;
 	$session->send_request( {
 		request  => $request,
 		onError  => sub { $log->error(Dumper(@_)); $log->error("Display PIN error") }, 
