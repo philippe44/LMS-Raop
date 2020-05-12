@@ -150,7 +150,7 @@ void SaveConfig(char *name, void *ref, int mode)
 			ixmlDocument_importNode(doc, dev_node, true, &dev_node);
 			ixmlNode_appendChild((IXML_Node*) root, dev_node);
 
-			XMLUpdateNode(doc, dev_node, force, "friendly_name", p->FriendlyName);
+			XMLUpdateNode(doc, dev_node, true, "friendly_name", p->FriendlyName);
 			XMLUpdateNode(doc, dev_node, true, "name", p->sq_config.name);
 			if (*p->Config.Credentials) XMLUpdateNode(doc, dev_node, true, "credentials", p->Config.Credentials);
 			if (*p->sq_config.dynamic.server) XMLUpdateNode(doc, dev_node, true, "server", p->sq_config.dynamic.server);

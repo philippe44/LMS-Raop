@@ -1,3 +1,6 @@
+0.4.22.2
+ - FriendlyName should always be updated in config file
+ 
 0.4.22.1
  - Pairing socket issue with keep-alive, move back to own HTTP.pm (will fix that crap later ...)
  
