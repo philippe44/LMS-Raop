@@ -1,3 +1,6 @@
+0.4.23.0
+ - add FreeBSD build and Perl 5.24 crypto - not tested
+ 
 0.4.22.2
  - FriendlyName should always be updated in config file
  

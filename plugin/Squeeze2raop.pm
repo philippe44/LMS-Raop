@@ -42,16 +42,23 @@ sub binaries {
 		return qw(squeeze2raop-x86-64 squeeze2raop-x86-64-static squeeze2raop-x86 squeeze2raop-x86-static squeeze2raop-armv6hf squeeze2raop-armv6hf-static squeeze2raop-aarch64 squeeze2raop-aarch64_static);
 	}
 	
+	if ($os->{'os'} eq 'Unix') {
+	
+		if ($os->{'osName'} eq 'solaris') {
+			return qw(squeeze2raop-i86pc-solaris-static squeeze2raop-i86pc-solaris);
+		}	
+		if ($os->{'osName'} =~ /freebsd/) {
+			return qw( squeeze2raop-bsd-x64 squeeze2raop-bsd-x64-static);
+		}
+		
+	}	
+	
 	if ($os->{'os'} eq 'Darwin') {
 		return qw(squeeze2raop-osx-multi-static squeeze2raop-osx-multi);
 	}
 	
 	if ($os->{'os'} eq 'Windows') {
 		return qw(squeeze2raop-win.exe);
-	}	
-	
-	if ($os->{'os'} eq 'Unix' && $os->{'osName'} eq 'solaris') {
-		return qw(squeeze2raop-i86pc-solaris-static squeeze2raop-i86pc-solaris);
 	}	
 }
 

@@ -55,7 +55,7 @@
 #endif
 
 extern log_level 	util_loglevel;
-#if WIN
+#if WIN || FREEBSD
 static log_level 	*loglevel = &util_loglevel;
 #endif
 
@@ -460,7 +460,7 @@ void touch_memory(u8_t *buf, size_t size) {
 }
 #endif
 
-#if LINUX || FREEBSD || SUNOS
+#if LINUX || SUNOS
 int SendARP(in_addr_t src, in_addr_t dst, u32_t *mac, u32_t *size) {
 	int                 s;
 	struct arpreq       areq;
@@ -540,6 +540,12 @@ int SendARP(in_addr_t src, in_addr_t dst, u32_t *mac, u32_t *size)
 
 	free(buf);
 	return (found_entry);
+}
+#elif !WIN
+int SendARP(in_addr_t src, in_addr_t dst, u32_t *mac, u32_t *size)
+{
+	LOG_ERROR("No SendARP build for this platform", NULL);
+	return 1;
 }
 #endif
 

@@ -1,6 +1,7 @@
-CFLAGS  ?= -Wall -Wno-multichar -Wno-unused-but-set-variable -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES)
-LDFLAGS ?= -lgomp -lpthread -lssl -lcrypto -ldl -lm -lrt -lstdc++ -L. 
-
+CFLAGS  ?= -Wall -Wno-multichar -Wno-unused-but-set-variable -fPIC -ggdb -m64 -O2 $(OPTS) -I/usr/include/i386-linux-gnu $(INCLUDE) $(DEFINES)
+LDFLAGS ?= -s -m64 -lgomp -lpthread -ldl -lm -lrt -lstdc++ -L. 
+LIBRARY_PATH = /usr/lib64
+ 
 OBJ					= bin/x86-64
 EXECUTABLE 			= bin/squeeze2raop-x86-64
 EXECUTABLE_STATIC 	= bin/squeeze2raop-x86-64-static
