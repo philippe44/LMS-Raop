@@ -963,9 +963,9 @@ static void *ActiveRemoteThread(void *args)
 
 		sd = accept(glActiveRemoteSock, (struct sockaddr *) &cli_addr, &clilen);
 
-		if (sd < 0) {
+		if (sd < 0 || !glMainRunning) {
 			if (glMainRunning) {
-				LOG_ERROR("Accept error", NULL);
+				LOG_WARN("Accept error", NULL);
 			}
 			continue;
 		}
@@ -1163,6 +1163,16 @@ void StopActiveRemote(void)
 #if WIN
 		shutdown(glActiveRemoteSock, SD_BOTH);
 #else
+#if FREEBSD
+		// wake-up thread by connecting socket, needed for freeBSD
+		struct sockaddr addr;
+		socklen_t nlen = sizeof(struct sockaddr);
+		int sock = socket(AF_INET, SOCK_STREAM, 0);
+
+		getsockname(glActiveRemoteSock, (struct sockaddr *) &addr, &nlen);
+		connect(sock, (struct sockaddr*) &addr, sizeof(addr));
+		closesocket(sock);
+#endif
 		shutdown(glActiveRemoteSock, SHUT_RDWR);
 #endif
 		closesocket(glActiveRemoteSock);
