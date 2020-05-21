@@ -106,7 +106,7 @@ static u8_t LMSVolumeMap[129] = {
 sq_dev_param_t glDeviceParam = {
 					STREAMBUF_SIZE,
 					OUTPUTBUF_SIZE,
-					"aac,ogg,ops,flc,alc,aif,pcm,mp3", // magic codec order
+					"aac,ogg,ops,ogf,flc,alc,aif,pcm,mp3", // magic codec order
 					"?",
 					"",
 					{ 0x00,0x00,0x00,0x00,0x00,0x00 },
@@ -1482,8 +1482,8 @@ int main(int argc, char *argv[])
 	glConfigID = (void*) LoadConfig(glConfigName, &glMRConfig, &glDeviceParam);
 
 	// do some parameters migration
-	if (!glMigration || glMigration == 1) {
-		glMigration = 2;
+	if (!glMigration || glMigration == 1 || glMigration == 2) {
+		glMigration = 3;
 		if (!strcasestr(glDeviceParam.codecs, "ogg")) strcat(glDeviceParam.codecs, ",ogg");
 		SaveConfig(glConfigName, glConfigID, CONFIG_MIGRATE);
 	}

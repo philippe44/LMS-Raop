@@ -329,10 +329,9 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			UNLOCK_O;
 
 			if (strm->format != '?') {
-				if (strm->format != 'a')
-					sample_size = (strm->pcm_sample_size != '?') ? pcm_sample_size[strm->pcm_sample_size - '0'] : 0xff;
-				else
-					sample_size = strm->pcm_sample_size;
+				if (strm->pcm_sample_size == '?') sample_size = 0xff;
+				else if (strm->format == 'a' || strm->format == 'd' || strm->format == 'f') sample_size = strm->pcm_sample_size;
+				else sample_size = pcm_sample_size[strm->pcm_sample_size - '0'];
 				sample_rate = (strm->pcm_sample_rate != '?') ? pcm_sample_rate[strm->pcm_sample_rate - '0'] : 0xff;
 				if (sample_rate > ctx->config.sample_rate) {
 					 LOG_WARN("[%p]: Sample rate %u error suspected, forcing to %u", ctx, sample_rate, ctx->config.sample_rate);

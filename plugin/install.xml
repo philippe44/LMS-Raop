@@ -9,7 +9,7 @@
   <optionsURL>plugins/RaopBridge/settings/basic.html</optionsURL>
   <creator>Philippe</creator>
   <defaultState>enabled</defaultState>
-  <version>0.4.23.0</version>
+  <version>0.4.30.0</version>
   <name>PLUGIN_RAOPBRIDGE</name>
   <description>PLUGIN_RAOPBRIDGE_DESC</description>
   <module>Plugins::RaopBridge::Plugin</module>
