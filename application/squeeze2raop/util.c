@@ -64,6 +64,26 @@ void close_socket(int sd) {
 }
 
 
+#if WIN
+/*----------------------------------------------------------------------------*/
+int asprintf(char **strp, const char *fmt, ...)
+{
+	va_list args, cp;
+	int len, ret = 0;
+
+	va_start(args, fmt);
+	len = vsnprintf(NULL, 0, fmt, args);
+	*strp = malloc(len + 1);
+
+	if (*strp) ret = vsprintf(*strp, fmt, args);
+
+	va_end(args);
+
+	return ret;
+}
+#endif
+
+
 /*----------------------------------------------------------------------------*/
 int pthread_cond_reltimedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, u32_t msWait)
 {

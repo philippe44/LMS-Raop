@@ -552,7 +552,8 @@ struct thread_ctx_s {
 	u8_t *silencebuf;
 };
 
-extern struct thread_ctx_s thread_ctx[MAX_PLAYER];
+extern struct thread_ctx_s 	thread_ctx[MAX_PLAYER];
+extern char					sq_model_name[];
 
 // codecs
 #define MAX_CODECS 16

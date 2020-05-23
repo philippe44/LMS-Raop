@@ -95,12 +95,14 @@ void send_packet(u8_t *packet, size_t len, sockfd sock) {
 
 /*---------------------------------------------------------------------------*/
 static void sendHELO(bool reconnect, const char *fixed_cap, const char *var_cap, u8_t mac[6], struct thread_ctx_s *ctx) {
-	const char *base_cap =
+	char *base_cap;
+	struct HELO_packet pkt;
+
+	asprintf(&base_cap,
 #if USE_SSL
 	"CanHTTPS=1,"
 #endif
-	"Model=squeezelite,ModelName=SqueezeLite,AccuratePlayPoints=1,HasDigitalOut=1";
-	struct HELO_packet pkt;
+	"Model=squeezelite,ModelName=%s,AccuratePlayPoints=0,HasDigitalOut=1", sq_model_name);
 
 	memset(&pkt, 0, sizeof(pkt));
 	memcpy(&pkt.opcode, "HELO", 4);
@@ -119,6 +121,8 @@ static void sendHELO(bool reconnect, const char *fixed_cap, const char *var_cap,
 	send_packet((u8_t *)base_cap, strlen(base_cap), ctx->sock);
 	send_packet((u8_t *)fixed_cap, strlen(fixed_cap), ctx->sock);
 	send_packet((u8_t *)var_cap, strlen(var_cap), ctx->sock);
+
+	free(base_cap);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -458,8 +462,8 @@ static void process_setd(u8_t *pkt, int len,struct thread_ctx_s *ctx) {
 				sendSETDName(ctx->config.name, ctx->sock);
 			}
 		} else if (len > 5) {
-			strncpy(ctx->config.name, setd->data, SQ_STR_LENGTH);
-			ctx->config.name[SQ_STR_LENGTH - 1] = '\0';
+			strncpy(ctx->config.name, setd->data, _STR_LEN_);
+			ctx->config.name[_STR_LEN_ - 1] = '\0';
 			LOG_DEBUG("[%p] set name: %s", ctx, setd->data);
 			// confirm change to server
 			sendSETDName(setd->data, ctx->sock);

@@ -110,6 +110,7 @@ char *strlwr(char *str);
 #define _random(x) random()
 char *GetTempPath(u16_t size, char *path);
 #define	closesocket close
+int asprintf(char **strp, const char *fmt, ...);
 
 #endif
 
@@ -137,6 +138,7 @@ typedef __int64 s64_t;
 #define inline __inline
 
 int gettimeofday(struct timeval *tv, struct timezone *tz);
+int asprintf(char **strp, const char *fmt, ...);
 
 #define usleep(x) Sleep((x)/1000)
 #define sleep(x) Sleep((x)*1000)
@@ -168,4 +170,4 @@ typedef struct ntp_s {
 u32_t gettime_ms(void);
 u64_t gettime_ms64(void);
 
-#endif     // __PLATFORM
+#endif     // __PLATFORM

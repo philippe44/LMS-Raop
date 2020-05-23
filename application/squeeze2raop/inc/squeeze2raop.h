@@ -64,16 +64,16 @@ typedef struct sMRConfig
 	int			IdleTimeout;
 	int			RemoveTimeout;
 	bool		Encryption;
-	char		Credentials[SQ_STR_LENGTH];
+	char		Credentials[_STR_LEN_];
 	int 		ReadAhead;
 	int			VolumeMode;
 	int			Volume;
 	int			VolumeFeedback;
-	char		VolumeMapping[SQ_STR_LENGTH];
+	char		VolumeMapping[_STR_LEN_];
 	bool		MuteOnPause;
 	bool		AlacEncode;
 	bool		VolumeTrigger;
-	char 		PreventPlayback[SQ_STR_LENGTH];
+	char 		PreventPlayback[_STR_LEN_];
 } tMRConfig;
 
 
@@ -86,7 +86,7 @@ struct sMR {
 	bool on;
 	char UDN			[RESOURCE_LENGTH];
 	char FriendlyName	[RESOURCE_LENGTH];
-	char			ContentType[SQ_STR_LENGTH];		// a bit patchy ... to buffer next URI
+	char			ContentType[_STR_LEN_];		// a bit patchy ... to buffer next URI
 	int	 			SqueezeHandle;
 	sq_action_t		sqState;
 	s8_t			Volume;
@@ -124,7 +124,7 @@ extern s32_t				glLogLimit;
 extern tMRConfig			glMRConfig;
 extern sq_dev_param_t		glDeviceParam;
 extern struct sMR			glMRDevices[MAX_RENDERERS];
-extern char					glExcluded[SQ_STR_LENGTH];
+extern char					glExcluded[_STR_LEN_];
 extern int					glMigration;
 
 #endif

@@ -25,7 +25,7 @@
 #include "squeezedefs.h"
 #include "util_common.h"
 
-#define SQ_STR_LENGTH	256
+#define _STR_LEN_	256
 
 typedef enum { SQ_NONE, SQ_PLAY, SQ_PAUSE, SQ_UNPAUSE, SQ_STOP, SQ_SEEK,
 			  SQ_VOLUME, SQ_ONOFF, SQ_NEXT, SQ_CONNECT, SQ_STARTED,
@@ -69,18 +69,18 @@ typedef struct sq_metadata_s {
 typedef	struct sq_dev_param_s {
 	unsigned 	stream_buf_size;
 	unsigned 	output_buf_size;
-	char		codecs[SQ_STR_LENGTH];
-	char 		server[SQ_STR_LENGTH];
-	char 		name[SQ_STR_LENGTH];
+	char		codecs[_STR_LEN_];
+	char 		server[_STR_LEN_];
+	char 		name[_STR_LEN_];
 	u8_t		mac[6];
 	bool		soft_volume;
 	u32_t		sample_rate;
 #if defined(RESAMPLE)
 	bool		resample;
-	char		resample_options[SQ_STR_LENGTH];
+	char		resample_options[_STR_LEN_];
 #endif
 	struct {
-		char 	server[SQ_STR_LENGTH];
+		char 	server[_STR_LEN_];
 	} dynamic;
 } sq_dev_param_t;
 
@@ -88,7 +88,7 @@ struct raopcl_s;
 
 typedef bool (*sq_callback_t)(sq_dev_handle_t handle, void *caller_id, sq_action_t action, void *param);
 
-void				sq_init(void);
+void				sq_init(char *model_name);
 void				sq_end(void);
 
 bool			 	sq_run_device(sq_dev_handle_t handle, struct raopcl_s *raopcl, sq_dev_param_t *param);

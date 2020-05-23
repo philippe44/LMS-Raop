@@ -49,6 +49,8 @@
 
 #define DISCOVERY_TIME 20
 
+#define MODEL_NAME_STRING	"RaopBridge"
+
 enum { VOLUME_IGNORE = 0, VOLUME_SOFT = 1, VOLUME_HARD = 2};
 enum { VOLUME_FEEDBACK = 1, VOLUME_UNFILTERED = 2};
 
@@ -57,7 +59,7 @@ enum { VOLUME_FEEDBACK = 1, VOLUME_UNFILTERED = 2};
 /*----------------------------------------------------------------------------*/
 s32_t				glLogLimit = -1;
 char 				glInterface[16] = "?";
-char				glExcluded[SQ_STR_LENGTH] = "aircast,airupnp,shairtunes2,airesp32";
+char				glExcluded[_STR_LEN_] = "aircast,airupnp,shairtunes2,airesp32";
 int					glMigration = 0;
 struct sMR			glMRDevices[MAX_RENDERERS];
 
@@ -144,9 +146,10 @@ static struct mdnsd 		*gl_mDNSResponder;
 static int					glActiveRemoteSock;
 static pthread_t			glActiveRemoteThread;
 static void					*glConfigID = NULL;
-static char					glConfigName[SQ_STR_LENGTH] = "./config.xml";
+static char					glConfigName[_STR_LEN_] = "./config.xml";
 static struct in_addr 		glHost;
 static char					*glHostName;
+static char					glModelName[_STR_LEN_] = MODEL_NAME_STRING;
 
 
 static char usage[] =
@@ -162,6 +165,7 @@ static char usage[] =
 		   "  -f <logfile>\t\tWrite debug to logfile\n"
   		   "  -p <pid file>\t\twrite PID in file\n"
 		   "  -d <log>=<level>\tSet logging level, logs: all|slimproto|stream|decode|output|web|main|util|raop, level: error|warn|info|debug|sdebug\n"
+		   "  -M <modelname>\tSet the squeezelite player model name sent to the server (default: " MODEL_NAME_STRING ")\n"
 #if LINUX || FREEBSD || SUNOS
 		   "  -z \t\t\tDaemonize\n"
 #endif
@@ -769,7 +773,7 @@ static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s)
 	bool Auth = false;
 	char *p, *am, *md, *pk;
 	u32_t mac_size = 6;
-	char Secret[SQ_STR_LENGTH] = "";
+	char Secret[_STR_LEN_] = "";
 
 	// read parameters from default then config file
 	memcpy(&Device->Config, &glMRConfig, sizeof(tMRConfig));
@@ -1185,7 +1189,7 @@ void StopActiveRemote(void)
 /*----------------------------------------------------------------------------*/
 static bool IsExcluded(char *Model)
 {
-	char item[SQ_STR_LENGTH];
+	char item[_STR_LEN_];
 	char *p = glExcluded;
 
 	do {
@@ -1348,7 +1352,7 @@ bool ParseArgs(int argc, char **argv) {
 
 	while (optind < argc && strlen(argv[optind]) >= 2 && argv[optind][0] == '-') {
 		char *opt = argv[optind] + 1;
-		if (strstr("stxdfpibm", opt) && optind < argc - 1) {
+		if (strstr("stxdfpibmM", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
 		} else if (strstr("tzZIk"
@@ -1367,6 +1371,9 @@ bool ParseArgs(int argc, char **argv) {
 		switch (opt[0]) {
 		case 's':
 			strcpy(glDeviceParam.server, optarg);
+			break;
+		case 'M':
+			strcpy(glModelName, optarg);
 			break;
 		case 'b':
 			strcpy(glInterface, optarg);
@@ -1531,7 +1538,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	sq_init();
+	sq_init(glModelName);
 
 	if (!Start()) {
 		LOG_ERROR("Cannot start, exiting", NULL);

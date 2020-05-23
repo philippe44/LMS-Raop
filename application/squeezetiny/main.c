@@ -40,6 +40,7 @@
 #define UNLOCK_P mutex_unlock(ctx->mutex)
 
 struct thread_ctx_s thread_ctx[MAX_PLAYER];
+char				sq_model_name[_STR_LEN_];
 
 /*----------------------------------------------------------------------------*/
 /* locals */
@@ -386,16 +387,16 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 		if (!metadata->artwork || !strlen(metadata->artwork)) {
 			NFREE(metadata->artwork);
 			if ((p = cli_find_tag(cur, "coverid")) != NULL) {
-				metadata->artwork = malloc(SQ_STR_LENGTH);
-				snprintf(metadata->artwork, SQ_STR_LENGTH, "http://%s:%s/music/%s/cover.jpg", ctx->server_ip, ctx->server_port, p);
+				metadata->artwork = malloc(_STR_LEN_);
+				snprintf(metadata->artwork, _STR_LEN_, "http://%s:%s/music/%s/cover.jpg", ctx->server_ip, ctx->server_port, p);
 				free(p);
 			}
 		}
 
 		if (metadata->artwork && strncmp(metadata->artwork, "http", 4)) {
-			char *artwork = malloc(SQ_STR_LENGTH);
+			char *artwork = malloc(_STR_LEN_);
 
-			snprintf(artwork, SQ_STR_LENGTH, "http://%s:%s%s", ctx->server_ip, ctx->server_port, metadata->artwork);
+			snprintf(artwork, _STR_LEN_, "http://%s:%s%s", ctx->server_ip, ctx->server_port, metadata->artwork);
 			free(metadata->artwork);
 			metadata->artwork = artwork;
 		}
@@ -555,8 +556,9 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 
 
 /*---------------------------------------------------------------------------*/
-void sq_init(void)
+void sq_init(char *model_name)
 {
+	strcpy(sq_model_name, model_name);
 	decode_init();
 }
 
