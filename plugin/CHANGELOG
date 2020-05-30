@@ -1,3 +1,14 @@
+Note: beware of crypto version (see shairtunes)
+
+0.4.40.0
+ - add 'wav' codec
+
+0.4.32.0
+ - add perl crypto 5.30
+
+0.4.31.0
+ - change modelName to RaopBridge and add command line -M
+ 
 0.4.30.0
  - add OggFlac
  
