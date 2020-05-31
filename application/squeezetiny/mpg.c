@@ -116,6 +116,7 @@ static decode_state mpg_decode(struct thread_ctx_s *ctx) {
 
 			LOG_INFO("[%p]: setting track_start", ctx);
 			LOCK_O_not_direct;
+			// don't use next_sample_rate
 			ctx->output.current_sample_rate = decode_newstream(rate, ctx->output.supported_rates, ctx);
 			ctx->output.track_start = ctx->outputbuf->writep;
 			if (ctx->output.fade_mode) _checkfade(true, ctx);

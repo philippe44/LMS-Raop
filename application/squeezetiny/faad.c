@@ -371,7 +371,7 @@ static decode_state faad_decode(struct thread_ctx_s *ctx) {
 
 			LOCK_O;
 			LOG_INFO("[%p]: setting track_start", ctx);
-			//output.next_sample_rate = decode_newstream(samplerate, output.supported_rates);
+			// don't use next_sample_rate
 			ctx->output.current_sample_rate = decode_newstream(a->samplerate, ctx->output.supported_rates, ctx);
 			ctx->output.track_start = ctx->outputbuf->writep;
 			if (ctx->output.fade_mode) _checkfade(true, ctx);

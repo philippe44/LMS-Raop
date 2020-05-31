@@ -45,122 +45,92 @@ static log_level *loglevel = &decode_loglevel;
 #endif
 
 #define MAX_DECODE_FRAMES 4096
+#define MIN_READ 	4096
+#define MIN_SPACE	10240
 
 struct pcm {
 	u32_t sample_rate;
 	u8_t sample_size;
 	u8_t channels;
 	bool big_endian;
-	bool  limit;
-	u32_t audio_left;
 };
 
-typedef enum { UNKNOWN = 0, WAVE, AIFF } header_format;
-
 /*---------------------------------------------------------------------------*/
-static void check_header(struct thread_ctx_s *ctx) {
+static unsigned check_header(struct thread_ctx_s *ctx) {
 	u8_t *ptr = ctx->streambuf->readp;
 	struct pcm *p = ctx->decode.handle;
 	unsigned bytes = min(_buf_used(ctx->streambuf), _buf_cont_read(ctx->streambuf));
-	header_format format = UNKNOWN;
+	size_t flat_size = min(1024, MIN_READ);
 
-	// simple parsing of wav and aiff headers and get to samples
-
-	if (bytes > 12) {
-		if (!memcmp(ptr, "RIFF", 4) && !memcmp(ptr+8, "WAVE", 4)) {
-			LOG_INFO("[%p]: WAVE", ctx);
-			format = WAVE;
-		} else if (!memcmp(ptr, "FORM", 4) && (!memcmp(ptr+8, "AIFF", 4) || !memcmp(ptr+8, "AIFC", 4))) {
-			LOG_INFO("[%p]: AIFF", ctx);
-			format = AIFF;
-		}
+	// we need a linear buffer and we know that we have MIN_READ bytes at least
+	if (bytes < flat_size) {
+		u8_t *buf = malloc(flat_size);
+		LOG_INFO("[%p]: flattening buffer %u", ctx, bytes);
+		memcpy(buf, ptr, bytes);
+		memcpy(buf + bytes, ctx->streambuf->buf, flat_size - bytes);
+		ptr = buf;
 	}
 
-	if (format != UNKNOWN) {
-		ptr   += 12;
-		bytes -= 12;
+	// make sure that we return 0 in case header is missing or parsing failure
+	bytes = 0;
 
-		while (bytes >= 8) {
-			char id[5];
-			unsigned len;
-			memcpy(id, ptr, 4);
-			id[4] = '\0';
+	// ok, now we can safely parse the buffer : DO NOT MODIFY ptr
+	if (!memcmp(ptr, "RIFF", 4) && !memcmp(ptr+8, "WAVE", 4) && !memcmp(ptr+12, "fmt ", 4)) {
+		LOG_INFO("[%p]: WAVE", ctx);
+		// override the server parsed values with our own
+		p->channels    	=  *(u16_t*) (ptr+22);
+		p->sample_rate 	= *(u32_t*) (ptr+24);
+		p->sample_size 	= *(u16_t*) (ptr+34);
+		p->big_endian   = false;
+		bytes = (12+8+4+4) + *(u32_t*) (ptr+16);
+		LOG_INFO("[%p]: pcm size: %u rate: %u chan: %u bigendian: %u", ctx, p->sample_size, p->sample_rate, p->channels, p->big_endian);
+	} else if (!memcmp(ptr, "FORM", 4) && (!memcmp(ptr+8, "AIFF", 4) || !memcmp(ptr+8, "AIFC", 4))) {
+		u8_t *parse = ptr+12;
+		LOG_INFO("[%p]: AIFF", ctx);
 
-			if (format == WAVE) {
-				len = *(ptr+4) | *(ptr+5) << 8 | *(ptr+6) << 16| *(ptr+7) << 24;
-			} else {
-				len = *(ptr+4) << 24 | *(ptr+5) << 16 | *(ptr+6) << 8 | *(ptr+7);
-			}
+		// we explore as far as 22 bytes ahead of parse pointer
+		while (parse - ptr < flat_size - 22) {
+			unsigned len = htonl(*(u32_t*) (parse+4));
+			LOG_INFO("[%p]: AIFF header: %4s len: %d", ctx, parse, len);
 
-			LOG_INFO("header: %s len: %d", id, len);
-
-			if (format == WAVE && !memcmp(ptr, "data", 4)) {
-				ptr += 8;
-				_buf_inc_readp(ctx->streambuf, ptr - ctx->streambuf->readp);
-				p->audio_left = len;
-
-				if ((p->audio_left == 0xFFFFFFFF) || (p->audio_left == 0x7FFFEFFC)) {
-					LOG_INFO("[%p]: wav audio size unknown: %u", ctx, p->audio_left);
-					p->limit = false;
-				} else {
-					LOG_INFO("[%p]: wav audio size: %u", ctx, p->audio_left);
-					p->limit = true;
-				}
-				return;
-			}
-
-			if (format == AIFF && !memcmp(ptr, "SSND", 4) && bytes >= 16) {
-				unsigned offset = *(ptr+8) << 24 | *(ptr+9) << 16 | *(ptr+10) << 8 | *(ptr+11);
-				// following 4 bytes is blocksize - ignored
-				ptr += 8 + 8;
-				_buf_inc_readp(ctx->streambuf, ptr + offset - ctx->streambuf->readp);
-
-				// Reading from an upsampled stream, length could be wrong.
-				// Only use length in header for files.
-				if (ctx->stream.state == STREAMING_FILE) {
-					p->audio_left = len - 8 - offset;
-					LOG_INFO("[%p]: aif audio size: %u", ctx, p->audio_left);
-					p->limit = true;
-				}
-				return;
-			}
-
-			if (format == WAVE && !memcmp(ptr, "fmt ", 4) && bytes >= 24) {
-				// override the server parsed values with our own
-				p->channels    = *(ptr+10) | *(ptr+11) << 8;
-				p->sample_rate = *(ptr+12) | *(ptr+13) << 8 | *(ptr+14) << 16 | *(ptr+15) << 24;
-				p->sample_size = (*(ptr+22) | *(ptr+23) << 8);
-				p->big_endian   = false;
-				LOG_INFO("[%p]: pcm size: %u rate: %u chan: %u bigendian: %u", ctx, p->sample_size, p->sample_rate, p->channels, p->big_endian);
-			}
-
-			if (format == AIFF && !memcmp(ptr, "COMM", 4) && bytes >= 26) {
+			if (!memcmp(parse, "COMM", 4)) {
 				int exponent;
 				// override the server parsed values with our own
-				p->channels    = *(ptr+8) << 8 | *(ptr+9);
-				p->sample_size = (*(ptr+14) << 8 | *(ptr+15));
+				p->channels    = htons(*(u16_t*) (parse + 8));
+				p->sample_size = htons(*(u16_t*) (parse + 14));
 				p->big_endian   = true;
 				// sample rate is encoded as IEEE 80 bit extended format
 				// make some assumptions to simplify processing - only use first 32 bits of mantissa
-				exponent = ((*(ptr+16) & 0x7f) << 8 | *(ptr+17)) - 16383 - 31;
-				p->sample_rate  = *(ptr+18) << 24 | *(ptr+19) << 16 | *(ptr+20) << 8 | *(ptr+21);
+				exponent = ((*(parse+16) & 0x7f) << 8 | *(parse+17)) - 16383 - 31;
+				p->sample_rate  = htonl(*(u32_t*) (parse+18));
 				while (exponent < 0) { p->sample_rate >>= 1; ++exponent; }
 				while (exponent > 0) { p->sample_rate <<= 1; --exponent; }
 				LOG_INFO("[%p]: pcm size: %u rate: %u chan: %u bigendian: %u", ctx, p->sample_size, p->sample_rate, p->channels, p->big_endian);
 			}
 
-			if (bytes >= len + 8) {
-				ptr   += len + 8;
-				bytes -= (len + 8);
-			} else {
-				LOG_WARN("[%p]: run out of data", ctx);
-				return;
+			if (!memcmp(parse, "SSND", 4)) {
+				unsigned offset = htonl(*(u32_t*) (parse+8));
+				bytes = parse - ptr + offset + (8+8);
+				break;
 			}
-		}
 
+			parse += len + 8;
+		}
+	} else if (p->big_endian && !(*(u64_t*) ptr) && (strstr(ctx->server_version, "7.7") || strstr(ctx->server_version, "7.8"))) {
+		/*
+		LMS < 7.9 does not remove 8 bytes when sending aiff files but it does
+		when it is a transcoding ... so this does not matter for 16 bits samples
+		but it is a mess for 24 bits ... so this tries to guess what we are
+		receiving
+		*/
+		LOG_INFO("[%p]: guessing a AIFF extra header", ctx);
+		bytes = 8;
 	} else {
 		LOG_WARN("[%p]: unknown format - can't parse header", ctx);
 	}
+
+	if (ptr != ctx->streambuf->readp) free(ptr);
+	return bytes;
 }
 
 
@@ -173,33 +143,13 @@ decode_state pcm_decode(struct thread_ctx_s *ctx) {
 	bool done = false;
 
 	LOCK_S;
-	if (ctx->decode.new_stream) check_header(ctx);
 	LOCK_O_direct;
 
-	iptr = (u8_t *)ctx->streambuf->readp;
-
-	if (ctx->decode.new_stream && p->big_endian && !(*((u64_t*) iptr)) &&
-		   (strstr(ctx->server_version, "7.7") || strstr(ctx->server_version, "7.8"))) {
-		/*
-		LMS < 7.9 does not remove 8 bytes when sending aiff files but it does
-		when it is a transcoding ... so this does not matter for 16 bits samples
-		but it is a mess for 24 bits ... so this tries to guess what we are
-		receiving
-		*/
-		_buf_inc_readp(ctx->streambuf, 8);
-		LOG_INFO("[%p]: guessing a AIFF extra header", ctx);
-	}
-
-	bytes = min(_buf_used(ctx->streambuf), _buf_cont_read(ctx->streambuf));
-	bytes_per_frame = (p->sample_size * p->channels) / 8;
-
-	if ((ctx->stream.state <= DISCONNECT && bytes == 0) || (p->limit && p->audio_left == 0)) {
+	if (ctx->stream.state <= DISCONNECT && !_buf_used(ctx->streambuf)) {
 		UNLOCK_O_direct;
 		UNLOCK_S;
 		return DECODE_COMPLETE;
 	}
-
-	in = bytes / bytes_per_frame;
 
 	IF_DIRECT(
 		out = min(_buf_space(ctx->outputbuf), _buf_cont_write(ctx->outputbuf)) / BYTES_PER_FRAME;
@@ -213,17 +163,29 @@ decode_state pcm_decode(struct thread_ctx_s *ctx) {
 	if (ctx->decode.new_stream) {
 		LOG_INFO("[%p]: setting track_start", ctx);
 
+		// check headers and consume bytes if needed
+		bytes = check_header(ctx);
+		_buf_inc_readp(ctx->streambuf, bytes);
+
 		LOCK_O_not_direct;
-		//FIXME: not in use for now, sample rate always same how to know starting rate when resamplign will be used
+
+		// don't use next_sample_rate
 		ctx->output.current_sample_rate = decode_newstream(p->sample_rate, ctx->output.supported_rates, ctx);
 		ctx->output.track_start = ctx->outputbuf->writep;
 		if (ctx->output.fade_mode) _checkfade(true, ctx);
 		ctx->decode.new_stream = false;
+
 		UNLOCK_O_not_direct;
 		IF_PROCESS(
 			out = ctx->process.max_in_frames;
 		);
 	}
+
+	bytes = min(_buf_used(ctx->streambuf), _buf_cont_read(ctx->streambuf));
+	bytes_per_frame = (p->sample_size * p->channels) / 8;
+
+	iptr = (u8_t *)ctx->streambuf->readp;
+	in = bytes / bytes_per_frame;
 
 	if (in == 0 && bytes > 0 && _buf_used(ctx->streambuf) >= bytes_per_frame) {
 		memcpy(buf, iptr, bytes);
@@ -234,11 +196,6 @@ decode_state pcm_decode(struct thread_ctx_s *ctx) {
 
 	frames = min(in, out);
 	frames = min(frames, MAX_DECODE_FRAMES);
-
-	if (p->limit && frames * bytes_per_frame > p->audio_left) {
-		LOG_INFO("[%p]: reached end of audio", ctx);
-		frames = p->audio_left / bytes_per_frame;
-	}
 
 	// stereo, 16 bits
 	if (p->sample_size == 16 && p->channels == 2) {
@@ -304,10 +261,6 @@ decode_state pcm_decode(struct thread_ctx_s *ctx) {
 
 	_buf_inc_readp(ctx->streambuf, frames * bytes_per_frame);
 
-	if (p->limit) {
-		p->audio_left -= frames * bytes_per_frame;
-	}
-
 	IF_DIRECT(
 		_buf_inc_writep(ctx->outputbuf, frames * BYTES_PER_FRAME);
 	);
@@ -339,7 +292,7 @@ static void pcm_open(u8_t sample_size, u32_t sample_rate, u8_t channels, u8_t en
 	p->channels = channels;
 	p->big_endian = (endianness == 0);
 
-	LOG_INFO("pcm size: %u rate: %u chan: %u bigendian: %u", sample_size, sample_rate, channels, endianness);
+	LOG_INFO("pcm size: %u rate: %u chan: %u bigendian: %u", p->sample_size, p->sample_rate, p->channels, p->big_endian);
 }
 
 
@@ -355,8 +308,8 @@ struct codec *register_pcm(void) {
 	static struct codec ret = { 
 		'p',         // id
 		"aif,wav,pcm",   // types
-		4096,        // min read
-		102400,      // min space
+		MIN_READ,        // min read
+		MIN_SPACE,      // min space
 		pcm_open,    // open
 		pcm_close,   // close
 		pcm_decode,  // decode

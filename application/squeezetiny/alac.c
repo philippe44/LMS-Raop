@@ -306,6 +306,7 @@ static decode_state alac_decode(struct thread_ctx_s *ctx) {
 			bytes = min(_buf_used(ctx->streambuf), _buf_cont_read(ctx->streambuf));
 			LOG_INFO("[%p]: setting track_start", ctx);
 			LOCK_O;
+			// don't use next_sample_rate
 			ctx->output.current_sample_rate = decode_newstream(l->sample_rate, ctx->output.supported_rates, ctx);
 			ctx->output.track_start = ctx->outputbuf->writep;
 

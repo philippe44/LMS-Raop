@@ -128,8 +128,7 @@ static FLAC__StreamDecoderWriteStatus write_cb(const FLAC__StreamDecoder *decode
 		LOG_INFO("[%p]: setting track_start", ctx);
 		ctx->output.track_start = ctx->outputbuf->writep;
 		ctx->decode.new_stream = false;
-
-		// output.next_sample_rate = decode_newstream(frame->header.sample_rate, output.supported_rates);
+		// don't use next_sample_rate
 		ctx->output.current_sample_rate = decode_newstream(frame->header.sample_rate, ctx->output.supported_rates, ctx);
 		if (ctx->output.fade_mode) _checkfade(true, ctx);
 
