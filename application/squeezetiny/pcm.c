@@ -145,7 +145,7 @@ decode_state pcm_decode(struct thread_ctx_s *ctx) {
 	LOCK_S;
 	LOCK_O_direct;
 
-	if (ctx->stream.state <= DISCONNECT && !_buf_used(ctx->streambuf)) {
+	if (ctx->stream.state <= DISCONNECT && _buf_used(ctx->streambuf) < bytes_per_frame) {
 		UNLOCK_O_direct;
 		UNLOCK_S;
 		return DECODE_COMPLETE;
@@ -174,6 +174,7 @@ decode_state pcm_decode(struct thread_ctx_s *ctx) {
 		ctx->output.track_start = ctx->outputbuf->writep;
 		if (ctx->output.fade_mode) _checkfade(true, ctx);
 		ctx->decode.new_stream = false;
+		bytes_per_frame = (p->sample_size * p->channels) / 8;
 
 		UNLOCK_O_not_direct;
 		IF_PROCESS(
@@ -182,7 +183,6 @@ decode_state pcm_decode(struct thread_ctx_s *ctx) {
 	}
 
 	bytes = min(_buf_used(ctx->streambuf), _buf_cont_read(ctx->streambuf));
-	bytes_per_frame = (p->sample_size * p->channels) / 8;
 
 	iptr = (u8_t *)ctx->streambuf->readp;
 	in = bytes / bytes_per_frame;
