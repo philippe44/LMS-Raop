@@ -53,6 +53,7 @@ struct pcm {
 	u8_t sample_size;
 	u8_t channels;
 	bool big_endian;
+	unsigned bytes_per_frame;
 };
 
 /*---------------------------------------------------------------------------*/
@@ -136,7 +137,7 @@ static unsigned check_header(struct thread_ctx_s *ctx) {
 
 /*---------------------------------------------------------------------------*/
 decode_state pcm_decode(struct thread_ctx_s *ctx) {
-	unsigned bytes, in, out, bytes_per_frame;
+	unsigned bytes, in, out;
 	frames_t frames;
 	u8_t *iptr, *optr, buf[3*8];
 	struct pcm *p = ctx->decode.handle;
@@ -145,7 +146,7 @@ decode_state pcm_decode(struct thread_ctx_s *ctx) {
 	LOCK_S;
 	LOCK_O_direct;
 
-	if (ctx->stream.state <= DISCONNECT && _buf_used(ctx->streambuf) < bytes_per_frame) {
+	if (ctx->stream.state <= DISCONNECT && _buf_used(ctx->streambuf) < p->bytes_per_frame) {
 		UNLOCK_O_direct;
 		UNLOCK_S;
 		return DECODE_COMPLETE;
@@ -174,7 +175,7 @@ decode_state pcm_decode(struct thread_ctx_s *ctx) {
 		ctx->output.track_start = ctx->outputbuf->writep;
 		if (ctx->output.fade_mode) _checkfade(true, ctx);
 		ctx->decode.new_stream = false;
-		bytes_per_frame = (p->sample_size * p->channels) / 8;
+		p->bytes_per_frame = (p->sample_size * p->channels) / 8;
 
 		UNLOCK_O_not_direct;
 		IF_PROCESS(
@@ -185,11 +186,11 @@ decode_state pcm_decode(struct thread_ctx_s *ctx) {
 	bytes = min(_buf_used(ctx->streambuf), _buf_cont_read(ctx->streambuf));
 
 	iptr = (u8_t *)ctx->streambuf->readp;
-	in = bytes / bytes_per_frame;
+	in = bytes / p->bytes_per_frame;
 
-	if (in == 0 && bytes > 0 && _buf_used(ctx->streambuf) >= bytes_per_frame) {
+	if (in == 0 && bytes > 0 && _buf_used(ctx->streambuf) >= p->bytes_per_frame) {
 		memcpy(buf, iptr, bytes);
-		memcpy(buf + bytes, ctx->streambuf->buf, bytes_per_frame - bytes);
+		memcpy(buf + bytes, ctx->streambuf->buf, p->bytes_per_frame - bytes);
 		iptr = buf;
 		in = 1;
 	}
@@ -259,7 +260,7 @@ decode_state pcm_decode(struct thread_ctx_s *ctx) {
 		}
 	}
 
-	_buf_inc_readp(ctx->streambuf, frames * bytes_per_frame);
+	_buf_inc_readp(ctx->streambuf, frames * p->bytes_per_frame);
 
 	IF_DIRECT(
 		_buf_inc_writep(ctx->outputbuf, frames * BYTES_PER_FRAME);
@@ -291,6 +292,7 @@ static void pcm_open(u8_t sample_size, u32_t sample_rate, u8_t channels, u8_t en
 	p->sample_rate = sample_rate,
 	p->channels = channels;
 	p->big_endian = (endianness == 0);
+	p->bytes_per_frame = BYTES_PER_FRAME;
 
 	LOG_INFO("pcm size: %u rate: %u chan: %u bigendian: %u", p->sample_size, p->sample_rate, p->channels, p->big_endian);
 }

@@ -1,5 +1,7 @@
 Note: beware of crypto version (see shairtunes)
-
+0.4.41.2
+ - bytes_per_frame must be in context!
+ 
 0.4.41.1
  - stop pcm decoder when bytes < bytes_pr_frame
  - set bytes_per_frame in new_stream only
