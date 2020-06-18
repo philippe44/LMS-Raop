@@ -1,4 +1,8 @@
 Note: beware of crypto version (see shairtunes)
+
+0.4.41.3
+ - linearize streambuf for large needed atoms crossing boundary or give-up
+ 
 0.4.41.2
  - bytes_per_frame must be in context!
  
