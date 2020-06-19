@@ -310,9 +310,9 @@ static int read_mp4_header(unsigned long *samplerate_p, unsigned char *channels_
 			_buf_inc_writep(ctx->streambuf, bytes);
 			LOG_WARN("[%p]: buffer wrap in mp4 header parsing type:%s len:%u bytes:%s", ctx, type, len, bytes);
 			break;
-		 } else if (len > _buf_size(ctx->streambuf)) {
- 			// can't process an atom larger than streambuf!
-			LOG_ERROR("[%p]: atom %s too large for buffer %u %u", ctx, type, len, _buf_size(ctx->streambuf));
+		 } else if (len >= ctx->streambuf->size) {
+			// can't process an atom larger than streambuf!
+			LOG_ERROR("[%p]: atom %s too large for buffer %u %u", ctx, type, len, ctx->streambuf->size);
 			return -1;
 		 } else {
 			break;
