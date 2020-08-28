@@ -238,12 +238,17 @@ static decode_state mad_decode(struct thread_ctx_s *ctx) {
 		MAD(&gm, synth_frame, &m->synth, &m->frame);
 
 		if (ctx->decode.new_stream) {
+			// seems that mad can use some help in term of sync detection
+			if (m->stream.next_frame[0] != 0xff || (m->stream.next_frame[1] & 0xf0) != 0xf0) continue;
+
 			LOCK_O;
 			LOG_INFO("[%p]: setting track_start", ctx);
+
 			// don't use next_sample_rate
 			ctx->output.current_sample_rate = decode_newstream(m->synth.pcm.samplerate, ctx->output.supported_rates, ctx);
 			ctx->output.track_start = ctx->outputbuf->writep;
 			if (ctx->output.fade_mode) _checkfade(true, ctx);
+
 			ctx->decode.new_stream = false;
 			UNLOCK_O;
 		}

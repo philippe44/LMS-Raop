@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+0.4.41.4
+ - when searching for mad sync, verify that next frame is valid
+ 
 0.4.41.3
  - linearize streambuf for large needed atoms crossing boundary or give-up
  
