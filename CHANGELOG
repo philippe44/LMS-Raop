@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+0.4.42.0
+ - try SSL when plain fails on non 443
+ 
 0.4.41.4
  - when searching for mad sync, verify that next frame is valid
  
