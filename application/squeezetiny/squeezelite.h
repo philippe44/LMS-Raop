@@ -326,10 +326,10 @@ struct streamstate {
 	char host[256];
 };
 
-void stream_thread_init(unsigned buf_size, struct thread_ctx_s *ctx);
+bool stream_thread_init(unsigned buf_size, struct thread_ctx_s *ctx);
 void stream_close(struct thread_ctx_s *ctx);
 void stream_file(const char *header, size_t header_len, unsigned threshold, struct thread_ctx_s *ctx);
-void stream_sock(u32_t ip, u16_t port, const char *header, size_t header_len, unsigned threshold, bool cont_wait, struct thread_ctx_s *ctx);
+void 		stream_sock(u32_t ip, u16_t port, bool use_ssl, const char *header, size_t header_len, unsigned threshold, bool cont_wait, struct thread_ctx_s *ctx);
 bool stream_disconnect(struct thread_ctx_s *ctx);
 
 // decode.c
@@ -373,15 +373,15 @@ void decode_thread_init(struct thread_ctx_s *ctx);
 
 void decode_close(struct thread_ctx_s *ctx);
 void decode_flush(struct thread_ctx_s *ctx);
-unsigned decode_newstream(unsigned sample_rate, unsigned supported_rates[], struct thread_ctx_s *ctx);
-void codec_open(u8_t format, u8_t sample_size, u32_t sample_rate, u8_t channels, u8_t endianness, struct thread_ctx_s *ctx);
+unsigned decode_newstream(unsigned sample_rate, int supported_rates[], struct thread_ctx_s *ctx);
+bool codec_open(u8_t codec, u8_t sample_size, u32_t sample_rate, u8_t channels, u8_t endianness, struct thread_ctx_s *ctx);
 
 #if PROCESS
 // process.c
 void process_samples(struct thread_ctx_s *ctx);
 void process_drain(struct thread_ctx_s *ctx);
 void process_flush(struct thread_ctx_s *ctx);
-unsigned process_newstream(bool *direct, unsigned raw_sample_rate, unsigned supported_rates[], struct thread_ctx_s *ctx);
+unsigned process_newstream(bool *direct, unsigned raw_sample_rate, int supported_rates[], struct thread_ctx_s *ctx);
 void process_init(char *opt, struct thread_ctx_s *ctx);
 void process_end(struct thread_ctx_s *ctx);
 #endif
@@ -390,7 +390,7 @@ void process_end(struct thread_ctx_s *ctx);
 // resample.c
 void resample_samples(struct thread_ctx_s *ctx);
 bool resample_drain(struct thread_ctx_s *ctx);
-bool resample_newstream(unsigned raw_sample_rate, unsigned supported_rates[], struct thread_ctx_s *ctx);
+bool resample_newstream(unsigned raw_sample_rate, int supported_rates[], struct thread_ctx_s *ctx);
 void resample_flush(struct thread_ctx_s *ctx);
 bool resample_init(char *opt, struct thread_ctx_s *ctx);
 void resample_end(struct thread_ctx_s *ctx);
@@ -416,7 +416,7 @@ struct outputstate {
 	u32_t device_frames;
 	unsigned current_sample_rate;
 	unsigned default_sample_rate;
-	unsigned supported_rates[2];
+	int supported_rates[2];
 	bool error_opening;
 	u32_t updated;
 	u32_t track_start_time;
@@ -455,7 +455,7 @@ void wake_output(struct thread_ctx_s *ctx);
 
 // output_raop.c
 void output_init_common(void *device, unsigned output_buf_size, u32_t sample_rate, struct thread_ctx_s *ctx);
-void output_raop_thread_init(struct raopcl_s *raopcl, unsigned output_buf_size, struct thread_ctx_s *ctx);
+bool output_raop_thread_init(struct raopcl_s *raopcl, unsigned output_buf_size, struct thread_ctx_s *ctx);
 void output_close_common(struct thread_ctx_s *ctx);
 
 // output_pack.c
@@ -478,7 +478,7 @@ typedef struct {
 	u32_t updated;
 	u32_t stream_start;			// vf : now() when stream started
 	u32_t stream_full;			// v : unread bytes in stream buf
-	u32_t stream_size;			// f : stream_buf_size init param
+	u32_t stream_size;			// f : streambuf_size init param
 	u64_t stream_bytes;         // v : bytes received for current stream
 	u32_t output_full;			// v : unread bytes in output buf
 	u32_t output_size;			// f : output_buf_size init param

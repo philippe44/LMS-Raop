@@ -67,8 +67,8 @@ typedef struct sq_metadata_s {
 } sq_metadata_t;
 
 typedef	struct sq_dev_param_s {
-	unsigned 	stream_buf_size;
-	unsigned 	output_buf_size;
+	unsigned 	streambuf_size;
+	unsigned 	outputbuf_size;
 	char		codecs[_STR_LEN_];
 	char 		server[_STR_LEN_];
 	char 		name[_STR_LEN_];

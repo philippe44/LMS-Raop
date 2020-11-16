@@ -120,7 +120,7 @@ static void *output_raop_thread(struct thread_ctx_s *ctx) {
 
 
 /*---------------------------------------------------------------------------*/
-void output_raop_thread_init(struct raopcl_s *raopcl, unsigned output_buf_size, struct thread_ctx_s *ctx) {
+bool output_raop_thread_init(struct raopcl_s *raopcl, unsigned outputbuf_size, struct thread_ctx_s *ctx) {
 	pthread_attr_t attr;
 
 	LOG_INFO("[%p]: init output raop", ctx);
@@ -130,7 +130,7 @@ void output_raop_thread_init(struct raopcl_s *raopcl, unsigned output_buf_size, 
 	ctx->output.buf = malloc(FRAMES_PER_BLOCK * BYTES_PER_FRAME);
 	if (!ctx->output.buf) {
 		LOG_ERROR("[%p]: unable to malloc buf", ctx);
-		return;
+		return false;
 	}
 
 	ctx->output_running = true;
@@ -138,12 +138,14 @@ void output_raop_thread_init(struct raopcl_s *raopcl, unsigned output_buf_size, 
 	ctx->output.start_frames = FRAMES_PER_BLOCK * 2;
 	ctx->output.write_cb = &_raop_write_frames;
 
-	output_init_common(raopcl, output_buf_size, raopcl_sample_rate(raopcl), ctx);
+	output_init_common(raopcl, outputbuf_size, raopcl_sample_rate(raopcl), ctx);
 
 	pthread_attr_init(&attr);
 	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + OUTPUT_THREAD_STACK_SIZE);
 	pthread_create(&ctx->output_thread, &attr, (void *(*)(void*)) &output_raop_thread, ctx);
 	pthread_attr_destroy(&attr);
+
+	return true;
 }
 
 

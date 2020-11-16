@@ -109,8 +109,8 @@ void SaveConfig(char *name, void *ref, int mode)
 	XMLUpdateNode(doc, root, force, "log_limit", "%d", (s32_t) glLogLimit);
 	XMLUpdateNode(doc, root, true, "migration", "%d", (s32_t) glMigration);
 
-	XMLUpdateNode(doc, common, force, "streambuf_size", "%d", (u32_t) glDeviceParam.stream_buf_size);
-	XMLUpdateNode(doc, common, force, "output_size", "%d", (u32_t) glDeviceParam.output_buf_size);
+	XMLUpdateNode(doc, common, force, "streambuf_size", "%d", (u32_t) glDeviceParam.streambuf_size);
+	XMLUpdateNode(doc, common, force, "output_size", "%d", (u32_t) glDeviceParam.outputbuf_size);
 	XMLUpdateNode(doc, common, force, "enabled", "%d", (int) glMRConfig.Enabled);
 	XMLUpdateNode(doc, common, force, "codecs", glDeviceParam.codecs);
 	XMLUpdateNode(doc, common, force, "sample_rate", "%d", (int) glDeviceParam.sample_rate);
@@ -201,8 +201,8 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 {
 	if (!val)return;
 
-	if (!strcmp(name, "streambuf_size")) sq_conf->stream_buf_size = atol(val);
-	if (!strcmp(name, "output_size")) sq_conf->output_buf_size = atol(val);
+	if (!strcmp(name, "streambuf_size")) sq_conf->streambuf_size = atol(val);
+	if (!strcmp(name, "output_size")) sq_conf->outputbuf_size = atol(val);
 	if (!strcmp(name, "codecs")) strcpy(sq_conf->codecs, val);
 	if (!strcmp(name, "sample_rate")) sq_conf->sample_rate = atol(val);
 	if (!strcmp(name, "name")) strcpy(sq_conf->name, val);

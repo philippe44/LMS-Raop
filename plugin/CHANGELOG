@@ -1,5 +1,9 @@
 Note: beware of crypto version (see shairtunes)
 
+0.4.43.0
+ - SSL flags in stream_s
+ - consolidation with other bridges
+
 0.4.42.0
  - try SSL when plain fails on non 443
  

@@ -27,13 +27,6 @@
 
 #define LOCK_S   mutex_lock(ctx->streambuf->mutex)
 #define UNLOCK_S mutex_unlock(ctx->streambuf->mutex)
-#if 0
-#define LOCK_O   mutex_lock(ctx->outputbuf->mutex)
-#define UNLOCK_O mutex_unlock(ctx->outputbuf->mutex)
-#else
-#define LOCK_O
-#define UNLOCK_O
-#endif
 #define LOCK_D   mutex_lock(ctx->decode.mutex)
 #define UNLOCK_D mutex_unlock(ctx->decode.mutex)
 #define LOCK_P   mutex_lock(ctx->mutex)
@@ -607,19 +600,19 @@ bool sq_run_device(sq_dev_handle_t handle, struct raopcl_s *raopcl, sq_dev_param
 						  ctx->config.mac[0], ctx->config.mac[1], ctx->config.mac[2],
 						  ctx->config.mac[3], ctx->config.mac[4], ctx->config.mac[5]);
 
-	stream_thread_init(ctx->config.stream_buf_size, ctx);
-	output_raop_thread_init(raopcl, ctx->config.output_buf_size, ctx);
-	decode_thread_init(ctx);
-
-#if RESAMPLE
-	if (param->resample) {
-		process_init(param->resample_options, ctx);
+	if (stream_thread_init(ctx->config.streambuf_size, ctx) && output_raop_thread_init(raopcl, ctx->config.outputbuf_size, ctx)) {
+		decode_thread_init(ctx);
+	#if RESAMPLE
+		if (param->resample) {
+			process_init(param->resample_options, ctx);
+		}
+	#endif
+		slimproto_thread_init(ctx);
+		return true;
+	} else {
+		if (ctx->stream_running) stream_close(ctx);
+		return false;
 	}
-#endif
-
-	slimproto_thread_init(ctx);
-
-	return true;
 }
 
 

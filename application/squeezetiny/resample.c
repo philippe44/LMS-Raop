@@ -93,7 +93,7 @@ void resample_samples(struct thread_ctx_s *ctx) {
 		LOG_ERROR("[%p]: should not get here - partial sox process: %u of %u processed %u of %u out",
 				  ctx, (unsigned)idone, ctx->process.in_frames, (unsigned)odone, ctx->process.max_out_frames);
 	}
-	
+
 	ctx->process.out_frames = odone;
 	ctx->process.total_in  += idone;
 	ctx->process.total_out += odone;
@@ -109,13 +109,13 @@ bool resample_drain(struct thread_ctx_s *ctx) {
 	struct soxr *r = ctx->decode.process_handle;
 	size_t odone;
 	size_t clip_cnt;
-		
+
 	soxr_error_t error = SOXR(&gr, process, r->resampler, NULL, 0, NULL, ctx->process.outbuf, ctx->process.max_out_frames, &odone);
 	if (error) {
 		LOG_INFO("[%p]: soxr_process error: %s", ctx, soxr_strerror(error));
 		return true;
 	}
-	
+
 	ctx->process.out_frames = odone;
 	ctx->process.total_out += odone;
 
@@ -124,7 +124,7 @@ bool resample_drain(struct thread_ctx_s *ctx) {
 		LOG_DEBUG("[%p]: resampling clips: %u", ctx, (unsigned)(clip_cnt - r->old_clips));
 		r->old_clips = clip_cnt;
 	}
-	
+
 	if (odone == 0) {
 
 		LOG_INFO("[%p]: resample track complete - total track clips: %u", ctx, r->old_clips);
@@ -140,10 +140,10 @@ bool resample_drain(struct thread_ctx_s *ctx) {
 	}
 }
 
-bool resample_newstream(unsigned raw_sample_rate, unsigned supported_rates[], struct thread_ctx_s *ctx) {
+bool resample_newstream(unsigned raw_sample_rate, int supported_rates[], struct thread_ctx_s *ctx) {
 	struct soxr *r = ctx->decode.process_handle;
 	unsigned outrate = 0;
-	int i;
+	int i = 0;
 
 	if (r->exception) {
 		// find direct match - avoid resampling
@@ -241,7 +241,7 @@ bool resample_newstream(unsigned raw_sample_rate, unsigned supported_rates[], st
 
 	} else {
 
-		LOG_INFO("[%p]: disable resampling - rates match", ctx);
+		LOG_INFO("[%p]: disable resampling - rates match %u", ctx, outrate);
 		return false;
 	}
 }

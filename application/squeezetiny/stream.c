@@ -2,7 +2,7 @@
  *  Squeezelite - lightweight headless squeezebox emulator
  *
  *  (c) Adrian Smith 2012-2015, triode1@btinternet.com
- *  (c) Philippe, philippe_44@outlook.com for raop/multi-instance modifications
+ *  (c) Philippe, philippe_44@outlook.com for multi-instance modifications
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -85,7 +85,7 @@ static int _poll(struct thread_ctx_s *ctx, struct pollfd *pollinfo, int timeout)
 #define _last_error() last_error()
 #endif
 
-static void send_header(struct thread_ctx_s *ctx) {
+static bool send_header(struct thread_ctx_s *ctx) {
 	char *ptr = ctx->stream.header;
 	int len = ctx->stream.header_len;
 
@@ -104,13 +104,14 @@ static void send_header(struct thread_ctx_s *ctx) {
 			ctx->stream.disconnect = LOCAL_DISCONNECT;
 			ctx->stream.state = DISCONNECT;
 			wake_controller(ctx);
-			return;
+			return false;
 		}
 		LOG_SDEBUG("[%p] wrote %d bytes to socket", ctx, n);
 		ptr += n;
 		len -= n;
 	}
 	LOG_SDEBUG("[%p] wrote header", ctx);
+	return true;
 }
 
 bool stream_disconnect(struct thread_ctx_s *ctx) {
@@ -273,10 +274,9 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 			}
 
 			if ((pollinfo.revents & POLLOUT) && ctx->stream.state == SEND_HEADERS) {
-				send_header(ctx);
+				if (send_header(ctx)) ctx->stream.state = RECV_HEADERS;
 				ctx->stream.header_mlen = ctx->stream.header_len;
 				ctx->stream.header_len = 0;
-				ctx->stream.state = RECV_HEADERS;
 				UNLOCK_S;
 				continue;
 			}
@@ -457,7 +457,7 @@ static void *stream_thread(struct thread_ctx_s *ctx) {
 
 
 /*---------------------------------------------------------------------------*/
-void stream_thread_init(unsigned streambuf_size, struct thread_ctx_s *ctx) {
+bool stream_thread_init(unsigned streambuf_size, struct thread_ctx_s *ctx) {
 
 	pthread_attr_t attr;
 
@@ -468,7 +468,7 @@ void stream_thread_init(unsigned streambuf_size, struct thread_ctx_s *ctx) {
 	buf_init(ctx->streambuf, ((streambuf_size / (BYTES_PER_FRAME * 3)) * BYTES_PER_FRAME * 3));
 	if (ctx->streambuf->buf == NULL) {
 		LOG_ERROR("[%p] unable to malloc buffer", ctx);
-		exit(0);
+		return false;
 	}
 
 #if USE_SSL
@@ -495,6 +495,8 @@ void stream_thread_init(unsigned streambuf_size, struct thread_ctx_s *ctx) {
 	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + STREAM_THREAD_STACK_SIZE);
 	pthread_create(&ctx->stream_thread, &attr, (void *(*)(void*)) stream_thread, ctx);
 	pthread_attr_destroy(&attr);
+
+	return true;
 }
 
 void stream_close(struct thread_ctx_s *ctx) {
@@ -543,7 +545,7 @@ void stream_file(const char *header, size_t header_len, unsigned threshold, stru
 	UNLOCK_S;
 }
 
-void stream_sock(u32_t ip, u16_t port, const char *header, size_t header_len, unsigned threshold, bool cont_wait, struct thread_ctx_s *ctx) {
+void stream_sock(u32_t ip, u16_t port, bool use_ssl, const char *header, size_t header_len, unsigned threshold, bool cont_wait, struct thread_ctx_s *ctx) {
 	int sock;
 	char *p;
 
@@ -556,10 +558,10 @@ void stream_sock(u32_t ip, u16_t port, const char *header, size_t header_len, un
 	if ((p = strcasestr(header,"Host:")) != NULL) sscanf(p, "Host:%255[^:]", ctx->stream.host);
 
 	port = ntohs(port);
-	sock = connect_socket(port == 443, ctx);
+	sock = connect_socket((port == 443) || use_ssl, ctx);
 
 	// try one more time with plain socket
-	if (sock < 0 && port == 443) sock = connect_socket(false, ctx);
+	if (sock < 0 && port == 443 && !use_ssl) sock = connect_socket(false, ctx);
 
 	if (sock < 0) {
 		LOCK_S;
