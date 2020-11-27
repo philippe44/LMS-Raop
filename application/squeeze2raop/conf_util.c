@@ -108,6 +108,7 @@ void SaveConfig(char *name, void *ref, int mode)
 	XMLUpdateNode(doc, root, force, "util_log",level2debug(util_loglevel));
 	XMLUpdateNode(doc, root, force, "log_limit", "%d", (s32_t) glLogLimit);
 	XMLUpdateNode(doc, root, true, "migration", "%d", (s32_t) glMigration);
+	XMLUpdateNode(doc, root, force, "ports", glPortOpen);
 
 	XMLUpdateNode(doc, common, force, "streambuf_size", "%d", (u32_t) glDeviceParam.streambuf_size);
 	XMLUpdateNode(doc, common, force, "output_size", "%d", (u32_t) glDeviceParam.outputbuf_size);
@@ -255,6 +256,7 @@ static void LoadGlobalItem(char *name, char *val)
 	if (!strcmp(name, "log_limit")) glLogLimit = atol(val);
 	if (!strcmp(name, "exclude_model")) strcpy(glExcluded, val);
 	if (!strcmp(name, "migration")) glMigration = atol(val);
+	if (!strcmp(name, "ports")) strcpy(glPortOpen, val);
  }
 
 

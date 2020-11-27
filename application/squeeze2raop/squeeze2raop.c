@@ -62,6 +62,7 @@ char 				glInterface[16] = "?";
 char				glExcluded[_STR_LEN_] = "aircast,airupnp,shairtunes2,airesp32";
 int					glMigration = 0;
 struct sMR			glMRDevices[MAX_RENDERERS];
+char				glPortOpen[_STR_LEN_];
 
 log_level	slimproto_loglevel = lINFO;
 log_level	stream_loglevel = lWARN;
@@ -150,13 +151,14 @@ static char					glConfigName[_STR_LEN_] = "./config.xml";
 static struct in_addr 		glHost;
 static char					*glHostName;
 static char					glModelName[_STR_LEN_] = MODEL_NAME_STRING;
-
+static u16_t				glPortBase, glPortRange;
 
 static char usage[] =
 			VERSION "\n"
 		   "See -t for license terms\n"
 		   "Usage: [options]\n"
 		   "  -s <server>[:<port>]\tConnect to specified server, otherwise uses autodiscovery to find server\n"
+		   "  -a <port>[:<count>]\tset inbound port base and range\n"
 		   "  -b <address>]\tNetwork address to bind to\n"
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
 		   "  -i <config file>\tdiscover players, save <config file> and exit\n"
@@ -870,7 +872,8 @@ static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s)
 	else
 		Crypto = RAOP_CLEAR;
 
-	Device->Raop = raopcl_create(glHost, glDACPid, Device->ActiveRemote,
+	Device->Raop = raopcl_create(glHost, glPortBase, glPortRange,
+								 glDACPid, Device->ActiveRemote,
 								 Device->Config.AlacEncode ? RAOP_ALAC : RAOP_ALAC_RAW , FRAMES_PER_BLOCK,
 								 (u32_t) MS2TS(Device->Config.ReadAhead, Device->SampleRate ? atoi(Device->SampleRate) : 44100),
 								 Crypto, Auth, Secret, Device->Crypto, md,
@@ -1122,18 +1125,32 @@ void StartActiveRemote(struct in_addr host)
 		"OSsi=0x1F5",
 		NULL
 	};
+	struct {
+		u16_t count, range;
+		u16_t offset;
+	} aport = { 0 };
 
-	if ((glActiveRemoteSock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		LOG_ERROR("Cannot create ActiveRemote socket", NULL);
-		return;
-	}
+	aport.range = glPortBase ? glPortRange : 1;
+	aport.offset = rand() % aport.range;
 
-	memset(&my_addr, 0, sizeof(my_addr));
-	my_addr.sin_addr.s_addr = host.s_addr;
-	my_addr.sin_family = AF_INET;
-	my_addr.sin_port = 0;
+	do {
+		if ((glActiveRemoteSock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+			LOG_ERROR("Cannot create ActiveRemote socket", NULL);
+			return;
+		}
 
-	if (bind(glActiveRemoteSock, (struct sockaddr *) &my_addr, sizeof(my_addr)) < 0) {
+		memset(&my_addr, 0, sizeof(my_addr));
+		my_addr.sin_addr.s_addr = host.s_addr;
+		my_addr.sin_family = AF_INET;
+		my_addr.sin_port = htons(glPortBase + ((aport.offset + aport.count++) % aport.range));
+
+		if (bind(glActiveRemoteSock, (struct sockaddr *) &my_addr, sizeof(my_addr)) < 0) {
+			closesocket(glActiveRemoteSock);
+			glActiveRemoteSock = -1;
+		}
+	} while (glActiveRemoteSock < 0 && aport.count < aport.range);
+
+	if (glActiveRemoteSock < 0) {
 		LOG_ERROR("Cannot bind ActiveRemote: %s", strerror(errno));
 		return;
 	}
@@ -1352,7 +1369,7 @@ bool ParseArgs(int argc, char **argv) {
 
 	while (optind < argc && strlen(argv[optind]) >= 2 && argv[optind][0] == '-') {
 		char *opt = argv[optind] + 1;
-		if (strstr("stxdfpibmM", opt) && optind < argc - 1) {
+		if (strstr("astxdfpibmM", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
 		} else if (strstr("tzZIk"
@@ -1371,6 +1388,9 @@ bool ParseArgs(int argc, char **argv) {
 		switch (opt[0]) {
 		case 's':
 			strcpy(glDeviceParam.server, optarg);
+			break;
+		case 'a':
+			strcpy(glPortOpen, optarg);
 			break;
 		case 'M':
 			strcpy(glModelName, optarg);
@@ -1497,6 +1517,10 @@ int main(int argc, char *argv[])
 
 	// potentially overwrite with some cmdline parameters
 	if (!ParseArgs(argc, argv)) exit(1);
+
+	// make sure port range is correct
+	sscanf(glPortOpen, "%hu:%hu", &glPortBase, &glPortRange);
+	if (glPortBase && !glPortRange) glPortRange = MAX_RENDERERS*4;
 
 	if (glLogFile) {
 		if (!freopen(glLogFile, "a", stderr)) {

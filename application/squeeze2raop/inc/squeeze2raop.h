@@ -126,5 +126,6 @@ extern sq_dev_param_t		glDeviceParam;
 extern struct sMR			glMRDevices[MAX_RENDERERS];
 extern char					glExcluded[_STR_LEN_];
 extern int					glMigration;
+extern char					glPortOpen[_STR_LEN_];
 
 #endif

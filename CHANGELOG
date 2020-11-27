@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+0.4.50.0
+ - let user define inboud ports
+
 0.4.43.0
  - SSL flags in stream_s
  - consolidation with other bridges

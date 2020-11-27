@@ -50,8 +50,9 @@
 		&nbsp<input name="delconfig" type="submit" value=[% "PLUGIN_RAOPBRIDGE_DELCONFIG" | string %]>
 	[% END %]
 	
-	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_INTERFACE" desc="PLUGIN_RAOPBRIDGE_INTERFACE_DESC" %]
-		<input [% IF useLMSsocket || !xmlparams %] disabled [% END %] type="text" class="stdedit" name="interface" id="interface" value="[% interface %]" size="20">
+	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_NETWORK" desc="PLUGIN_RAOPBRIDGE_NETWORK_DESC" %]
+		[% "PLUGIN_RAOPBRIDGE_INBOUNDPORTS" | string %]&nbsp<input name="ports" type="text" class="stdedit" id="ports" value="[% ports %]" size="7">&nbsp
+		[% "PLUGIN_RAOPBRIDGE_INTERFACE" | string %]&nbsp<input [% IF useLMSsocket || !xmlparams %] disabled [% END %] type="text" class="stdedit" name="interface" id="interface" value="[% interface %]" size="20">
 		&nbsp<input name="useLMSsocket" type="checkbox" [% IF useLMSsocket %] checked [% END %]>&nbsp[% "PLUGIN_RAOPBRIDGE_USELMSSOCKET" | string %]
 	[% END %]
 	
