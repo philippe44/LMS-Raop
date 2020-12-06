@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+0.4.50.1
+ - server discovry response was truncated and CLIP was missing
+ 
 0.4.50.0
  - let user define inboud ports
 
