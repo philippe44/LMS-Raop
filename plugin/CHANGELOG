@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+0.4.50.2
+ - help port syntax
+
 0.4.50.1
  - server discovry response was truncated and CLIP was missing
  

@@ -1356,13 +1356,10 @@ static void sighandler(int signum) {
 /*---------------------------------------------------------------------------*/
 bool ParseArgs(int argc, char **argv) {
 	char *optarg = NULL;
-	int optind = 1;
-	int i;
+	int i, optind = 1;
+	char cmdline[256] = "";
 
-#define MAXCMDLINE 256
-	char cmdline[MAXCMDLINE] = "";
-
-	for (i = 0; i < argc && (strlen(argv[i]) + strlen(cmdline) + 2 < MAXCMDLINE); i++) {
+	for (i = 0; i < argc && (strlen(argv[i]) + strlen(cmdline) + 2 < sizeof(cmdline)); i++) {
 		strcat(cmdline, argv[i]);
 		strcat(cmdline, " ");
 	}

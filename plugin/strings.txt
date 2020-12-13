@@ -138,7 +138,7 @@ PLUGIN_RAOPBRIDGE_NETWORK
 	
 PLUGIN_RAOPBRIDGE_NETWORK_DESC
 	EN	This set different global parameters for networking 
-	EN	<br>- <i>open ports</i>: set the usable ports for incoming connection (RTP & HTTP) with format &lt;base port&gt;[:&lt;<count&gt;>]. Leave it to empty or
+	EN	<br>- <i>open ports</i>: set the usable ports for incoming connection (RTP & HTTP) with format &lt;base port&gt;[:&lt;count&gt;]. Leave it to empty or
 	EN	to 0:0 for automatic (random) port selection. Use this to limit your firewall opened ports. Note that 3 ports are needed per player. 
 	EN	<br>- <i>interface</i>: The network interface (ip address in format xxx.xxx.xxx.xxx) used by the bridge. This is especially useful if you have a
 	EN	computer with multiple network interfaces. Use ? to let the bridge decide or check "use LMS' network
