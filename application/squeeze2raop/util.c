@@ -310,6 +310,3 @@ int XMLAddAttribute(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt
 	return ret;
 }
 
-
-
-

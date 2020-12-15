@@ -50,10 +50,18 @@
 		&nbsp<input name="delconfig" type="submit" value=[% "PLUGIN_RAOPBRIDGE_DELCONFIG" | string %]>
 	[% END %]
 	
+	<script type="text/javascript">
+	function lmssocket(item) {
+		var params = document.getElementById('xmlparams') != null;
+		document.getElementById('interface').disabled = item.checked || !params;
+		document.getElementById('baseport_span').style.display = (item.checked && params) ? 'inline' : 'none';
+	}
+	</script>
+	
 	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_NETWORK" desc="PLUGIN_RAOPBRIDGE_NETWORK_DESC" %]
-		[% "PLUGIN_RAOPBRIDGE_INBOUNDPORTS" | string %]&nbsp<input name="ports" type="text" class="stdedit" id="ports" value="[% ports %]" size="7">&nbsp
-		[% "PLUGIN_RAOPBRIDGE_INTERFACE" | string %]&nbsp<input [% IF useLMSsocket || !xmlparams %] disabled [% END %] type="text" class="stdedit" name="interface" id="interface" value="[% interface %]" size="20">
-		&nbsp<input name="useLMSsocket" type="checkbox" [% IF useLMSsocket %] checked [% END %]>&nbsp[% "PLUGIN_RAOPBRIDGE_USELMSSOCKET" | string %]
+		[% "PLUGIN_RAOPBRIDGE_INBOUNDPORTS" | string %]&nbsp<input [% IF !xmlparams %] disabled [% END %] name="ports" type="text" class="stdedit" id="ports" value="[% ports %]" size="7">&nbsp
+		[% "PLUGIN_RAOPBRIDGE_INTERFACE" | string %]&nbsp<input [% IF useLMSsocket || !xmlparams %] disabled [% END %] type="text" class="stdedit" name="interface" id="interface" value="[% interface %]" size="16">
+		&nbsp<input name="useLMSsocket" type="checkbox" onchange="lmssocket(this)" [% IF useLMSsocket %] checked [% END %]>&nbsp[% "PLUGIN_RAOPBRIDGE_USELMSSOCKET" | string %]
 	[% END %]
 	
 	[% IF !xmlparams %]

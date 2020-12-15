@@ -17,6 +17,8 @@ my $log   = logger('plugin.raopbridge');
 my @xmlmainskip = qw(interface);
 my @xmlmain = ( @xmlmainskip, qw(log_limit ports) );
 my @xmldevice = qw(name mac codecs enabled remove_timeout send_metadata send_coverart player_volume idle_timeout read_ahead encryption server volume_feedback volume_mode volume_mapping mute_on_pause alac_encode volume_trigger prevent_playback);
+my @prefs_bool  = qw(autorun logging autosave eraselog useLMSsocket);
+my @prefs_other = qw(output bin debugs opts);
 
 my $session; # this can be a global, only one instance can run
 
@@ -85,13 +87,11 @@ sub handler {
 			delete $params->{'pairdevice'} if !$session;
 		}
 	} elsif ( $params->{'saveSettings'} ) {
-		my @bool  = qw(autorun logging autosave eraselog useLMSsocket);
-		my @other = qw(output bin debugs opts);
 		my $update;
 		
 		$log->debug("save settings required");
 				
-		for my $param (@bool) {
+		for my $param (@prefs_bool) {
 			my $val = $params->{ $param } ? 1 : 0;
 			
 			if ($val != $prefs->get($param)) {
@@ -101,7 +101,7 @@ sub handler {
 		}
 		
 		# check that the config file name has not changed first
-		for my $param (@other) {
+		for my $param (@prefs_other) {
 			if ($params->{ $param } ne $prefs->get($param)) {
 			
 				$prefs->set($param, $params->{ $param });
@@ -253,7 +253,7 @@ sub handler2 {
 
 	$params->{'binary'}   = Plugins::RaopBridge::Squeeze2raop->bin;
 	$params->{'binaries'} = [ Plugins::RaopBridge::Squeeze2raop->binaries ];
-	for my $param (qw(autorun output bin opts debugs logging configfile autosave eraselog useLMSsocket)) {
+	for my $param (@prefs_bool, @prefs_other, qw(configfile)) {
 		$params->{ $param } = $prefs->get($param);
 	}
 	
