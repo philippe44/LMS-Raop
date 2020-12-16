@@ -29,7 +29,7 @@ sub binaries {
 			return qw(squeeze2raop-x86-static squeeze2raop-x86);
 		}
 		if ($os->{'osArch'} =~ /aarch64/) {
-			return qw(squeeze2raop-aarch64_static squeeze2raop-armv6hf-static squeeze2raop-aarch64 squeeze2raop-armv6hf);
+			return qw(squeeze2raop-aarch64-static squeeze2raop-armv6hf-static squeeze2raop-aarch64 squeeze2raop-armv6hf);
 		}
 		if ($os->{'binArch'} =~ /armhf/) {
 			return qw(squeeze2raop-armv6hf-static squeeze2raop-armv6hf);
