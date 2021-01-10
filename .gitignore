@@ -99,3 +99,5 @@ _backup/
 *-idx*
 *.save*
 *.pcm
+*.store
+

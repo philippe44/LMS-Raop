@@ -1,5 +1,10 @@
 Note: beware of crypto version (see shairtunes)
 
+0.4.50.6 
+ - remove un-necessary "buffer" variable in alac.c
+ - aac buffer wrap only when needed
+ - guarantee alac writebuf size
+ 
 0.4.50.5
  - mispelled aarch64 static version 
  - alac stock decoder does not have aarch64 flag for endianness
