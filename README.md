@@ -21,9 +21,9 @@ To re-compile, use makefile (none available for Windows, I use Embarcadero IDE) 
  - mDNS-SD (my fork) https://github.com/philippe44/mDNS-SD (use fork v2)
  - mDNS announce: https://github.com/philippe44/TinySVCmDNS
  - Curve25519 crypto: https://github.com/msotoodeh/curve25519
- - ALAC codec: https://github.com/macosforge/alac
+ - ALAC codec: https://github.com/philippe44/alac
  - faad2: http://www.audiocoding.com/
  - libmad: https://www.underbit.com/products/mad/
  - libflac: https://xiph.org/flac/
  - libsoxr: https://sourceforge.net/p/soxr/wiki/Home/
- - libogg & libvorbis: https://xiph.org/vorbis/
+ - libogg, libopus & libvorbis: https://xiph.org/vorbis/
