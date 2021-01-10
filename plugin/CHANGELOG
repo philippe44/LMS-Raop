@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+0.4.50.7 NR
+ - improving alac style while verifying code
+
 0.4.50.6 
  - remove un-necessary "buffer" variable in alac.c
  - aac buffer wrap only when needed
