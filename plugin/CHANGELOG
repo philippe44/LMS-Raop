@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+0.4.50.9
+ - synthetic MAC should be 0xaa
+ 
 0.4.50.8
  - improving alac style while verifying code
 
