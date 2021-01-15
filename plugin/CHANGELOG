@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+0.4.50.10
+ - address valgrind complaints (there is still one due to inline strlen on 32 bits)
+
 0.4.50.9
  - synthetic MAC should be 0xaa
  
