@@ -1,5 +1,10 @@
 Note: beware of crypto version (see shairtunes)
 
+0.4.51.0
+ - openssl dynamic load compatible with 1.1.x
+ - playlist index modulus cannot be 0
+ - some mDNS repeater might continuously announce expired devices
+
 0.4.50.10
  - address valgrind complaints (there is still one due to inline strlen on 32 bits)
 

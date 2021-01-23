@@ -641,6 +641,12 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 			continue;
 		}
 
+		// should not happen
+		if (s->expired) {
+			LOG_DEBUG("Device already expired %s", s->name);
+			continue;
+		}
+
 		// device creation so search a free spot.
 		for (j = 0; j < MAX_RENDERERS && glMRDevices[j].Running; j++);
 

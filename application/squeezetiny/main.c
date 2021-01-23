@@ -341,7 +341,9 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 
 	// need to make sure we rollover if end of list
 	if ((p = cli_find_tag(rsp, "playlist_tracks")) != NULL) {
-		metadata->index %= atoi(p);
+		int len = atoi(p);
+		if (len) metadata->index %= len;
+		free(p);
 	}
 
 	sprintf(cmd, "playlist%%20index%%3a%d ", metadata->index);
