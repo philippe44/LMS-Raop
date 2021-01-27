@@ -176,14 +176,14 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 }
 
 
+/*---------------------------------------------------------------------------*/
 #define CLI_SEND_SLEEP (10000)
 #define CLI_SEND_TO (1*500000)
-/*---------------------------------------------------------------------------*/
+#define CLI_KEEP_DURATION (15*60*1000)
 char *cli_send_cmd(char *cmd, bool req, bool decode, struct thread_ctx_s *ctx)
-{
-#define CLI_LEN 2048
-	char packet[CLI_LEN];
-	int wait;
+{
+	char packet[2048];
+	int wait;
 	size_t len;
 	char *rsp = NULL;
 
@@ -192,7 +192,7 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 		mutex_unlock(ctx->cli_mutex);
 		return NULL;
 	}
-	ctx->cli_timestamp = gettime_ms();
+	ctx->cli_timeout = gettime_ms() + CLI_KEEP_DURATION;
 
 	wait = CLI_SEND_TO / CLI_SEND_SLEEP;
 	cmd = cli_encode(cmd);
@@ -220,7 +220,7 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 
 		if (k < 0) break;
 
-		k = recv(ctx->cli_sock, packet + len, CLI_LEN-1 - len, 0);
+		k = recv(ctx->cli_sock, packet + len, sizeof(packet)-1 - len, 0);
 		if (k <= 0) break;
 
 		len += k;

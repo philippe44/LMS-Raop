@@ -532,7 +532,7 @@ struct thread_ctx_s {
 #endif
 	char		cli_id[18];		// (6*2)+(5*':')+NULL
 	mutex_type	cli_mutex;
-	u32_t		cli_timestamp;
+	u32_t		cli_timeout;
 	int bytes_per_frame;		// for output
 	bool	output_running;		// for output.c
 	bool	stream_running;		// for stream.c

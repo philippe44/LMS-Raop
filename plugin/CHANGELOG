@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+0.4.52.0
+ - less aggressive CLI timeout
+
 0.4.51.0
  - openssl dynamic load compatible with 1.1.x
  - playlist index modulus cannot be 0
