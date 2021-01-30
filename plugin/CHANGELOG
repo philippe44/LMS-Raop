@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+0.4.52.1
+ - SNI must be w/o any leading space or trailing garbage now that LMS excludes port
+
 0.4.52.0
  - less aggressive CLI timeout
 
