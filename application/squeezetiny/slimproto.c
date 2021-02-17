@@ -936,7 +936,7 @@ void slimproto_thread_init(struct thread_ctx_s *ctx) {
 	ctx->new_server_cap = NULL;
 
 	LOCK_O;
-	sprintf(ctx->fixed_cap, ",MaxSampleRate=%u", ctx->config.sample_rate);
+	sprintf(ctx->fixed_cap, ",MaxSampleRate=%u", soxr_loaded ? ctx->config.sample_rate : 44100);
 
 	codec = buf = strdup(ctx->config.codecs);
 	while (codec && *codec ) {

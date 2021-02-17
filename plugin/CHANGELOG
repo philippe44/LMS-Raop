@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+0.4.52.2
+ - limit sample rate capability to 44100 when soxr is not loaded
+
 0.4.52.1
  - SNI must be w/o any leading space or trailing garbage now that LMS excludes port
 

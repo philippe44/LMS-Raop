@@ -34,6 +34,7 @@
 
 struct thread_ctx_s thread_ctx[MAX_PLAYER];
 char				sq_model_name[_STR_LEN_];
+bool				soxr_loaded = false;
 
 /*----------------------------------------------------------------------------*/
 /* locals */
@@ -54,6 +55,9 @@ void sq_end() {
 	}
 
 	decode_end();
+#if RESAMPLE
+	deregister_soxr();
+#endif
 }
 
 /*--------------------------------------------------------------------------*/
@@ -555,6 +559,9 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 {
 	strcpy(sq_model_name, model_name);
 	decode_init();
+#if RESAMPLE
+	soxr_loaded = register_soxr();
+#endif
 }
 
 /*---------------------------------------------------------------------------*/

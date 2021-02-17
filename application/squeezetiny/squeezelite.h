@@ -583,6 +583,7 @@ void 			deregister_opus(void);
 bool register_soxr(void);
 void deregister_soxr(void);
 #endif
+extern bool soxr_loaded;
 
 
 
