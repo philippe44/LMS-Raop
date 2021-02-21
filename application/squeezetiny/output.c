@@ -193,8 +193,8 @@ frames_t _output_frames(frames_t avail, struct thread_ctx_s *ctx) {
 
 		out_frames = !silence ? min(size, cont_frames) : size;
 
-		if (ctx->output.channels & 0x01) gainR = MONO_MUTED;
-		else if (ctx->output.channels & 0x02) gainL = MONO_MUTED;
+		if (ctx->output.channels & 0x01) gainR |= MONO_FLAG;
+		if (ctx->output.channels & 0x02) gainL |= MONO_FLAG;
 
 		wrote = ctx->output.write_cb(ctx, out_frames, silence, gainL, gainR, cross_gain_in, cross_gain_out, &cross_ptr);
 

@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+0.4.53.0
+ - add combined L+R channel option
+
 0.4.52.2
  - limit sample rate capability to 44100 when soxr is not loaded
 

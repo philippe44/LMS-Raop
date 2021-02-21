@@ -226,7 +226,7 @@ void _wake_create(event_event*);
 
 #define MAX_SILENCE_FRAMES FRAMES_PER_BLOCK 		// 352 for RAOP protocol
 #define FIXED_ONE  0x10000
-#define MONO_MUTED 0xFFFFFFFF
+#define MONO_FLAG  0x20000
 
 #define BYTES_PER_FRAME 4
 
