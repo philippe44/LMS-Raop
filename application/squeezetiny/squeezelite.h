@@ -226,7 +226,8 @@ void _wake_create(event_event*);
 
 #define MAX_SILENCE_FRAMES FRAMES_PER_BLOCK 		// 352 for RAOP protocol
 #define FIXED_ONE  0x10000
-#define MONO_FLAG  0x20000
+#define MONO_RIGHT	0x02
+#define MONO_LEFT	0x01
 
 #define BYTES_PER_FRAME 4
 
@@ -409,7 +410,7 @@ struct outputstate {
 	output_state state;
 	void *device;
 	bool  track_started;
-	int (* write_cb)(struct thread_ctx_s *ctx, frames_t out_frames, bool silence, s32_t gainL, s32_t gainR, s32_t cross_gain_in, s32_t cross_gain_out, s16_t **cross_ptr);
+	int (* write_cb)(struct thread_ctx_s *ctx, frames_t out_frames, bool silence, s32_t gainL, s32_t gainR, u8_t flags, s32_t cross_gain_in, s32_t cross_gain_out, s16_t **cross_ptr);
 	unsigned start_frames;
 	unsigned frames_played;
 	unsigned frames_played_dmp;// frames played at the point delay is measured
@@ -459,7 +460,7 @@ bool output_raop_thread_init(struct raopcl_s *raopcl, unsigned output_buf_size, 
 void output_close_common(struct thread_ctx_s *ctx);
 
 // output_pack.c
-void _scale_frames(s16_t *outputptr, s16_t *inputptr, frames_t cnt, s32_t gainL, s32_t gainR);
+void _scale_frames(s16_t *outputptr, s16_t *inputptr, frames_t cnt, s32_t gainL, s32_t gainR, u8_t flags);
 void _apply_cross(struct buffer *outputbuf, frames_t out_frames, s32_t cross_gain_in, s32_t cross_gain_out, s16_t **cross_ptr);
 s32_t gain32(s32_t gain, s32_t value);
 s32_t to_gain(float f);

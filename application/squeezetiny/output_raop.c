@@ -40,7 +40,7 @@ void wake_output(struct thread_ctx_s *ctx) {
 
 
 /*---------------------------------------------------------------------------*/
-static int _raop_write_frames(struct thread_ctx_s *ctx, frames_t out_frames, bool silence, s32_t gainL, s32_t gainR,
+static int _raop_write_frames(struct thread_ctx_s *ctx, frames_t out_frames, bool silence, s32_t gainL, s32_t gainR, u8_t flags,
 								s32_t cross_gain_in, s32_t cross_gain_out, s16_t **cross_ptr) {
 
 	s16_t *obuf;
@@ -58,7 +58,7 @@ static int _raop_write_frames(struct thread_ctx_s *ctx, frames_t out_frames, boo
 		obuf = (s16_t*) ctx->silencebuf;
 	}
 
-	_scale_frames((s16_t*) (ctx->output.buf + ctx->output.buf_frames * BYTES_PER_FRAME), obuf, out_frames, gainL, gainR);
+	_scale_frames((s16_t*) (ctx->output.buf + ctx->output.buf_frames * BYTES_PER_FRAME), obuf, out_frames, gainL, gainR, flags);
 
 	ctx->output.buf_frames += out_frames;
 

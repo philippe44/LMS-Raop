@@ -53,25 +53,24 @@ s32_t to_gain(float f) {
 
 
 /*---------------------------------------------------------------------------*/
-void _scale_frames(s16_t *outputptr, s16_t *inputptr, frames_t count, s32_t gainL, s32_t gainR)
+void _scale_frames(s16_t *outputptr, s16_t *inputptr, frames_t count, s32_t gainL, s32_t gainR, u8_t flags)
 {
-	if (gainL == FIXED_ONE && gainR == FIXED_ONE) {
+	if (gainL == FIXED_ONE && gainR == FIXED_ONE && !(flags & (MONO_LEFT | MONO_RIGHT))) {
 		memcpy(outputptr, inputptr, count * BYTES_PER_FRAME);
-	}  else if ((gainL & MONO_FLAG) && (gainR & MONO_FLAG)) {
-		gainL &= ~MONO_FLAG; gainR &= ~MONO_FLAG;
+	}  else if ((flags & MONO_LEFT) && (flags & MONO_RIGHT)) {
 		while (count--) {
 			s32_t sample = gain(gainL, *inputptr++);
 			sample = (sample + gain(gainR, *inputptr++)) / 2;
 			*outputptr++ = sample;
 			*outputptr++ = sample;
 		}
-	} else if (gainL & MONO_FLAG) {
+	} else if (flags & MONO_LEFT) {
 		while (count--) {
 			inputptr++;
 			*(outputptr + 1) = *outputptr = gain(gainR, *inputptr++);
 			outputptr += 2;
 		}
-	} else if (gainR & MONO_FLAG) {
+	} else if (flags & MONO_RIGHT) {
 		while (count--) {
 			*(outputptr + 1) = *outputptr = gain(gainL, *inputptr++);
 			inputptr++;
@@ -84,7 +83,6 @@ void _scale_frames(s16_t *outputptr, s16_t *inputptr, frames_t count, s32_t gain
 		}
 	}
 }
-
 
 /*---------------------------------------------------------------------------*/
 void _apply_cross(struct buffer *outputbuf, frames_t out_frames, s32_t cross_gain_in, s32_t cross_gain_out, s16_t **cross_ptr) {
