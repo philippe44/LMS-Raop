@@ -178,12 +178,6 @@ PLUGIN_RAOPBRIDGE_VOLUMESOFT
 PLUGIN_RAOPBRIDGE_VOLUMEHARD
 	EN	hardware
 	
-PLUGIN_RAOPBRIDGE_OTHERSTOP
-	EN	stop
-	
-PLUGIN_RAOPBRIDGE_OTHEROFF
-	EN	Power OFF
-	
 PLUGIN_RAOPBRIDGE_VOLUMERAW
 	EN	raw
 
@@ -313,16 +307,20 @@ PLUGIN_RAOPBRIDGE_OTHEROPTIONS
 	EN	Various Options
 
 PLUGIN_RAOPBRIDGE_PREVENTPLAYBACK
-	EN	LMS player when AirPlay device disconnects 
-
+	EN	When AirPlay disconnects
+	
 PLUGIN_RAOPBRIDGE_POWEROFF
-	EN	Power off
+	EN	Off
 	
 PLUGIN_RAOPBRIDGE_STOP
 	EN	Stop
-
+	
+PLUGIN_RAOPBRIDGE_PERSISTENT
+	EN	Re-connect on error
+	
 PLUGIN_RAOPBRIDGE_OTHEROPTIONS_DESC
 	EN	- When AirPlay device disconnects locally (e.g. by using the remote of an AV amplifier to switch source, should LMS stop or poweroff the virtual SB player)
+	EN	<br>- When there is a communication error, should the bridge try to reconnect (can happen when using another AirPlay controller)
 		
 PLUGIN_RAOPBRIDGE_NOCONFIG
 	EN	Configuration file missing - create one by clicking "generate" or, if autosave is on, refresh this page

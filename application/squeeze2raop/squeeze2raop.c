@@ -91,6 +91,7 @@ tMRConfig			glMRConfig = {
 							false,
 							false,			 // VolumeTrigger
 							"stop",			 // PreventPlayback
+							false,			 // Persistent
 					};
 
 static u8_t LMSVolumeMap[129] = {
@@ -414,8 +415,14 @@ static void *PlayerThread(void *args)
 
 			Device->Sane = raopcl_is_sane(Device->Raop) ? 0 : Device->Sane + 1;
 			if (Device->Sane > 3) {
-				LOG_ERROR("[%p]: broken connection, attempting repair", Device);
-				raopcl_repair(Device->Raop, !Device->Config.VolumeTrigger);
+				if (Device->Config.Persistent) {
+					LOG_ERROR("[%p]: broken connection, attempting repair", Device);
+					raopcl_repair(Device->Raop, !Device->Config.VolumeTrigger);
+				} else {
+					pthread_mutex_lock(&Device->Mutex);
+					sq_notify(Device->SqueezeHandle, Device, SQ_STOP, NULL, NULL);
+					pthread_mutex_unlock(&Device->Mutex);
+				}
 			}
 
 			// after that, only check what's needed when running

@@ -132,6 +132,7 @@ void SaveConfig(char *name, void *ref, int mode)
 	XMLUpdateNode(doc, common, force, "alac_encode", "%d", (int) glMRConfig.AlacEncode);
 	XMLUpdateNode(doc, common, force, "volume_trigger", "%d", (int) glMRConfig.VolumeTrigger);
 	XMLUpdateNode(doc, common, force, "prevent_playback", glMRConfig.PreventPlayback);
+	XMLUpdateNode(doc, common, force, "persistent", "%d", (int) glMRConfig.Persistent);
 
 	XMLUpdateNode(doc, common, force, "encryption", "%d", (int) glMRConfig.Encryption);
 	XMLUpdateNode(doc, common, force, "read_ahead", "%d", (int) glMRConfig.ReadAhead);
@@ -237,6 +238,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "alac_encode")) Conf->AlacEncode = atol(val);
 	if (!strcmp(name, "volume_trigger")) Conf->VolumeTrigger = atol(val);
 	if (!strcmp(name, "prevent_playback")) strcpy(Conf->PreventPlayback, val);
+	if (!strcmp(name, "persistent")) Conf->Persistent = atol(val);
 }
 
 /*----------------------------------------------------------------------------*/

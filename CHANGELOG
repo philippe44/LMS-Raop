@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+0.4.60.0
+ - Let user select if connection should be presistent on RAOP error
+
 0.4.53.2
  - fix handling of MONO flags when soft gain is used
  

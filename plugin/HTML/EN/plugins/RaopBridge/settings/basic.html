@@ -174,13 +174,19 @@
 	[% END %]
 	
 	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_OTHEROPTIONS" desc="PLUGIN_RAOPBRIDGE_OTHEROPTIONS_DESC" %]
-		[% PREVENTPLAYBACKBOX = [['',''], ['PLUGIN_RAOPBRIDGE_OTHERSTOP','stop'], ['PLUGIN_RAOPBRIDGE_OTHEROFF','off']] %]
+		[% PREVENTPLAYBACKBOX = [['',''], ['PLUGIN_RAOPBRIDGE_STOP','stop'], ['PLUGIN_RAOPBRIDGE_POWEROFF','off']] %]
+		[% "PLUGIN_RAOPBRIDGE_PREVENTPLAYBACK" | string %]
 		<select class="stdedit" name="prevent_playback" id="prevent_playback">
 		[% FOREACH entry IN PREVENTPLAYBACKBOX %] 
 			<option [% IF entry.1 == prevent_playback %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 		[% END %]
 		</select>
-		[% "PLUGIN_RAOPBRIDGE_PREVENTPLAYBACK" | string %]&nbsp
+		&nbsp&nbsp[% "PLUGIN_RAOPBRIDGE_PERSISTENT" | string %]
+		<select class="stdedit" name="persistent" id="persistent">
+		[% FOREACH entry IN YESNOBOX %] 
+			<option [% IF entry.1 == persistent %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
+		[% END %]
+		</select>
 	[% END %]
 	
 	<hr>

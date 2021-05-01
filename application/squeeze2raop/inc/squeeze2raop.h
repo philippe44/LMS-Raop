@@ -74,6 +74,7 @@ typedef struct sMRConfig
 	bool		AlacEncode;
 	bool		VolumeTrigger;
 	char 		PreventPlayback[_STR_LEN_];
+	bool 		Persistent;
 } tMRConfig;
 
 

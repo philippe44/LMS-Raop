@@ -16,7 +16,7 @@ my $prefs = preferences('plugin.raopbridge');
 my $log   = logger('plugin.raopbridge');
 my @xmlmainskip = qw(interface);
 my @xmlmain = ( @xmlmainskip, qw(log_limit ports) );
-my @xmldevice = qw(name mac codecs enabled remove_timeout send_metadata send_coverart player_volume idle_timeout read_ahead encryption server volume_feedback volume_mode volume_mapping mute_on_pause alac_encode volume_trigger prevent_playback);
+my @xmldevice = qw(name mac codecs enabled remove_timeout send_metadata send_coverart player_volume idle_timeout read_ahead encryption server volume_feedback volume_mode volume_mapping mute_on_pause alac_encode volume_trigger prevent_playback persistent);
 my @prefs_bool  = qw(autorun logging autosave eraselog useLMSsocket);
 my @prefs_other = qw(output bin debugs opts);
 
