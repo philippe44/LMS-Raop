@@ -66,10 +66,10 @@ static unsigned check_header(struct thread_ctx_s *ctx) {
 	if (!memcmp(ptr, "RIFF", 4) && !memcmp(ptr+8, "WAVE", 4) && !memcmp(ptr+12, "fmt ", 4)) {
 		LOG_INFO("[%p]: WAVE", ctx);
 		// override the server parsed values with our own
-		p->channels    	=  *(u16_t*) (ptr+22);
-		p->sample_rate 	= *(u32_t*) (ptr+24);
-		p->sample_size 	= *(u16_t*) (ptr+34);
-		p->big_endian   = false;
+		p->channels    = *(u16_t*) (ptr+22);
+		p->sample_rate = *(u32_t*) (ptr+24);
+		p->sample_size = *(u16_t*) (ptr+34);
+		p->big_endian  = false;
 		bytes = (12+8+4+4) + *(u32_t*) (ptr+16);
 		LOG_INFO("[%p]: pcm size: %u rate: %u chan: %u bigendian: %u", ctx, p->sample_size, p->sample_rate, p->channels, p->big_endian);
 	} else if (!memcmp(ptr, "FORM", 4) && (!memcmp(ptr+8, "AIFF", 4) || !memcmp(ptr+8, "AIFC", 4))) {

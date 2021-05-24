@@ -1,5 +1,9 @@
 Note: beware of crypto version (see shairtunes)
 
+0.4.60.1
+ - threshold is in FRAMES
+ - mdns fix for blank name field
+
 0.4.60.0
  - Let user select if connection should be presistent on RAOP error
 
