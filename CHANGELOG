@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+0.4.61.0
+ - autorun by default and use static version
+
 0.4.60.1
  - threshold is in FRAMES
  - mdns fix for blank name field

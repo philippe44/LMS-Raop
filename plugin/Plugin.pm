@@ -16,7 +16,17 @@ use Slim::Utils::Log;
 
 my $prefs = preferences('plugin.raopbridge');
 
-$prefs->init({ autorun => 0, opts => '', debugs => '', logging => 0, bin => undef, configfile => "raopbridge.xml", profilesURL => initProfilesURL(), autosave => 1, eraselog => 0});
+$prefs->init({ 
+	autorun => 1, 
+	opts => '', 
+	debugs => '', 
+	logging => 0, 
+	bin => undef, 
+	configfile => "raopbridge.xml", 
+	profilesURL => initProfilesURL(), 
+	autosave => 1, 
+	eraselog => 0
+});
 
 my $log = Slim::Utils::Log->addLogCategory({
 	'category'     => 'plugin.raopbridge',
