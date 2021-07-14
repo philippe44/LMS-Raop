@@ -15,6 +15,7 @@ use Slim::Utils::Prefs;
 use Slim::Utils::Log;
 
 my $prefs = preferences('plugin.raopbridge');
+my $fade_volume;
 
 $prefs->init({ 
 	autorun => 1, 
@@ -34,10 +35,21 @@ my $log = Slim::Utils::Log->addLogCategory({
 	'description'  => Slim::Utils::Strings::string('PLUGIN_RAOPBRIDGE'),
 }); 
 
+sub fade_volume {
+	my ($client, $fade, $callback, $callbackargs) = @_;
+	return $fade_volume->($client, $fade, $callback, $callbackargs) if $fade > 0 || $client->modelName !~ /RaopBridge/;
+	return $callback->($callbackargs) if $callback;
+}
+
 sub initPlugin {
 	my $class = shift;
 
 	$class->SUPER::initPlugin(@_);
+	
+	# this is hacky but I won't redefine a whole player model just for this	
+	require Slim::Player::SqueezePlay;
+	$fade_volume = \&Slim::Player::SqueezePlay::fade_volume;
+	*Slim::Player::SqueezePlay::fade_volume = \&fade_volume;
 		
 	require Plugins::RaopBridge::Squeeze2raop;	
 	require	Plugins::RaopBridge::Pairing;

@@ -369,15 +369,6 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 			free(p);
 		}
 
-		/*
-		at this point, LMS sends the original filesize, not the transcoded
-		so it simply does not work
-		if ((p = cli_find_tag(rsp, "filesize")) != NULL) {
-			metadata->file_size = atol(p);
-			free(p);
-		}
-		*/
-
 		if ((p = cli_find_tag(cur, "tracknum")) != NULL) {
 			metadata->track = atol(p);
 			free(p);

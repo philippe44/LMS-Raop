@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+0.4.62.0
+ - (P) don't fade-out on pause (no zero volume)
+
 0.4.61.0
  - autorun by default and use static version
 
