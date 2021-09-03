@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+0.4.62.1
+ - add support for Perl 5.32
+
 0.4.62.0
  - (P) don't fade-out on pause (no zero volume)
 

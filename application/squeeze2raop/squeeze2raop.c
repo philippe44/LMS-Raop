@@ -1022,7 +1022,7 @@ static void *ActiveRemoteThread(void *args)
 		pthread_mutex_lock(&Device->Mutex);
 
 		if (!Device->Running) {
-			LOG_WARN("[%]: device has been removed", Device);
+			LOG_WARN("[%p]: device has been removed", Device);
 			pthread_mutex_unlock(&Device->Mutex);
 			close_socket(sd);
 			continue;
