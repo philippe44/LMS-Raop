@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+0.4.62.2
+ - Fix CVE-2017-12087
+ 
 0.4.62.1
  - add support for Perl 5.32
 
