@@ -380,11 +380,11 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 		}
 
 		metadata->artwork = cli_find_tag(cur, "artwork_url");
-		if (!metadata->artwork || !strlen(metadata->artwork)) {
+		if (!metadata->artwork || !strlen(metadata->artwork) || *ctx->config.resolution) {
 			NFREE(metadata->artwork);
 			if ((p = cli_find_tag(cur, "coverid")) != NULL) {
 				metadata->artwork = malloc(_STR_LEN_);
-				snprintf(metadata->artwork, _STR_LEN_, "http://%s:%s/music/%s/cover.jpg", ctx->server_ip, ctx->server_port, p);
+				snprintf(metadata->artwork, _STR_LEN_, "http://%s:%s/music/%s/cover%s.jpg", ctx->server_ip, ctx->server_port, p, ctx->config.resolution);
 				free(p);
 			}
 		}

@@ -115,6 +115,7 @@ void SaveConfig(char *name, void *ref, int mode)
 	XMLUpdateNode(doc, common, force, "enabled", "%d", (int) glMRConfig.Enabled);
 	XMLUpdateNode(doc, common, force, "codecs", glDeviceParam.codecs);
 	XMLUpdateNode(doc, common, force, "sample_rate", "%d", (int) glDeviceParam.sample_rate);
+	XMLUpdateNode(doc, common, force, "resolution", glDeviceParam.resolution);
 #if defined(RESAMPLE)
 	XMLUpdateNode(doc, common, force, "resample", "%d", (int) glDeviceParam.resample);
 	XMLUpdateNode(doc, common, force, "resample_options", glDeviceParam.resample_options);
@@ -209,6 +210,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "sample_rate")) sq_conf->sample_rate = atol(val);
 	if (!strcmp(name, "name")) strcpy(sq_conf->name, val);
 	if (!strcmp(name, "server")) strcpy(sq_conf->server, val);
+	if (!strcmp(name, "resolution")) strcpy(sq_conf->resolution, val);
 	if (!strcmp(name, "mac"))  {
 		unsigned mac[6];
 		int i;

@@ -259,9 +259,13 @@ PLUGIN_RAOPBRIDGE_SENDMETADATA
 PLUGIN_RAOPBRIDGE_SEND_COVERART
 	EN	Include cover art
 
+PLUGIN_RAOPBRIDGE_RESOLUTION
+	EN	Resolution
+
 PLUGIN_RAOPBRIDGE_SENDMETADATA_DESC
 	EN	When using an AirPlay device with display capabilities, LMS can send metadata (title, artist, album) to it. 
-	EN	This <b>DOES NOT</b> work if you have set a password for LMS command access
+	EN	<br>- Use <b>resolution</b> to force a fixed coverart resolution (eg: 300x300) - leave it empty otherwise
+	EN	<br>This <b>DOES NOT</b> work if you have set a password for LMS command access
 	
 PLUGIN_RAOPBRIDGE_PLAYEROPTIONS
 	EN	AirPlay options

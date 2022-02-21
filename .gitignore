@@ -100,4 +100,5 @@ _backup/
 *.save*
 *.pcm
 *.store
+*.bak
 

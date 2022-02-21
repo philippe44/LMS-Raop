@@ -16,7 +16,7 @@ my $prefs = preferences('plugin.raopbridge');
 my $log   = logger('plugin.raopbridge');
 my @xmlmainskip = qw(interface);
 my @xmlmain = ( @xmlmainskip, qw(log_limit ports) );
-my @xmldevice = qw(name mac codecs enabled remove_timeout send_metadata send_coverart player_volume idle_timeout read_ahead encryption server volume_feedback volume_mode volume_mapping mute_on_pause alac_encode volume_trigger prevent_playback persistent);
+my @xmldevice = qw(name mac codecs enabled remove_timeout send_metadata send_coverart resolution player_volume idle_timeout read_ahead encryption server volume_feedback volume_mode volume_mapping mute_on_pause alac_encode volume_trigger prevent_playback persistent);
 my @prefs_bool  = qw(autorun logging autosave eraselog useLMSsocket);
 my @prefs_other = qw(output bin debugs opts);
 
@@ -301,15 +301,6 @@ sub handler2 {
 	$callback->($client, $params, $class->SUPER::handler($client, $params), @args);
 }
 
-sub mergeprofile{
-	my ($p1, $p2) = @_;
-	
-	foreach my $m (keys %$p2) {
-		$p1->{ $m } = $p2-> { $m };
-	}	
-}
-
-
 sub findUDN {
 	my $udn = shift(@_);
 	my $listpar = shift(@_);
@@ -322,14 +313,13 @@ sub findUDN {
 	return undef;
 }
 
-
 sub readconfig {
 	my ($class,@args) = @_;
 	my $ret;
 	
 	my $file = Plugins::RaopBridge::Squeeze2raop->configFile($class);
 	if (-e $file) {
-		$ret = XMLin($file, ForceArray => ['device'], KeepRoot => 0, NoAttr => 1, @args);
+		$ret = XMLin($file, ForceArray => ['device'], KeepRoot => 0, NoAttr => 1, SuppressEmpty => 1, @args);
 	}	
 	return $ret;
 }

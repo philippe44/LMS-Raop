@@ -113,8 +113,9 @@ sq_dev_param_t glDeviceParam = {
 					"aac,ogg,ops,ogf,flc,alc,wav,aif,pcm,mp3", // magic codec order
 					"?",
 					"",
-					{ 0x00,0x00,0x00,0x00,0x00,0x00 },
-					false,
+					{ 0x00,0x00,0x00,0x00,0x00,0x00 },	//mac
+					"",		//resolution
+					false,	// soft volume
 #if defined(RESAMPLE)
 					96000,
 					true,

@@ -1,5 +1,9 @@
 Note: beware of crypto version (see shairtunes)
 
+0.4.63.0
+ - add user-defined coverart resolution
+ - get rid of infamous "HASH" entry in settings
+
 0.4.62.3
  - add proper opus DLLs
 

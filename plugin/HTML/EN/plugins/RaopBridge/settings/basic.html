@@ -97,7 +97,7 @@
 	[% END %]		
 
 	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_AUDIOPARAM" desc="PLUGIN_RAOPBRIDGE_AUDIOPARAM_DESC" %]
-		[% "PLUGIN_RAOPBRIDGE_CODECS" | string %]&nbsp<input type="text" class="stdedit" name="codecs" id="codecs" value="[% codecs %]" size="20">
+		[% "PLUGIN_RAOPBRIDGE_CODECS" | string %]&nbsp<input type="text" class="stdedit" name="codecs" id="codecs" value="[% codecs %]" size="30">
 	[% END %]
 	
 	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_VOLUMEMGMT" desc="PLUGIN_RAOPBRIDGE_VOLUMEMGMT_DESC" %]
@@ -171,6 +171,7 @@
 			<option [% IF entry.1 == send_coverart %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 		[% END %]
 		</select>
+		&nbsp&nbsp[% "PLUGIN_RAOPBRIDGE_RESOLUTION" | string %]&nbsp<input type="text" class="stdedit" name="resolution" id="resolution" value="[% resolution %]" size="5">
 	[% END %]
 	
 	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_OTHEROPTIONS" desc="PLUGIN_RAOPBRIDGE_OTHEROPTIONS_DESC" %]
