@@ -1,5 +1,9 @@
 Note: beware of crypto version (see shairtunes)
 
+0.4.63.1
+ - crappy old bug that causes crash in raop debug loglevel
+ - do not change xml loglevel when set from command line
+
 0.4.63.0
  - add user-defined coverart resolution
  - get rid of infamous "HASH" entry in settings

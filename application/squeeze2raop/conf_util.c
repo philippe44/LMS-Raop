@@ -35,6 +35,7 @@ extern log_level	main_loglevel;
 extern log_level	slimmain_loglevel;
 extern log_level	util_loglevel;
 extern log_level	raop_loglevel;
+extern bool 		log_cmdline;
 
 
 /*----------------------------------------------------------------------------*/
@@ -98,14 +99,17 @@ void SaveConfig(char *name, void *ref, int mode)
 	}
 
 	XMLUpdateNode(doc, root, force, "interface", glInterface);
-	XMLUpdateNode(doc, root, force, "slimproto_log", level2debug(slimproto_loglevel));
-	XMLUpdateNode(doc, root, force, "stream_log", level2debug(stream_loglevel));
-	XMLUpdateNode(doc, root, force, "output_log", level2debug(output_loglevel));
-	XMLUpdateNode(doc, root, force, "decode_log", level2debug(decode_loglevel));
-	XMLUpdateNode(doc, root, force, "main_log",level2debug(main_loglevel));
-	XMLUpdateNode(doc, root, force, "slimmain_log", level2debug(slimmain_loglevel));
-	XMLUpdateNode(doc, root, force, "raop_log",level2debug(raop_loglevel));
-	XMLUpdateNode(doc, root, force, "util_log",level2debug(util_loglevel));
+	// do not update log if cmd line has set it
+	if (!log_cmdline) {
+		XMLUpdateNode(doc, root, force, "slimproto_log", level2debug(slimproto_loglevel));
+		XMLUpdateNode(doc, root, force, "stream_log", level2debug(stream_loglevel));
+		XMLUpdateNode(doc, root, force, "output_log", level2debug(output_loglevel));
+		XMLUpdateNode(doc, root, force, "decode_log", level2debug(decode_loglevel));
+		XMLUpdateNode(doc, root, force, "main_log",level2debug(main_loglevel));
+		XMLUpdateNode(doc, root, force, "slimmain_log", level2debug(slimmain_loglevel));
+		XMLUpdateNode(doc, root, force, "raop_log",level2debug(raop_loglevel));
+		XMLUpdateNode(doc, root, force, "util_log",level2debug(util_loglevel));
+	}
 	XMLUpdateNode(doc, root, force, "log_limit", "%d", (s32_t) glLogLimit);
 	XMLUpdateNode(doc, root, true, "migration", "%d", (s32_t) glMigration);
 	XMLUpdateNode(doc, root, force, "ports", glPortOpen);
