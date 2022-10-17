@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <limits.h>
+#include <string.h>
 
 #include "platform.h"
 #include "squeezedefs.h"
@@ -31,7 +32,7 @@
 #include "cross_net.h"
 #include "cross_thread.h"
 #include "squeeze2raop.h"
-#include "conf_util.h"
+#include "config_raop.h"
 #include "metadata.h"
 
 #include "mdnssd.h"

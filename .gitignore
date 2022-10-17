@@ -101,4 +101,5 @@ _backup/
 *.pcm
 *.store
 *.bak
+build/
 

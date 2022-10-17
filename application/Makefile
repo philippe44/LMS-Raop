@@ -1,102 +1,92 @@
-BASE		= ..
+ifeq ($(CC),cc)
+CC=$(lastword $(subst /, ,$(shell readlink -f `which cc`)))
+endif
+
+PLATFORM ?= $(firstword $(subst -, ,$(CC)))
+HOST ?= $(word 2, $(subst -, ,$(CC)))
 
 ifeq ($(OS),Darwin)
 LINKSTATIC	=
 LDFLAGS 	+= -Wl,-dead_strip
 else
-ifeq ($(OS),SunOS)
-LINKSTATIC 	=
-else
 LINKSTATIC 	= -static
-endif
 LDFLAGS 	+= -Wl,--gc-sections
 endif
 
-TOOLS		= ./tools
-SRC			= ./squeeze2raop
-SQUEEZETINY	= ./squeezetiny
+BUILDDIR	= build/$(PLATFORM)
+EXECUTABLE 	= bin/squeeze2raop-$(PLATFORM)
+EXECUTABLE_STATIC = bin/squeeze2raop-$(PLATFORM)-static
 
-RAOP		= $(BASE)/raop_play
-VALGRIND	= $(BASE)/valgrind
-UPNP 		= $(BASE)/libupnp/1.6.19
-MDNSSD		= $(BASE)/mdnssd
-FETCHER		= $(BASE)/http_fetcher
-TINYMDNS	= $(BASE)/tinysvcmdns
-ALAC		= $(BASE)/alac
-CURVE25519	= $(BASE)/curve25519/source
+SRC		= squeeze2raop
+SQUEEZELITE	= squeezelite
+TOOLS		= crosstools/src
+MDNS		= libmdns/targets
+PUPNP 		= libpupnp/targets/$(HOST)/$(PLATFORM)
+CODECS		= libcodecs/targets
+OPENSSL		= libopenssl/targets/$(HOST)/$(PLATFORM)
+RAOP		= raoptools/targets
+JANSSON		= libjansson/targets/$(HOST)/$(PLATFORM)
+FETCHER		= http-fetcher
+#VALGRIND	= $(BASE)/valgrind
 
-DEFINES 	+= -DHAVE_STDINT_H -DRESAMPLE -DNDEBUG -DUSE_SSL -D_GNU_SOURCE
+DEFINES 	= -DCODECS -DUSE_SSL -D_GNU_SOURCE -DUPNP_STATIC_LIB -DLINKALL
 
-vpath %.c $(TOOLS):$(SRC):$(RAOP)/src:$(SQUEEZETINY):$(MDNSSD):$(FETCHER)/src:$(TINYMDNS):$(ALAC):$(CURVE25519)
-vpath %.cpp $(TOOLS):$(SRC):$(RAOP)/src:$(SQUEEZETINY):$(MDNSSD):$(FETCHER)/src:$(TINYMDNS):$(ALAC):$(CURVE25519)
+CFLAGS  	+= -Wall -Wno-deprecated-declarations -Wno-format-truncation -Wno-stringop-truncation -fPIC -ggdb -O2 $(DEFINES) -fdata-sections -ffunction-sections 
+LDFLAGS += -s -lpthread -ldl -lm -lrt -lstdc++ -L. 
 
-LIBRARY 		= $(OBJ)/libixml.a $(OBJ)/libsoxr.a
-LIBRARY_STATIC 	= $(LIBRARY) $(OBJ)/libfaad.a $(OBJ)/libsoxr.a $(OBJ)/libFLAC.a $(OBJ)/libmad.a $(OBJ)/libvorbisfile.a $(OBJ)/libopusfile.a $(OBJ)/libopus.a $(OBJ)/libvorbis.a $(OBJ)/libogg.a -lssl -lcrypto
+vpath %.c $(TOOLS):$(SRC):$(SQUEEZELITE):$(FETCHER)/src
+vpath %.cpp $(TOOLS):$(SRC):$(SQUEEZELITE):$(FETCHER)/src
 
-INCLUDE = -I. \
-		  -I$(SQUEEZETINY) \
-		  -I$(RAOP)/src \
+INCLUDE = -I$(OPENSSL)/include \
 		  -I$(TOOLS) \
-		  -I$(SRC) -I$(SRC)/inc \
-		  -I$(VALGRIND)/memcheck -I$(VALGRIND)/include \
-		  -I$(UPNP)/ixml/inc -I$(UPNP)/upnp/inc \
-		  -I$(MDNSSD)\
-		  -I$(BASE)/mpg123/src/libmpg123\
-		  -I$(BASE)/flac/include\
-		  -I$(BASE)/faad2/include\
-		  -I$(BASE)/libmad\
-		  -I$(BASE)/libvorbis/include -I$(BASE)/libogg/include\
-		  -I$(BASE)/libopus/include -I$(BASE)/libopusfile/include\
-		  -I$(BASE)/soxr/src\
-		  -I$(FETCHER)/include\
-		  -I$(TINYMDNS)\
-		  -I$(ALAC)\
-		  -I$(CURVE25519) -I$(CURVE25519)/include
+		  -I$(SQUEEZELITE) \
+		  -I$(RAOP)/include \
+		  -I$(SRC)/inc \
+		  -I$(PUPNP)/include/upnp -I$(PUPNP)/include/ixml -I$(PUPNP)/include/addons \
+		  -I$(CODECS)/include/flac -I$(CODECS)/include/shine -I$(CODECS)/include/addons \
+		  -I$(MDNS)/include/tinysvcmdns -I$(MDNS)/include/mdnssd \
+		  -I$(FETCHER)/include
+		  		  
+DEPS	= $(SRC)/inc/squeezedefs.h
+				  
+SOURCES = slimproto.c buffer.c output.c output_pack.c output_raop.c main.c \
+		  stream.c decode.c pcm.c resample.c process.c alac.c flac.c \
+		  utils.c metadata.c \
+		  cross_util.c cross_log.c cross_net.c cross_thread.c platform.c \
+		  http_fetcher.c http_error_codes.c \
+		  config_raop.c squeeze2raop.c
 
-DEPS	= $(SQUEEZETINY)/squeezedefs.h
-		  
-SOURCES = slimproto.c buffer.c stream.c utils.c pcm.c process.c resample.c alac.c \
-		output.c decode.c output_pack.c output_raop.c  main.c util_common.c \
-		raop_client.c rtsp_client.c aes.c aexcl_lib.c base64.c alac_wrapper.cpp aes_ctr.c \
-      	squeeze2raop.c util.c conf_util.c log_util.c \
-		mdnssd-min.c \
-		http_fetcher.c http_error_codes.c \
-		mdns.c mdnsd.c\
-		ag_dec.c ag_enc.c ALACBitUtilities.c ALACEncoder.cpp dp_enc.c EndianPortable.c matrix_enc.c\
-		ALACDecoder.cpp dp_dec.c matrix_dec.c \
-		curve25519_dh.c curve25519_mehdi.c curve25519_order.c curve25519_utils.c custom_blind.c\
-		ed25519_sign.c ed25519_verify.c
+SOURCES_LIBS = cross_ssl.c
 		
-SOURCES_LIBS = mpg.c flac.c mad.c faad.c vorbis.c opus.c sslsym.c
-		
-OBJECTS 		= $(patsubst %.c,$(OBJ)/%.o,$(filter %.c,$(SOURCES))) $(patsubst %.cpp,$(OBJ)/%.o,$(filter %.cpp,$(SOURCES))) $(patsubst %.c,$(OBJ)/%.o,$(SOURCES_LIBS)) 
-OBJECTS_STATIC 	= $(patsubst %.c,$(OBJ)/%.o,$(filter %.c,$(SOURCES))) $(patsubst %.cpp,$(OBJ)/%.o,$(filter %.cpp,$(SOURCES))) $(patsubst %.c,$(OBJ)/%-static.o,$(SOURCES_LIBS)) 
+OBJECTS	= $(patsubst %.c,$(BUILDDIR)/%.o,$(filter %.c,$(SOURCES) $(SOURCES_LIBS)))
+OBJECTS	+= $(patsubst %.c,$(BUILDDIR)/%.o,$(filter %.cpp,$(SOURCES) $(SOURCES_LIBS)))
+OBJECTS_STATIC = $(patsubst %.c,$(BUILDDIR)/%.o,$(filter %.c,$(SOURCES))) $(patsubst %.c,$(BUILDDIR)/%-static.o,$(filter %.c,$(SOURCES_LIBS)))
+OBJECTS_STATIC	+= $(patsubst %.cpp,$(BUILDDIR)/%.o,$(filter %.cpp,$(SOURCES))) $(patsubst %.cpp,$(BUILDDIR)/%-static.o,$(filter %.cpp,$(SOURCES_LIBS)))
 
-all: $(EXECUTABLE) $(EXECUTABLE_STATIC)
+LIBRARY	= $(PUPNP)/libpupnp.a \
+		 $(CODECS)/$(HOST)/$(PLATFORM)/libcodecs.a \
+		 $(MDNS)/$(HOST)/$(PLATFORM)/libmdns.a  \
+		 $(RAOP)/$(HOST)/$(PLATFORM)/libraop.a
+		 
+LIBRARY_STATIC 	= $(LIBRARY) $(OPENSSL)/libopenssl.a
 
-$(EXECUTABLE): $(OBJECTS)
+all: directory $(EXECUTABLE) $(EXECUTABLE_STATIC)
+
+$(EXECUTABLE): $(OBJECTS) $(DEPS)
 	$(CC) $(OBJECTS) $(LIBRARY) $(LDFLAGS) -o $@
 	
-$(EXECUTABLE_STATIC): $(OBJECTS_STATIC)
-	$(CC) $(OBJECTS_STATIC) $(LIBRARY_STATIC) $(LDFLAGS) $(LINKSTATIC) -o $@	
+$(EXECUTABLE_STATIC): $(OBJECTS_STATIC) $(DEPS)
+	$(CC) $(OBJECTS_STATIC) $(LIBRARY_STATIC) $(LDFLAGS) -static -o $@	
 
-$(OBJECTS): $(DEPS) | bin $(OBJ)
-
-$(OBJ):
-	@mkdir -p $@
-	
-bin:	
+directory:
+	@mkdir -p $(BUILDDIR)
 	@mkdir -p bin
 
-$(OBJ)/%.o : %.c
+$(BUILDDIR)/%.o : %.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(INCLUDE) $< -c -o $@
-	
-$(OBJ)/%.o : %.cpp
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(INCLUDE) $< -c -o $@
-	
-$(OBJ)/%-static.o : %.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -DLINKALL $(INCLUDE) $< -c -o $(OBJ)/$*-static.o	
+
+$(BUILDDIR)/%-static.o : %.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -DSSL_LIB_STATIC $(INCLUDE) $< -c -o $(BUILDDIR)/$*-static.o	
 	
 clean:
-	rm -f $(OBJECTS) $(OBJECTS_STATIC) $(EXECUTABLE) $(EXECUTABLE_STATIC)
-
+	rm -f $(OBJECTS) $(EXECUTABLE) $(OBJECTS_STATIC) $(EXECUTABLE_STATIC) 
