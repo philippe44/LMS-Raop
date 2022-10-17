@@ -1,22 +1,28 @@
 /*
- *  Squeeze2raop - Squeezelite to AirPlay bridge
+ *  Squeeze2raop - LMS to RAOP gateway
  *
  *  (c) Philippe, philippe_44@outlook.com
  *
- *  See LICENSE
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
-
 #include <stdarg.h>
-
-#include "ixmlextra.h"
 #include "conf_util.h"
-#include "cross_log.h"
-
+#include "log_util.h"
 /*----------------------------------------------------------------------------*/
 /* globals */
 /*----------------------------------------------------------------------------*/
-
 extern log_level	slimproto_loglevel;
 extern log_level	stream_loglevel;
 extern log_level	decode_loglevel;
@@ -27,31 +33,46 @@ extern log_level	util_loglevel;
 extern log_level	raop_loglevel;
 extern bool 		log_cmdline;
 
-
 /*----------------------------------------------------------------------------*/
 /* locals */
 /*----------------------------------------------------------------------------*/
 extern log_level	util_loglevel;
 static log_level 	*loglevel = &util_loglevel;
+/*----------------------------------------------------------------------------*/
+void MakeMacUnique(struct sMR *Device)
+{
+	int i;
+	for (i = 0; i < MAX_RENDERERS; i++) {
+		if (!glMRDevices[i].Running || Device == &glMRDevices[i]) continue;
+		if (!memcmp(&glMRDevices[i].sq_config.mac, &Device->sq_config.mac, 6)) {
+			u32_t hash = hash32(Device->UDN);
+			LOG_INFO("[%p]: duplicated mac ... updating", Device);
+			memset(&Device->sq_config.mac[0], 0xaa, 2);
+			memcpy(&Device->sq_config.mac[0] + 2, &hash, 4);
+		}
+	}
+}
 
 /*----------------------------------------------------------------------------*/
-void SaveConfig(char *name, void *ref, int mode) {
+void SaveConfig(char *name, void *ref, int mode)
+{
 	struct sMR *p;
 	IXML_Document *doc = ixmlDocument_createDocument();
 	IXML_Document *old_doc = ref;
 	IXML_Node	 *root, *common;
+	IXML_NodeList *list;
+	IXML_Element *old_root;
+	char *s;
+	FILE *file;
+	int i;
 	bool force = (mode == CONFIG_MIGRATE);
-
-	IXML_Element* old_root = ixmlDocument_getElementById(old_doc, "squeeze2raop");
-
+	old_root = ixmlDocument_getElementById(old_doc, "squeeze2raop");
 	if (mode != CONFIG_CREATE && old_doc) {
 		ixmlDocument_importNode(doc, (IXML_Node*) old_root, true, &root);
 		ixmlNode_appendChild((IXML_Node*) doc, root);
-
-		IXML_NodeList* list = ixmlDocument_getElementsByTagName((IXML_Document*) root, "device");
-		for (int i = 0; i < (int) ixmlNodeList_length(list); i++) {
+		list = ixmlDocument_getElementsByTagName((IXML_Document*) root, "device");
+		for (i = 0; i < (int) ixmlNodeList_length(list); i++) {
 			IXML_Node *device;
-
 			device = ixmlNodeList_item(list, i);
 			ixmlNode_removeChild(root, device, &device);
 			ixmlNode_free(device);
@@ -63,7 +84,6 @@ void SaveConfig(char *name, void *ref, int mode) {
 		root = XMLAddNode(doc, NULL, "squeeze2raop", NULL);
 		common = (IXML_Node*) XMLAddNode(doc, root, "common", NULL);
 	}
-
 	XMLUpdateNode(doc, root, force, "interface", glInterface);
 	// do not update log if cmd line has set it
 	if (!log_cmdline) {
@@ -76,12 +96,11 @@ void SaveConfig(char *name, void *ref, int mode) {
 		XMLUpdateNode(doc, root, force, "raop_log",level2debug(raop_loglevel));
 		XMLUpdateNode(doc, root, force, "util_log",level2debug(util_loglevel));
 	}
-	XMLUpdateNode(doc, root, force, "log_limit", "%d", (int32_t) glLogLimit);
-	XMLUpdateNode(doc, root, true, "migration", "%d", (int32_t) glMigration);
+	XMLUpdateNode(doc, root, force, "log_limit", "%d", (s32_t) glLogLimit);
+	XMLUpdateNode(doc, root, true, "migration", "%d", (s32_t) glMigration);
 	XMLUpdateNode(doc, root, force, "ports", glPortOpen);
-
-	XMLUpdateNode(doc, common, force, "streambuf_size", "%d", (uint32_t) glDeviceParam.streambuf_size);
-	XMLUpdateNode(doc, common, force, "output_size", "%d", (uint32_t) glDeviceParam.outputbuf_size);
+	XMLUpdateNode(doc, common, force, "streambuf_size", "%d", (u32_t) glDeviceParam.streambuf_size);
+	XMLUpdateNode(doc, common, force, "output_size", "%d", (u32_t) glDeviceParam.outputbuf_size);
 	XMLUpdateNode(doc, common, force, "enabled", "%d", (int) glMRConfig.Enabled);
 	XMLUpdateNode(doc, common, force, "codecs", glDeviceParam.codecs);
 	XMLUpdateNode(doc, common, force, "sample_rate", "%d", (int) glDeviceParam.sample_rate);
@@ -104,25 +123,19 @@ void SaveConfig(char *name, void *ref, int mode) {
 	XMLUpdateNode(doc, common, force, "volume_trigger", "%d", (int) glMRConfig.VolumeTrigger);
 	XMLUpdateNode(doc, common, force, "prevent_playback", glMRConfig.PreventPlayback);
 	XMLUpdateNode(doc, common, force, "persistent", "%d", (int) glMRConfig.Persistent);
-
 	XMLUpdateNode(doc, common, force, "encryption", "%d", (int) glMRConfig.Encryption);
 	XMLUpdateNode(doc, common, force, "read_ahead", "%d", (int) glMRConfig.ReadAhead);
 	XMLUpdateNode(doc, common, force, "server", glDeviceParam.server);
-
 	// correct some buggy parameters
 	if (glDeviceParam.sample_rate < 44100) XMLUpdateNode(doc, common, true, "sample_rate", "%d", 96000);
-
-	for (int i = 0; i < MAX_RENDERERS; i++) {
+	for (i = 0; i < MAX_RENDERERS; i++) {
 		IXML_Node *dev_node;
-
 		if (!glMRDevices[i].Running) continue;
 		else p = &glMRDevices[i];
-
 		// existing device, keep param and update "name" if LMS has requested it
 		if (old_doc && ((dev_node = (IXML_Node*) FindMRConfig(old_doc, p->UDN)) != NULL)) {
 			ixmlDocument_importNode(doc, dev_node, true, &dev_node);
 			ixmlNode_appendChild((IXML_Node*) root, dev_node);
-
 			XMLUpdateNode(doc, dev_node, true, "friendly_name", p->FriendlyName);
 			XMLUpdateNode(doc, dev_node, true, "name", p->sq_config.name);
 			if (*p->Config.Credentials) XMLUpdateNode(doc, dev_node, true, "credentials", p->Config.Credentials);
@@ -141,13 +154,11 @@ void SaveConfig(char *name, void *ref, int mode) {
 			XMLAddNode(doc, dev_node, "enabled", "%d", (int) p->Config.Enabled);
 		}
 	}
-
 	// add devices in old XML file that has not been discovered
-	IXML_NodeList* list = ixmlDocument_getElementsByTagName((IXML_Document*) old_root, "device");
-	for (int i = 0; i < (int) ixmlNodeList_length(list); i++) {
+	list = ixmlDocument_getElementsByTagName((IXML_Document*) old_root, "device");
+	for (i = 0; i < (int) ixmlNodeList_length(list); i++) {
 		char *udn;
 		IXML_Node *device, *node;
-
 		device = ixmlNodeList_item(list, i);
 		node = (IXML_Node*) ixmlDocument_getElementById((IXML_Document*) device, "udn");
 		node = ixmlNode_getFirstChild(node);
@@ -158,21 +169,18 @@ void SaveConfig(char *name, void *ref, int mode) {
 		}
 	}
 	if (list) ixmlNodeList_free(list);
-
-	FILE* file = fopen(name, "wb");
-	char* s = ixmlDocumenttoString(doc);
+	file = fopen(name, "wb");
+	s = ixmlDocumenttoString(doc);
 	fwrite(s, 1, strlen(s), file);
 	fclose(file);
 	free(s);
-
 	ixmlDocument_free(doc);
 }
 
-
 /*----------------------------------------------------------------------------*/
-static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name, char *val) {
+static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name, char *val)
+{
 	if (!val)return;
-
 	if (!strcmp(name, "streambuf_size")) sq_conf->streambuf_size = atol(val);
 	if (!strcmp(name, "output_size")) sq_conf->outputbuf_size = atol(val);
 	if (!strcmp(name, "codecs")) strcpy(sq_conf->codecs, val);
@@ -182,9 +190,10 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "resolution")) strcpy(sq_conf->resolution, val);
 	if (!strcmp(name, "mac"))  {
 		unsigned mac[6];
+		int i;
 		// seems to be a Windows scanf buf, cannot support %hhx
 		sscanf(val,"%2x:%2x:%2x:%2x:%2x:%2x", &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]);
-		for (int i = 0; i < 6; i++) sq_conf->mac[i] = mac[i];
+		for (i = 0; i < 6; i++) sq_conf->mac[i] = mac[i];
 	}
 #if defined(RESAMPLE)
 	if (!strcmp(name, "resample")) sq_conf->resample = atol(val);
@@ -210,11 +219,10 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "prevent_playback")) strcpy(Conf->PreventPlayback, val);
 	if (!strcmp(name, "persistent")) Conf->Persistent = atol(val);
 }
-
 /*----------------------------------------------------------------------------*/
-static void LoadGlobalItem(char *name, char *val) {
+static void LoadGlobalItem(char *name, char *val)
+{
 	if (!val) return;
-
 	if (!strcmp(name, "interface")) strcpy(glInterface, val);
 	if (!strcmp(name, "slimproto_log")) slimproto_loglevel = debug2level(val);
 	if (!strcmp(name, "stream_log")) stream_loglevel = debug2level(val);
@@ -230,18 +238,22 @@ static void LoadGlobalItem(char *name, char *val) {
 	if (!strcmp(name, "ports")) strcpy(glPortOpen, val);
  }
 
-
 /*----------------------------------------------------------------------------*/
-void *FindMRConfig(void *ref, char *UDN) {
-	IXML_Node *device = NULL;
+void *FindMRConfig(void *ref, char *UDN)
+{
+	IXML_Element *elm;
+	IXML_Node	*device = NULL;
+	IXML_NodeList *l1_node_list;
 	IXML_Document *doc = (IXML_Document*) ref;
-	IXML_Element* elm = ixmlDocument_getElementById(doc, "squeeze2raop");
-	IXML_NodeList* l1_node_list = ixmlDocument_getElementsByTagName((IXML_Document*) elm, "udn");
-
-	for (unsigned i = 0; i < ixmlNodeList_length(l1_node_list); i++) {
-		IXML_Node* l1_node = ixmlNodeList_item(l1_node_list, i);
-		IXML_Node* l1_1_node = ixmlNode_getFirstChild(l1_node);
-		char* v = (char*) ixmlNode_getNodeValue(l1_1_node);
+	char *v;
+	unsigned i;
+	elm = ixmlDocument_getElementById(doc, "squeeze2raop");
+	l1_node_list = ixmlDocument_getElementsByTagName((IXML_Document*) elm, "udn");
+	for (i = 0; i < ixmlNodeList_length(l1_node_list); i++) {
+		IXML_Node *l1_node, *l1_1_node;
+		l1_node = ixmlNodeList_item(l1_node_list, i);
+		l1_1_node = ixmlNode_getFirstChild(l1_node);
+		v = (char*) ixmlNode_getNodeValue(l1_1_node);
 		if (v && !strcmp(v, UDN)) {
 			device = ixmlNode_getParentNode(l1_node);
 			break;
@@ -250,60 +262,68 @@ void *FindMRConfig(void *ref, char *UDN) {
 	if (l1_node_list) ixmlNodeList_free(l1_node_list);
 	return device;
 }
-
 /*----------------------------------------------------------------------------*/
-void *LoadMRConfig(void *ref, char *UDN, tMRConfig *Conf, sq_dev_param_t *sq_conf) {
+void *LoadMRConfig(void *ref, char *UDN, tMRConfig *Conf, sq_dev_param_t *sq_conf)
+{
+	IXML_NodeList *node_list;
 	IXML_Document *doc = (IXML_Document*) ref;
-	IXML_Node* node = (IXML_Node*) FindMRConfig(doc, UDN);
-
+	IXML_Node *node;
+	char *n, *v;
+	unsigned i;
+	node = (IXML_Node*) FindMRConfig(doc, UDN);
 	if (node) {
-		IXML_NodeList* node_list = ixmlNode_getChildNodes(node);
-		for (unsigned i = 0; i < ixmlNodeList_length(node_list); i++) {
-			IXML_Node* l1_node = ixmlNodeList_item(node_list, i);
-			char* n = (char*) ixmlNode_getNodeName(l1_node);
-			IXML_Node* l1_1_node = ixmlNode_getFirstChild(l1_node);
-			char *v = (char*) ixmlNode_getNodeValue(l1_1_node);
+		node_list = ixmlNode_getChildNodes(node);
+		for (i = 0; i < ixmlNodeList_length(node_list); i++) {
+			IXML_Node *l1_node, *l1_1_node;
+			l1_node = ixmlNodeList_item(node_list, i);
+			n = (char*) ixmlNode_getNodeName(l1_node);
+			l1_1_node = ixmlNode_getFirstChild(l1_node);
+			v = (char*) ixmlNode_getNodeValue(l1_1_node);
 			LoadConfigItem(Conf, sq_conf, n, v);
 		}
 		if (node_list) ixmlNodeList_free(node_list);
 	}
-
 	return node;
 }
-
 /*----------------------------------------------------------------------------*/
-void *LoadConfig(char *name, tMRConfig *Conf, sq_dev_param_t *sq_conf) {
-	IXML_Document* doc = ixmlLoadDocument(name);
+void *LoadConfig(char *name, tMRConfig *Conf, sq_dev_param_t *sq_conf)
+{
+	IXML_Element *elm;
+	IXML_Document	*doc;
+	doc = ixmlLoadDocument(name);
 	if (!doc) return NULL;
-
-	IXML_Element* elm = ixmlDocument_getElementById(doc, "squeeze2raop");
+	elm = ixmlDocument_getElementById(doc, "squeeze2raop");
 	if (elm) {
-		IXML_NodeList* l1_node_list = ixmlNode_getChildNodes((IXML_Node*) elm);
-		for (unsigned i = 0; i < ixmlNodeList_length(l1_node_list); i++) {
-			IXML_Node* l1_node = ixmlNodeList_item(l1_node_list, i);
-			char* n = (char*) ixmlNode_getNodeName(l1_node);
-			IXML_Node* l1_1_node = ixmlNode_getFirstChild(l1_node);
-			char* v = (char*) ixmlNode_getNodeValue(l1_1_node);
+		unsigned i;
+		char *n, *v;
+		IXML_NodeList *l1_node_list;
+		l1_node_list = ixmlNode_getChildNodes((IXML_Node*) elm);
+		for (i = 0; i < ixmlNodeList_length(l1_node_list); i++) {
+			IXML_Node *l1_node, *l1_1_node;
+			l1_node = ixmlNodeList_item(l1_node_list, i);
+			n = (char*) ixmlNode_getNodeName(l1_node);
+			l1_1_node = ixmlNode_getFirstChild(l1_node);
+			v = (char*) ixmlNode_getNodeValue(l1_1_node);
 			LoadGlobalItem(n, v);
 		}
 		if (l1_node_list) ixmlNodeList_free(l1_node_list);
 	}
-
 	elm = ixmlDocument_getElementById((IXML_Document	*)elm, "common");
 	if (elm) {
-		IXML_NodeList* l1_node_list = ixmlNode_getChildNodes((IXML_Node*) elm);
-		for (unsigned i = 0; i < ixmlNodeList_length(l1_node_list); i++) {
-			IXML_Node* l1_node = ixmlNodeList_item(l1_node_list, i);
-			char* n = (char*) ixmlNode_getNodeName(l1_node);
-			IXML_Node* l1_1_node = ixmlNode_getFirstChild(l1_node);
-			char* v = (char*) ixmlNode_getNodeValue(l1_1_node);
+		char *n, *v;
+		IXML_NodeList *l1_node_list;
+		unsigned i;
+		l1_node_list = ixmlNode_getChildNodes((IXML_Node*) elm);
+		for (i = 0; i < ixmlNodeList_length(l1_node_list); i++) {
+			IXML_Node *l1_node, *l1_1_node;
+			l1_node = ixmlNodeList_item(l1_node_list, i);
+			n = (char*) ixmlNode_getNodeName(l1_node);
+			l1_1_node = ixmlNode_getFirstChild(l1_node);
+			v = (char*) ixmlNode_getNodeValue(l1_1_node);
 			LoadConfigItem(&glMRConfig, &glDeviceParam, n, v);
 		}
 		if (l1_node_list) ixmlNodeList_free(l1_node_list);
 	}
-
 	return doc;
  }
-
-
 

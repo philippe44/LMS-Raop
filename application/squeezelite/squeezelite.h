@@ -22,6 +22,7 @@
 // make may define: SELFPIPE, RESAMPLE, RESAMPLE_MP, LINKALL to influence build
 
 // build detection
+#include "platform.h"
 #include "squeezedefs.h"
 
 #if !defined(LOOPBACK)
@@ -48,41 +49,9 @@
 #define LOOPBACK  1
 #endif
 
-#if defined(RESAMPLE) || defined(RESAMPLE_MP)
-#undef  RESAMPLE
-#define RESAMPLE  1 // resampling
-#define PROCESS   1 // any sample processing (only resampling at present)
-#else
-#define RESAMPLE  0
-#define PROCESS   0
-#endif
-#if defined(RESAMPLE_MP)
-#undef RESAMPLE_MP
-#define RESAMPLE_MP 1
-#else
-#define RESAMPLE_MP 0
-#endif
-
-#if defined(FFMPEG)
-#undef FFMPEG
-#define FFMPEG    1
-#else
-#define FFMPEG    0
-#endif
-
-
-#if defined(LINKALL)
-#undef LINKALL
-#define LINKALL   1 // link all libraries at build time - requires all to be available at run time
-#else
-#define LINKALL   0
-#endif
-
-
 #if !LINKALL
 
 // dynamically loaded libraries at run time
-
 #if LINUX || SUNOS
 #define LIBFLAC "libFLAC.so.8"
 #define LIBMAD  "libmad.so.0"
@@ -140,13 +109,6 @@
 
 #endif // !LINKALL
 
-// config options
-#define OUTPUTBUF_SIZE_CROSSFADE (OUTPUTBUF_SIZE * 12 / 10)
-
-#define MAX_HEADER 4096 // do not reduce as icy-meta max is 4080
-
-#define SL_LITTLE_ENDIAN (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -159,15 +121,54 @@
 #include <sys/stat.h>
 
 #include "squeezeitf.h"
-#include "log_util.h"
-#include "util_common.h"
+#include "cross_log.h"
+#include "cross_net.h"
+#include "cross_util.h"
+
+// we'll give venerable squeezelite the benefit of "old" int's
+typedef uint64_t u64_t;
+typedef int64_t  s64_t;
+typedef uint32_t u32_t;
+typedef int32_t  s32_t;
+typedef uint16_t u16_t;
+typedef int16_t  s16_t;
+typedef uint8_t  u8_t;
+typedef int8_t   s8_t;
+
+#define SL_LITTLE_ENDIAN (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+
+#define OUTPUTBUF_SIZE_CROSSFADE (OUTPUTBUF_SIZE * 12 / 10)
+
+#define MAX_HEADER 4096 // do not reduce as icy-meta max is 4080
+
+#define STREAM_THREAD_STACK_SIZE (1024 * 64)
+#define DECODE_THREAD_STACK_SIZE (1024 * 128)
+#define OUTPUT_THREAD_STACK_SIZE (1024 * 64)
+#define SLIMPROTO_THREAD_STACK_SIZE  (1024 * 64)
+
+#define mutex_type pthread_mutex_t
+#define mutex_create(m) pthread_mutex_init(&m, NULL)
+#define mutex_lock(m) pthread_mutex_lock(&m)
+#define mutex_trylock(m) pthread_mutex_trylock(&m)
+#define mutex_unlock(m) pthread_mutex_unlock(&m)
+#define mutex_destroy(m) pthread_mutex_destroy(&m)
+#define thread_type pthread_t
+#if !WIN
+#define mutex_create_p(m) \
+	pthread_mutexattr_t attr; \
+	pthread_mutexattr_init(&attr); \
+	pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT); \
+	pthread_mutex_init(&m, &attr); pthread_mutexattr_destroy(&attr)
+#else
+#define mutex_create_p mutex_create
+#endif	
+
+typedef u32_t frames_t;
+typedef int sockfd;
 
 #if !defined(MSG_NOSIGNAL)
 #define MSG_NOSIGNAL 0
 #endif
-
-typedef u32_t frames_t;
-typedef int sockfd;
 
 #if EVENTFD
 #include <sys/eventfd.h>
@@ -557,6 +558,8 @@ struct thread_ctx_s {
 
 extern struct thread_ctx_s 	thread_ctx[MAX_PLAYER];
 extern char					sq_model_name[];
+extern struct in_addr		sq_local_host;
+extern u16_t 				sq_local_port;
 
 // codecs
 #define MAX_CODECS 16

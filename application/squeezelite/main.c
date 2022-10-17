@@ -33,7 +33,8 @@
 #define UNLOCK_P mutex_unlock(ctx->mutex)
 
 struct thread_ctx_s thread_ctx[MAX_PLAYER];
-char				sq_model_name[_STR_LEN_];
+char				sq_model_name[STR_LEN];
+struct in_addr		sq_local_host;
 bool				soxr_loaded = false;
 
 /*----------------------------------------------------------------------------*/
@@ -82,7 +83,8 @@ void sq_delete_device(sq_dev_handle_t handle) {
 
 /*---------------------------------------------------------------------------*/
 static char from_hex(char ch) {
-  return isdigit(ch) ? ch - '0' : tolower(ch) - 'a' + 10;
+
+  return isdigit(ch) ? ch - '0' : tolower(ch) - 'a' + 10;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -131,10 +133,14 @@ static char *cli_decode(char *str) {
   return buf;
 }
 
-/*---------------------------------------------------------------------------*/
-/* IMPORTANT: be sure to free() the returned string after use */
-static char *cli_find_tag(char *str, char *tag)
-{
+
+/*---------------------------------------------------------------------------*/
+
+/* IMPORTANT: be sure to free() the returned string after use */
+
+static char *cli_find_tag(char *str, char *tag)
+
+{
 	char *p, *res = NULL;
 	char *buf = malloc(max(strlen(str), strlen(tag)) + 4);
 
@@ -169,7 +175,7 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 	addr.sin_addr.s_addr = ctx->slimproto_ip;
 	addr.sin_port = htons(ctx->cli_port);
 
-	if (connect_timeout(ctx->cli_sock, (struct sockaddr *) &addr, sizeof(addr), 50))  {
+	if (tcp_connect_timeout(ctx->cli_sock, addr, 50))  {
 		LOG_ERROR("[%p] unable to connect to server with cli", ctx);
 		ctx->cli_sock = -1;
 		return false;
@@ -180,36 +186,54 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 }
 
 
-/*---------------------------------------------------------------------------*/
-#define CLI_SEND_SLEEP (10000)
-#define CLI_SEND_TO (1*500000)
-#define CLI_KEEP_DURATION (15*60*1000)
-#define CLI_PACKET 4096
-char *cli_send_cmd(char *cmd, bool req, bool decode, struct thread_ctx_s *ctx)
-{
-	char *packet;
-	int wait;
+
+/*---------------------------------------------------------------------------*/
+
+#define CLI_SEND_SLEEP (10000)
+
+#define CLI_SEND_TO (1*500000)
+
+#define CLI_KEEP_DURATION (15*60*1000)
+
+#define CLI_PACKET 4096
+
+char *cli_send_cmd(char *cmd, bool req, bool decode, struct thread_ctx_s *ctx)
+
+{
+
+	char *packet;
+
+	int wait;
 	size_t len;
 	char *rsp = NULL;
 
 	mutex_lock(ctx->cli_mutex);
-	if (!cli_open_socket(ctx)) {
+
+	if (!cli_open_socket(ctx)) {
 		mutex_unlock(ctx->cli_mutex);
 		return NULL;
 	}
 
-	packet = malloc(CLI_PACKET + 1);
-	ctx->cli_timeout = gettime_ms() + CLI_KEEP_DURATION;
 
-	wait = CLI_SEND_TO / CLI_SEND_SLEEP;
-	cmd = cli_encode(cmd);
-	if (req) len = sprintf(packet, "%s ?\n", cmd);
+	packet = malloc(CLI_PACKET + 1);
+
+	ctx->cli_timeout = gettime_ms() + CLI_KEEP_DURATION;
+
+
+	wait = CLI_SEND_TO / CLI_SEND_SLEEP;
+
+	cmd = cli_encode(cmd);
+
+	if (req) len = sprintf(packet, "%s ?\n", cmd);
 	else len = sprintf(packet, "%s\n", cmd);
 
 	LOG_SDEBUG("[%p]: cmd %s", ctx, packet);
-	send_packet((u8_t*) packet, len, ctx->cli_sock);
-	// first receive the tag and then point to the last '\n'
-	len = 0;
+
+	send_packet((u8_t*) packet, len, ctx->cli_sock);
+
+	// first receive the tag and then point to the last '\n'
+
+	len = 0;
 	while (wait)	{
 		int k;
 		fd_set rfds;
@@ -261,39 +285,6 @@ bool cli_open_socket(struct thread_ctx_s *ctx) {
 	return rsp;
 }
 
-
-/*--------------------------------------------------------------------------*/
-static void sq_init_metadata(sq_metadata_t *metadata)
-{
-	metadata->artist 	= NULL;
-	metadata->album 	= NULL;
-	metadata->title 	= NULL;
-	metadata->genre 	= NULL;
-	metadata->artwork 	= NULL;
-
-	metadata->track 	= 0;
-	metadata->index 	= 0;
-	metadata->file_size = 0;
-	metadata->duration 	= 0;
-	metadata->remote 	= false;
-}
-
-
-/*--------------------------------------------------------------------------*/
-void sq_default_metadata(sq_metadata_t *metadata, bool init)
-{
-	if (init) sq_init_metadata(metadata);
-
-	if (!metadata->title) metadata->title 	= strdup("[LMS to RAOP]");
-	if (!metadata->album) metadata->album 	= strdup("[no album]");
-	if (!metadata->artist) metadata->artist = strdup("[no artist]");
-	if (!metadata->genre) metadata->genre 	= strdup("[no genre]");
-	/*
-	if (!metadata->path) metadata->path = strdup("[no path]");
-	if (!metadata->artwork) metadata->artwork = strdup("[no artwork]");
-	*/
-}
-
 /*--------------------------------------------------------------------------*/
 sq_action_t sq_get_mode(sq_dev_handle_t handle)
 {
@@ -319,25 +310,25 @@ sq_action_t sq_get_mode(sq_dev_handle_t handle)
 
 
 /*--------------------------------------------------------------------------*/
-bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
+bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, bool next)
 {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
 	char cmd[1024];
 	char *rsp, *p, *cur;
 
+	metadata_init(metadata);
+
 	if (!handle || !ctx->in_use) {
 		LOG_ERROR("[%p]: no handle %d", ctx, handle);
-		sq_default_metadata(metadata, true);
+		metadata_defaults(metadata);
 		return false;
 	}
-
-	sq_init_metadata(metadata);
 
 	sprintf(cmd, "%s status - 2 tags:xcfldatgrKN", ctx->cli_id);
 	rsp = cli_send_cmd(cmd, false, false, ctx);
 
 	if (!rsp || !*rsp) {
-		sq_default_metadata(metadata, false);
+		metadata_defaults(metadata);
 		LOG_WARN("[%p]: cannot get metadata", ctx);
 		return true;
 	}
@@ -383,16 +374,16 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 		if (!metadata->artwork || !strlen(metadata->artwork) || *ctx->config.resolution) {
 			NFREE(metadata->artwork);
 			if ((p = cli_find_tag(cur, "coverid")) != NULL) {
-				metadata->artwork = malloc(_STR_LEN_);
-				snprintf(metadata->artwork, _STR_LEN_, "http://%s:%s/music/%s/cover%s.jpg", ctx->server_ip, ctx->server_port, p, ctx->config.resolution);
+				metadata->artwork = malloc(STR_LEN);
+				snprintf(metadata->artwork, STR_LEN, "http://%s:%s/music/%s/cover%s.jpg", ctx->server_ip, ctx->server_port, p, ctx->config.resolution);
 				free(p);
 			}
 		}
 
 		if (metadata->artwork && strncmp(metadata->artwork, "http", 4)) {
-			char *artwork = malloc(_STR_LEN_);
+			char *artwork = malloc(STR_LEN);
 
-			snprintf(artwork, _STR_LEN_, "http://%s:%s%s", ctx->server_ip, ctx->server_port, metadata->artwork);
+			snprintf(artwork, STR_LEN, "http://%s:%s%s", ctx->server_ip, ctx->server_port, metadata->artwork);
 			free(metadata->artwork);
 			metadata->artwork = artwork;
 		}
@@ -400,28 +391,16 @@ bool sq_get_metadata(sq_dev_handle_t handle, sq_metadata_t *metadata, bool next)
 
 	NFREE(rsp);
 
-	sq_default_metadata(metadata, false);
+	metadata_defaults(metadata);
 
 	LOG_DEBUG("[%p]: idx %d\n\tartist:%s\n\talbum:%s\n\ttitle:%s\n\tgenre:%s\n\tduration:%d.%03d\n\tsize:%d\n\tcover:%s", ctx, metadata->index,
 				metadata->artist, metadata->album, metadata->title,
 				metadata->genre, div(metadata->duration, 1000).quot,
-				div(metadata->duration,1000).rem, metadata->file_size,
+				div(metadata->duration,1000).rem, metadata->size,
 				metadata->artwork ? metadata->artwork : "");
 
 	return true;
 }
-
-
-/*--------------------------------------------------------------------------*/
-void sq_free_metadata(sq_metadata_t *metadata)
-{
-	NFREE(metadata->artist);
-	NFREE(metadata->album);
-	NFREE(metadata->title);
-	NFREE(metadata->genre);
-	NFREE(metadata->artwork);
-}
-
 
 /*--------------------------------------------------------------------------*/
 u32_t sq_get_time(sq_dev_handle_t handle)
@@ -552,8 +531,10 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 
 
 /*---------------------------------------------------------------------------*/
-void sq_init(char *model_name)
+
+void sq_init(struct in_addr host, char *model_name)
 {
+	sq_local_host = host;
 	strcpy(sq_model_name, model_name);
 	decode_init();
 #if RESAMPLE
@@ -600,7 +581,8 @@ bool sq_run_device(sq_dev_handle_t handle, struct raopcl_s *raopcl, sq_dev_param
 {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
 
-	memcpy(&ctx->config, param, sizeof(sq_dev_param_t));
+
+	memcpy(&ctx->config, param, sizeof(sq_dev_param_t));
 
 	sprintf(ctx->cli_id, "%02x:%02x:%02x:%02x:%02x:%02x",
 						  ctx->config.mac[0], ctx->config.mac[1], ctx->config.mac[2],

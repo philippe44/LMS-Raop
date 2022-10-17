@@ -462,8 +462,8 @@ static void process_setd(u8_t *pkt, int len,struct thread_ctx_s *ctx) {
 				sendSETDName(ctx->config.name, ctx->sock);
 			}
 		} else if (len > 5) {
-			strncpy(ctx->config.name, setd->data, _STR_LEN_);
-			ctx->config.name[_STR_LEN_ - 1] = '\0';
+			strncpy(ctx->config.name, setd->data, STR_LEN);
+			ctx->config.name[STR_LEN - 1] = '\0';
 			LOG_DEBUG("[%p] set name: %s", ctx, setd->data);
 			// confirm change to server
 			sendSETDName(setd->data, ctx->sock);
@@ -765,16 +765,22 @@ void discover_server(struct thread_ctx_s *ctx) {
 	socklen_t enable = 1;
 
 	ctx->cli_port = 9090;
-
 	setsockopt(disc_sock, SOL_SOCKET, SO_BROADCAST, (const void *)&enable, sizeof(enable));
-
 	len = sprintf(buf,"e%s%c%s%c%s", vers, '\0', port, '\0', clip) + 1;
 
 	memset(&d, 0, sizeof(d));
 	d.sin_family = AF_INET;
 	d.sin_port = htons(PORT);
-	if (!ctx->slimproto_ip) d.sin_addr.s_addr = htonl(INADDR_BROADCAST);
-	else d.sin_addr.s_addr = ctx->slimproto_ip;
+	if (!ctx->slimproto_ip) {
+		// some systems refuse to broadcast on unbound socket
+		memset(&s, 0, sizeof(s));
+		s.sin_addr.s_addr = sq_local_host.s_addr;
+		s.sin_family = AF_INET;
+		bind(disc_sock, (struct sockaddr*) &s, sizeof(s));
+		d.sin_addr.s_addr = htonl(INADDR_BROADCAST);
+	} else {
+		d.sin_addr.s_addr = ctx->slimproto_ip;
+	}
 
 	pollinfo.fd = disc_sock;
 	pollinfo.events = POLLIN;
@@ -806,7 +812,7 @@ void discover_server(struct thread_ctx_s *ctx) {
 				ctx->server_port[min(6, *p)] = '\0';
 			}
 
-			if ((p = strstr(readbuf, clip)) != NULL) {
+			 if ((p = strstr(readbuf, clip)) != NULL) {
 				p += strlen(clip);
 				ctx->cli_port = atoi(p + 1);
 			}
@@ -850,7 +856,7 @@ static void slimproto(struct thread_ctx_s *ctx) {
 		set_nonblock(ctx->sock);
 		set_nosigpipe(ctx->sock);
 
-		if (connect_timeout(ctx->sock, (struct sockaddr *) &ctx->serv_addr, sizeof(ctx->serv_addr), 5*1000) != 0) {
+		if (tcp_connect_timeout(ctx->sock, ctx->serv_addr, 5*1000) != 0) {
 
 			LOG_WARN("[%p] unable to connect to server %u", ctx, failed_connect);
 			sleep(5);

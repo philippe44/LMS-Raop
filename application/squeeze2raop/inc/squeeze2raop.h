@@ -30,7 +30,7 @@
 #include "squeezedefs.h"
 #include "squeezeitf.h"
 #include "raop_client.h"
-#include "util.h"
+#include "cross_util.h"
 
 /*----------------------------------------------------------------------------*/
 /* typedefs */
@@ -51,7 +51,7 @@ typedef struct sRaopReq {
 	char Type[20];
 	union {
 		float Volume;
-		u64_t FlushTS;
+		uint64_t FlushTS;
 	} Data;
 } tRaopReq;
 
@@ -64,69 +64,69 @@ typedef struct sMRConfig
 	int			IdleTimeout;
 	int			RemoveTimeout;
 	bool		Encryption;
-	char		Credentials[_STR_LEN_];
+	char		Credentials[STR_LEN];
 	int 		ReadAhead;
 	int			VolumeMode;
 	int			Volume;
 	int			VolumeFeedback;
-	char		VolumeMapping[_STR_LEN_];
+	char		VolumeMapping[STR_LEN];
 	bool		MuteOnPause;
 	bool		AlacEncode;
 	bool		VolumeTrigger;
-	char 		PreventPlayback[_STR_LEN_];
+	char 		PreventPlayback[STR_LEN];
 	bool 		Persistent;
 } tMRConfig;
 
 
 struct sMR {
-	u32_t Magic;
+	uint32_t Magic;
 	bool  Running;
-	u32_t Expired;
+	uint32_t Expired;
 	tMRConfig Config;
 	sq_dev_param_t	sq_config;
 	bool on;
 	char UDN			[RESOURCE_LENGTH];
 	char FriendlyName	[RESOURCE_LENGTH];
-	char			ContentType[_STR_LEN_];		// a bit patchy ... to buffer next URI
+	char			ContentType[STR_LEN];		// a bit patchy ... to buffer next URI
 	int	 			SqueezeHandle;
 	sq_action_t		sqState;
-	s8_t			Volume;
-	u32_t			VolumeStampRx, VolumeStampTx;
+	int8_t			Volume;
+	uint32_t		VolumeStampRx, VolumeStampTx;
 	float 			VolumeMapping[101];
 	bool			VolumeReady;
-	u8_t			VolumeReadyWait;
+	uint8_t			VolumeReadyWait;
 	struct raopcl_s	*Raop;
 	struct in_addr 	PlayerIP;
-	u16_t			PlayerPort;
+	uint16_t		PlayerPort;
 	pthread_t		Thread;
 	pthread_mutex_t Mutex;
 	pthread_cond_t	Cond;
 	bool			Delete;
-	u32_t			Busy;
-	tQueue			Queue;
-	u32_t 			LastFlush;
+	uint32_t		Busy;
+	queue_t			Queue;
+	uint32_t		LastFlush;
 	bool			DiscWait;
 	int				Sane;
 	bool			TrackRunning;
-	u8_t			MetadataWait;
-	u32_t			MetadataHash;
+	uint8_t			MetadataWait;
+	uint32_t			MetadataHash;
 	char *SampleSize;
 	char *SampleRate;
 	char *Channels;
 	char *Codecs;
 	char *Crypto;
 	char ActiveRemote[16];
-	u32_t SkipStart;
+	uint32_t SkipStart;
 	bool SkipDir;
 };
 
 extern char 				glInterface[];
-extern s32_t				glLogLimit;
+extern int32_t				glLogLimit;
 extern tMRConfig			glMRConfig;
 extern sq_dev_param_t		glDeviceParam;
 extern struct sMR			glMRDevices[MAX_RENDERERS];
-extern char					glExcluded[_STR_LEN_];
+extern char					glExcluded[STR_LEN];
 extern int					glMigration;
-extern char					glPortOpen[_STR_LEN_];
+extern char					glPortOpen[STR_LEN];
 
 #endif

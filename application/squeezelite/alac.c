@@ -462,14 +462,14 @@ static decode_state alac_decode(struct thread_ctx_s *ctx) {
 			}
 		} else if (l->sample_size == 24) {
 			while (count--) {
-				*optr++ = (*(u16_t*) iptr) >> 8;
-				*optr++ = (*(u16_t*) (iptr + 3)) >> 8;
+				*optr++ = (*(u32_t*) iptr) >> 8;
+				*optr++ = (*(u32_t*) (iptr + 3)) >> 8;
 				iptr += 6;
 			}
 		} else if (l->sample_size == 32) {
 			while (count--) {
-				*optr++ = (*(u16_t*) iptr) >> 16;
-				*optr++ = (*(u16_t*) (iptr + 4)) >> 16;
+				*optr++ = (*(u32_t*) iptr) >> 16;
+				*optr++ = (*(u32_t*) (iptr + 4)) >> 16;
 				iptr += 8;
 			}
 		} else {

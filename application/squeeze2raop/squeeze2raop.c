@@ -1,20 +1,9 @@
 /*
- *  Squeeze2raop - LMS to RAOP gateway
+ *  Squeeze2raop - Squeezelite to Airplay bridge
  *
  *  (c) Philippe, philippe_44@outlook.com
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * See LICENSE
  *
  */
 
@@ -24,6 +13,7 @@
 #include <sys/stat.h>
 #include <limits.h>
 
+#include "platform.h"
 #include "squeezedefs.h"
 
 #if USE_SSL
@@ -35,17 +25,18 @@
 #endif
 
 #include "ixml.h"
+#include "cross_ssl.h"
+#include "cross_util.h"
+#include "cross_log.h"
+#include "cross_net.h"
+#include "cross_thread.h"
 #include "squeeze2raop.h"
 #include "conf_util.h"
-#include "util_common.h"
-#include "log_util.h"
-#include "util.h"
+#include "metadata.h"
 
-#include "mdnssd-itf.h"
+#include "mdnssd.h"
+#include "tinysvcmdns.h"
 #include "http_fetcher.h"
-#include "mdns.h"
-#include "mdnsd.h"
-#include "sslsym.h"
 
 #define DISCOVERY_TIME 20
 
@@ -57,12 +48,12 @@ enum { VOLUME_FEEDBACK = 1, VOLUME_UNFILTERED = 2};
 /*----------------------------------------------------------------------------*/
 /* globals 																	  */
 /*----------------------------------------------------------------------------*/
-s32_t				glLogLimit = -1;
+int32_t				glLogLimit = -1;
 char 				glInterface[16] = "?";
-char				glExcluded[_STR_LEN_] = "aircast,airupnp,shairtunes2,airesp32";
+char				glExcluded[STR_LEN] = "aircast,airupnp,shairtunes2,airesp32";
 int					glMigration = 0;
 struct sMR			glMRDevices[MAX_RENDERERS];
-char				glPortOpen[_STR_LEN_];
+char				glPortOpen[STR_LEN];
 
 log_level	slimproto_loglevel = lINFO;
 log_level	stream_loglevel = lWARN;
@@ -95,7 +86,7 @@ tMRConfig			glMRConfig = {
 							false,			 // Persistent
 					};
 
-static u8_t LMSVolumeMap[129] = {
+static uint8_t LMSVolumeMap[129] = {
 			0, 3, 6, 7, 8, 10, 12, 13, 14, 16, 17, 18, 19, 20,
 			21, 22, 24, 25, 26, 27, 28, 28, 29, 30, 31, 32, 33,
 			34, 35, 36, 37, 37, 38, 39, 40, 41, 41, 42, 43, 44,
@@ -150,14 +141,14 @@ static struct mdnsd 		*gl_mDNSResponder;
 static int					glActiveRemoteSock;
 static pthread_t			glActiveRemoteThread;
 static void					*glConfigID = NULL;
-static char					glConfigName[_STR_LEN_] = "./config.xml";
+static char					glConfigName[STR_LEN] = "./config.xml";
 static struct in_addr 		glHost;
-static char					*glHostName;
-static char					glModelName[_STR_LEN_] = MODEL_NAME_STRING;
-static u16_t				glPortBase, glPortRange;
+static char					glModelName[STR_LEN] = MODEL_NAME_STRING;
+static uint16_t				glPortBase, glPortRange;
 
 static char usage[] =
-			VERSION "\n"
+
+			VERSION "\n"
 		   "See -t for license terms\n"
 		   "Usage: [options]\n"
 		   "  -s <server>[:<port>]\tConnect to specified server, otherwise uses autodiscovery to find server\n"
@@ -210,7 +201,6 @@ static char usage[] =
 		   " SSL"
 #endif
 		   "\n\n";
-
 static char license[] =
 		   "This program is free software: you can redistribute it and/or modify\n"
 		   "it under the terms of the GNU General Public License as published by\n"
@@ -222,7 +212,6 @@ static char license[] =
 		   "GNU General Public License for more details.\n\n"
 		   "You should have received a copy of the GNU General Public License\n"
 		   "along with this program.  If not, see <http://www.gnu.org/licenses/>.\n\n";
-
 	#define SET_LOGLEVEL(log) 			  \
 	if (!strcmp(resp, #log"dbg")) { \
 		char level[20];           \
@@ -230,19 +219,20 @@ static char license[] =
 		log ## _loglevel = debug2level(level); \
 	}
 
-/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 /* prototypes */
 /*----------------------------------------------------------------------------*/
 static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s);
 static void DelRaopDevice(struct sMR *Device);
 static bool IsExcluded(char *Model);
+
 #if BUSY_MODE
 static void BusyRaise(struct sMR *Device);
 static void BusyDrop(struct sMR *Device);
 #endif
 
 /*----------------------------------------------------------------------------*/
-bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, void *param)
+bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, void *param)
 {
 	struct sMR *device = caller;
 	bool rc = true;
@@ -264,9 +254,10 @@ static void BusyDrop(struct sMR *Device);
 		if (!device->on) {
 			tRaopReq *Req = malloc(sizeof(tRaopReq));
 
-			QueueFlush(&device->Queue);
-			strcpy(Req->Type, "OFF");
-			QueueInsert(&device->Queue, Req);
+			queue_flush(&device->Queue);
+			strcpy(Req->Type, "OFF");
+
+			queue_insert(&device->Queue, Req);
 			pthread_cond_signal(&device->Cond);
 		}
 
@@ -296,7 +287,7 @@ static void BusyDrop(struct sMR *Device);
 			raopcl_stop(device->Raop);
 
 			strcpy(Req->Type, "FLUSH");
-			QueueInsert(&device->Queue, Req);
+			queue_insert(&device->Queue, Req);
 			pthread_cond_signal(&device->Cond);
 			break;
 		}
@@ -310,7 +301,7 @@ static void BusyDrop(struct sMR *Device);
 
 			Req = malloc(sizeof(tRaopReq));
 			strcpy(Req->Type, "FLUSH");
-			QueueInsert(&device->Queue, Req);
+			queue_insert(&device->Queue, Req);
 			pthread_cond_signal(&device->Cond);
 			break;
 		}
@@ -322,15 +313,14 @@ static void BusyDrop(struct sMR *Device);
 			if (*((unsigned*) param))
 				raopcl_start_at(device->Raop, TIME_MS2NTP(*((unsigned*) param)) -
 								TS2NTP(raopcl_latency(device->Raop), raopcl_sample_rate(device->Raop)));
-
 			strcpy(Req->Type, "CONNECT");
-			QueueInsert(&device->Queue, Req);
+			queue_insert(&device->Queue, Req);
 			pthread_cond_signal(&device->Cond);
 			break;
 		}
 		case SQ_VOLUME: {
-			u32_t Volume = LMSVolumeMap[*(u16_t*) param];
-			u32_t now = gettime_ms();
+			uint32_t Volume = LMSVolumeMap[*(uint16_t*) param];
+			uint32_t now = gettime_ms();
 
 			if (device->Config.VolumeMode == VOLUME_HARD &&
 				(device->Config.VolumeFeedback == VOLUME_UNFILTERED || now > device->VolumeStampRx + 1000) &&
@@ -342,7 +332,7 @@ static void BusyDrop(struct sMR *Device);
 
 				Req->Data.Volume = device->VolumeMapping[device->Volume];
 				strcpy(Req->Type, "VOLUME");
-				QueueInsert(&device->Queue, Req);
+				queue_insert(&device->Queue, Req);
 				pthread_cond_signal(&device->Cond);
 			} else {
 				LOG_INFO("[%p]: volume ignored %u", device, Volume);
@@ -356,7 +346,7 @@ static void BusyDrop(struct sMR *Device);
 			device->sqState = SQ_PLAY;
 
 			strcpy(Req->Type, "CONNECT");
-			QueueInsert(&device->Queue, Req);
+			queue_insert(&device->Queue, Req);
 			pthread_cond_signal(&device->Cond);
 
 			break;
@@ -383,12 +373,21 @@ static void BusyDrop(struct sMR *Device);
 	return rc;
 }
 
+/*----------------------------------------------------------------------------*/
+static void* GetRequest(queue_t* Queue, pthread_mutex_t* Mutex, pthread_cond_t* Cond, uint32_t timeout) {
+	pthread_mutex_lock(Mutex);
+
+	void* data = queue_extract(Queue);
+	if (!data) pthread_cond_reltimedwait(Cond, Mutex, timeout);
+
+	pthread_mutex_unlock(Mutex);
+	return data;
+}
 
 /*----------------------------------------------------------------------------*/
-static void *PlayerThread(void *args)
-{
+static void *PlayerThread(void *args) {
 	struct sMR *Device = (struct sMR*) args;
-	u32_t KeepAlive = 0;
+	uint32_t KeepAlive = 0;
 
 	Device->Running = true;
 
@@ -404,7 +403,7 @@ static void *PlayerThread(void *args)
 
 		// empty means timeout every sec
 		if (!req) {
-			u32_t now = gettime_ms();
+			uint32_t now = gettime_ms();
 
 			LOG_DEBUG("[%p]: tick %u", Device, now);
 
@@ -436,15 +435,15 @@ static void *PlayerThread(void *args)
 			pthread_mutex_lock(&Device->Mutex);
 
 			if (Device->MetadataWait && !--Device->MetadataWait && Device->Config.SendMetaData) {
-				sq_metadata_t metadata;
-				u32_t hash, Time;
+				metadata_t metadata;
+				uint32_t hash, Time;
 
 				pthread_mutex_unlock(&Device->Mutex);
 
 				// not a valid metadata, nothing to update
 				if (!sq_get_metadata(Device->SqueezeHandle, &metadata, false)) {
 					Device->MetadataWait = 5;
-					sq_free_metadata(&metadata);
+					metadata_free(&metadata);
 					continue;
 				}
 
@@ -494,13 +493,12 @@ static void *PlayerThread(void *args)
 								 Device, metadata.index, metadata.artist,
 								 metadata.album, metadata.title, metadata.genre,
 								 div(metadata.duration, 1000).quot,
-								 div(metadata.duration,1000).rem, metadata.file_size,
+								 div(metadata.duration,1000).rem, metadata.size,
 								 metadata.artwork ? metadata.artwork : "");
 
-				} else Device->MetadataWait = 5;
 
-				sq_free_metadata(&metadata);
-
+				} else Device->MetadataWait = 5;
+				metadata_free(&metadata);
 				LOG_DEBUG("[%p]: next metadata update %u", Device, Device->MetadataWait);
 
 			} else pthread_mutex_unlock(&Device->Mutex);
@@ -571,50 +569,32 @@ static void *PlayerThread(void *args)
 }
 
 /*----------------------------------------------------------------------------*/
-char *GetmDNSAttribute(txt_attr_t *p, int count, char *name)
-{
-	int j;
-
-	for (j = 0; j < count; j++)
-		if (!strcasecmp(p[j].name, name))
-			return strdup(p[j].value);
-
+char *GetmDNSAttribute(txt_attr_t *p, int count, char *name) {
+	for (int i = 0; i < count; i++)	if (!strcasecmp(p[i].name, name))return strdup(p[i].value);
 	return NULL;
 }
 
-
 /*----------------------------------------------------------------------------*/
-struct sMR *SearchUDN(char *UDN)
-{
-	int i;
-
-	for (i = 0; i < MAX_RENDERERS; i++) {
-		if (glMRDevices[i].Running && !strcmp(glMRDevices[i].UDN, UDN))
-			return glMRDevices + i;
-	}
-
+struct sMR *SearchUDN(char *UDN) {
+	for (int i = 0; i < MAX_RENDERERS; i++) if (glMRDevices[i].Running && !strcmp(glMRDevices[i].UDN, UDN))	return glMRDevices + i;
 	return NULL;
 }
 
-
 /*----------------------------------------------------------------------------*/
-bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
-{
+bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop) {
 	struct sMR *Device;
 	mDNSservice_t *s;
-	u32_t now = gettime_ms();
-	int j;
+	uint32_t now = gettime_ms();
 
 	for (s = slist; s && glMainRunning; s = s->next) {
 		char *am = GetmDNSAttribute(s->attr, s->attr_count, "am");
 		bool excluded = am ? IsExcluded(am) : false;
-
 		NFREE(am);
 
 		// ignore excluded and announces made on behalf
 		if (!s->name || excluded || s->host.s_addr != s->addr.s_addr) continue;
 
-		// is that device already here
+		// is that device already here
 		if ((Device = SearchUDN(s->name)) != NULL) {
 			Device->Expired = 0;
 			// device disconnected
@@ -630,7 +610,6 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 			// device update - ignore changes in TXT
 			} else if (s->port != Device->PlayerPort || s->addr.s_addr != Device->PlayerIP.s_addr) {
 				LOG_INFO("[%p]: changed ip:port %s:%d", Device, inet_ntoa(s->addr), s->port);
-
 				Device->PlayerPort = s->port;
 				Device->PlayerIP = s->addr;
 
@@ -649,7 +628,6 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 			LOG_ERROR("Unknown device disconnected %s", s->name);
 			continue;
 		}
-
 		// should not happen
 		if (s->expired) {
 			LOG_DEBUG("Device already expired %s", s->name);
@@ -657,15 +635,13 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 		}
 
 		// device creation so search a free spot.
-		for (j = 0; j < MAX_RENDERERS && glMRDevices[j].Running; j++);
+		for (Device = glMRDevices; Device->Running && Device < glMRDevices + MAX_RENDERERS; Device++);
 
 		// no more room !
-		if (j == MAX_RENDERERS) {
-			LOG_ERROR("Too many Raop devices", NULL);
+		if (Device == glMRDevices + MAX_RENDERERS) {
+			LOG_ERROR("Too many devices (max:%u)", MAX_RENDERERS);
 			break;
 		}
-
-		Device = glMRDevices + j;
 
 		if (AddRaopDevice(Device, s) && !glDiscovery) {
 			// create a new slimdevice
@@ -683,18 +659,17 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 	}
 
 	// walk through the list for device whose timeout expired
-	for (j = 0; j < MAX_RENDERERS; j++) {
-		Device = glMRDevices + j;
-		if (!Device->Running || Device->Config.RemoveTimeout <= 0 || !Device->Expired ||
-			now < Device->Expired + Device->Config.RemoveTimeout*1000) continue;
+	for (int i = 0; i < MAX_RENDERERS; i++) {
+		Device = glMRDevices + i;
+		if (!Device->Running || Device->Config.RemoveTimeout <= 0 || !Device->Expired || now < Device->Expired + Device->Config.RemoveTimeout*1000) continue;
 
-		LOG_INFO("[%p]: removing renderer (%s) on timeout", Device, Device->FriendlyName);
+		LOG_INFO("[%p]: removing renderer (%s) on timeout", Device, Device->FriendlyName);
 		if (Device->SqueezeHandle) sq_delete_device(Device->SqueezeHandle);
 		DelRaopDevice(Device);
 	}
 
 	if (glAutoSaveConfigFile || glDiscovery) {
-		LOG_DEBUG("Updating configuration %s", glConfigName);
+		LOG_DEBUG("Updating configuration %s", glConfigName);
 		SaveConfig(glConfigName, glConfigID, false);
 	}
 
@@ -704,31 +679,25 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 
 
 /*----------------------------------------------------------------------------*/
-static void *mDNSsearchThread(void *args)
-{
+static void *mDNSsearchThread(void *args) {
 	// launch the query,
 	query_mDNS(glmDNSsearchHandle, "_raop._tcp.local", 120,
 			   glDiscovery ? DISCOVERY_TIME : 0, &mDNSsearchCallback, NULL);
 	return NULL;
 }
 
-
 /*----------------------------------------------------------------------------*/
-static void *MainThread(void *args)
-{
+static void *MainThread(void *args) {
 	while (glMainRunning) {
-
 		pthread_mutex_lock(&glMainMutex);
 		pthread_cond_reltimedwait(&glMainCond, &glMainMutex, 30*1000);
 		pthread_mutex_unlock(&glMainMutex);
 
 		if (glLogFile && glLogLimit != - 1) {
-			s32_t size = ftell(stderr);
-
+			int32_t size = ftell(stderr);
 			if (size > glLogLimit*1024*1024) {
-				u32_t Sum, BufSize = 16384;
-				u8_t *buf = malloc(BufSize);
-
+				uint32_t Sum, BufSize = 16384;
+				uint8_t *buf = malloc(BufSize);
 				FILE *rlog = fopen(glLogFile, "rb");
 				FILE *wlog = fopen(glLogFile, "r+b");
 				LOG_DEBUG("Resizing log", NULL);
@@ -750,14 +719,11 @@ static void *MainThread(void *args)
 	return NULL;
 }
 
-
 /*----------------------------------------------------------------------------*/
-void SetVolumeMapping(struct sMR *Device)
-{
+void SetVolumeMapping(struct sMR *Device) {
 	char *p;
 	int i = 1;
 	float a1 = 1, b1 = -30, a2 = 0, b2 = 0;
-
 	Device->VolumeMapping[0] = -144.0;
 	p = Device->Config.VolumeMapping;
 	do {
@@ -773,25 +739,19 @@ void SetVolumeMapping(struct sMR *Device)
 									   i*(b1-b2)/(a1-a2) + b1 - a1*(b1-b2)/(a1-a2);
 			i++;
 		}
-
 		a1 = a2;
 		b1 = b2;
 	} while (i <= 100);
-
 	for (; i <= 100; i++) Device->VolumeMapping[i] = Device->VolumeMapping[i-1];
 }
 
-
 /*----------------------------------------------------------------------------*/
-static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s)
-{
+static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s) {
 	pthread_attr_t pattr;
 	raop_crypto_t Crypto;
 	bool Auth = false;
 	char *p, *am, *md, *pk;
-	u32_t mac_size = 6;
-	char Secret[_STR_LEN_] = "";
-
+	char Secret[STR_LEN] = "";
 	// read parameters from default then config file
 	memcpy(&Device->Config, &glMRConfig, sizeof(tMRConfig));
 	memcpy(&Device->sq_config, &glDeviceParam, sizeof(sq_dev_param_t));
@@ -799,20 +759,21 @@ static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s)
 
 	if (!Device->Config.Enabled) return false;
 
-	if (strcasestr(s->name, "AirSonos")) {
-		LOG_DEBUG("[%p]: skipping AirSonos player (please use uPnPBridge)", Device);
+	if (strcasestr(s->name, "AirSonos")) {
+
+		LOG_DEBUG("[%p]: skipping AirSonos player (please use uPnPBridge)", Device);
 		return false;
 	}
 
-	am = GetmDNSAttribute(s->attr, s->attr_count, "am");
-	pk = GetmDNSAttribute(s->attr, s->attr_count, "pk");
-	md = GetmDNSAttribute(s->attr, s->attr_count, "md");
+	am = GetmDNSAttribute(s->attr, s->attr_count, "am");
+	pk = GetmDNSAttribute(s->attr, s->attr_count, "pk");
+	md = GetmDNSAttribute(s->attr, s->attr_count, "md");
 
-	// if airport express, forece auth
-	if (am && strcasestr(am, "airport")) {
-		LOG_INFO("[%p]: AirPort Express", Device);
-		Auth = true;
-	}
+	// if airport express, force auth
+	if (am && strcasestr(am, "airport")) {
+		LOG_INFO("[%p]: AirPort Express", Device);
+		Auth = true;
+	}
 
 	if (am && strcasestr(am, "appletv") && pk && *pk) {
 		char *token = strchr(Device->Config.Credentials, '@');
@@ -852,24 +813,30 @@ static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s)
 
 	strcpy(Device->UDN, s->name);
 	sprintf(Device->ActiveRemote, "%u", hash32(Device->UDN));
-	strcpy(Device->FriendlyName, s->hostname);
 
+	strcpy(Device->FriendlyName, s->hostname);
 	p = strcasestr(Device->FriendlyName, ".local");
 	if (p) *p = '\0';
 
-	LOG_INFO("[%p]: adding renderer (%s)", Device, Device->FriendlyName);
-
-	if (!memcmp(Device->sq_config.mac, "\0\0\0\0\0\0", mac_size)) {
-		if (SendARP(Device->PlayerIP.s_addr, INADDR_ANY, (u32_t*) Device->sq_config.mac, &mac_size)) {
-			u32_t hash = hash32(Device->UDN);
-
-			LOG_ERROR("[%p]: cannot get mac %s, creating fake %x", Device, Device->FriendlyName, hash);
-			memcpy(Device->sq_config.mac + 2, &hash, 4);
+	if (!memcmp(Device->sq_config.mac, "\0\0\0\0\0\0", 6)) {
+		uint32_t mac_size = 6;
+		if (SendARP(glHost.s_addr, INADDR_ANY, Device->sq_config.mac, &mac_size)) {
+			*(uint32_t*)(Device->sq_config.mac + 2) = hash32(Device->UDN);
+			LOG_INFO("[%p]: creating MAC", Device);
 		}
 		memset(Device->sq_config.mac, 0xaa, 2);
 	}
 
-	MakeMacUnique(Device);
+	// virtual players duplicate mac address
+	for (int i = 0; i < MAX_RENDERERS; i++) {
+		if (glMRDevices[i].Running && Device != glMRDevices + i && !memcmp(glMRDevices[i].sq_config.mac, Device->sq_config.mac, 6)) {
+			memset(Device->sq_config.mac, 0xaa, 2);
+			*(uint32_t*)(Device->sq_config.mac + 2) = hash32(Device->UDN);
+			LOG_INFO("[%p]: duplicated mac ... updating", Device);
+		}
+	}
+
+	LOG_INFO("[%p]: adding renderer (%s) with mac %hX-%X", Device, Device->FriendlyName, *(uint16_t*)Device->sq_config.mac, *(uint32_t*)(Device->sq_config.mac + 2));
 
 	// gather RAOP device capabilities, to be matched mater
 	Device->SampleSize = GetmDNSAttribute(s->attr, s->attr_count, "ss");
@@ -882,15 +849,13 @@ static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s)
 		LOG_WARN("[%p]: ALAC not in codecs, player might not work %s", Device, Device->Codecs);
 	}
 
-	if ((Device->Config.Encryption || Auth) && strchr(Device->Crypto, '1'))
-		Crypto = RAOP_RSA;
-	else
-		Crypto = RAOP_CLEAR;
+	if ((Device->Config.Encryption || Auth) && strchr(Device->Crypto, '1'))	Crypto = RAOP_RSA;
+	else Crypto = RAOP_CLEAR;
 
 	Device->Raop = raopcl_create(glHost, glPortBase, glPortRange,
 								 glDACPid, Device->ActiveRemote,
 								 Device->Config.AlacEncode ? RAOP_ALAC : RAOP_ALAC_RAW , FRAMES_PER_BLOCK,
-								 (u32_t) MS2TS(Device->Config.ReadAhead, Device->SampleRate ? atoi(Device->SampleRate) : 44100),
+								 (uint32_t) MS2TS(Device->Config.ReadAhead, Device->SampleRate ? atoi(Device->SampleRate) : 44100),
 								 Crypto, Auth, Secret, Device->Crypto, md,
 								 Device->SampleRate ? atoi(Device->SampleRate) : 44100,
 								 Device->SampleSize ? atoi(Device->SampleSize) : 16,
@@ -912,40 +877,31 @@ static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s)
 	}
 
 	pthread_mutex_init(&Device->Mutex, 0);
-	QueueInit(&Device->Queue);
+	queue_init(&Device->Queue, false, free);
 
-	// TODO : reduce stack
-	pthread_attr_init(&pattr);
-	pthread_attr_setstacksize(&pattr, PTHREAD_STACK_MIN + 64*1024);
+	pthread_attr_init(&pattr);
+	pthread_attr_setstacksize(&pattr, PTHREAD_STACK_MIN + 64*1024);
 	pthread_create(&Device->Thread, NULL, &PlayerThread, Device);
 	pthread_attr_destroy(&pattr);
 
-	return true;
+	return true;
 }
 
-
 /*----------------------------------------------------------------------------*/
-void FlushRaopDevices(void)
-{
-	int i;
-
-	for (i = 0; i < MAX_RENDERERS; i++) {
+void FlushRaopDevices(void) {
+	for (int i = 0; i < MAX_RENDERERS; i++) {
 		struct sMR *p = &glMRDevices[i];
 		if (p->Running) DelRaopDevice(p);
 	}
 }
 
-
 /*----------------------------------------------------------------------------*/
-void DelRaopDevice(struct sMR *Device)
-{
+void DelRaopDevice(struct sMR *Device) {
 	pthread_mutex_lock(&Device->Mutex);
 	Device->Running = false;
 	pthread_cond_signal(&Device->Cond);
 	pthread_mutex_unlock(&Device->Mutex);
-
 	pthread_join(Device->Thread, NULL);
-
 	raopcl_destroy(Device->Raop);
 
 	LOG_INFO("[%p]: Raop device stopped", Device);
@@ -957,10 +913,8 @@ void DelRaopDevice(struct sMR *Device)
 	NFREE(Device->Crypto);
 }
 
-
 /*----------------------------------------------------------------------------*/
-static void *ActiveRemoteThread(void *args)
-{
+static void *ActiveRemoteThread(void *args) {
 	char buf[1024], command[128], ActiveRemote[16];
 	char response[] = "HTTP/1.1 204 No Content\r\nDate: %s,%02d %s %4d %02d:%02d:%02d "
 					  "GMT\r\nDAAP-Server: iTunes/7.6.2 (Windows; N;)\r\nContent-Type: "
@@ -968,12 +922,10 @@ static void *ActiveRemoteThread(void *args)
 					  "Connection: close\r\n\r\n";
 	char *day[] = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
 	char *month[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sept", "Oct", "Nov", "Dec" };
-
 	if (listen(glActiveRemoteSock, 1) < 0) {
 		LOG_ERROR("Cannot listen %d", glActiveRemoteSock);
 		return NULL;
 	}
-
 	while (glMainRunning) {
 		int sd, i;
 		struct sockaddr cli_addr;
@@ -982,7 +934,6 @@ static void *ActiveRemoteThread(void *args)
 		char *p;
 		time_t now = time(NULL);
 		struct tm gmt;
-
 		sd = accept(glActiveRemoteSock, (struct sockaddr *) &cli_addr, &clilen);
 
 		if (sd < 0 || !glMainRunning) {
@@ -996,16 +947,13 @@ static void *ActiveRemoteThread(void *args)
 		recv(sd, (void*) buf, sizeof(buf) - 1, 0);
 		buf[sizeof(buf) - 1] = '\0';
 		strlwr(buf);
-
 		// a pretty basic reading of command
 		p = strstr(buf, "active-remote:");
 		if (p) sscanf(p, "active-remote:%15s", ActiveRemote);
 		ActiveRemote[sizeof(ActiveRemote) - 1] = '\0';
-
 		p = strstr(buf, "/ctrl-int/1/");
 		if (p) sscanf(p, "/ctrl-int/1/%127s", command);
 		command[sizeof(command) - 1] = '\0';
-
 		// find where this is coming from
 		for (i = 0; i < MAX_RENDERERS; i++) {
 			if (glMRDevices[i].Running && !strcmp(glMRDevices[i].ActiveRemote, ActiveRemote)) {
@@ -1013,25 +961,20 @@ static void *ActiveRemoteThread(void *args)
 				break;
 			}
 		}
-
 		if (!Device) {
 			LOG_ERROR("DACP from unknown player %s", buf);
-			close_socket(sd);
+			closesocket(sd);
 			continue;
 		}
-
 		// this is async, so need to check context validity
 		pthread_mutex_lock(&Device->Mutex);
-
 		if (!Device->Running) {
 			LOG_WARN("[%p]: device has been removed", Device);
 			pthread_mutex_unlock(&Device->Mutex);
-			close_socket(sd);
+			closesocket(sd);
 			continue;
 		}
-
 		LOG_INFO("[%p]: remote command %s", Device, command);
-
 		if (!strcasecmp(command, "pause")) sq_notify(Device->SqueezeHandle, Device, SQ_PAUSE, NULL, NULL);
 		if (!strcasecmp(command, "play")) sq_notify(Device->SqueezeHandle, Device, SQ_PLAY, NULL, NULL);
 		if (!strcasecmp(command, "playpause")) sq_notify(Device->SqueezeHandle, Device, SQ_PLAY_PAUSE, NULL, NULL);
@@ -1047,7 +990,7 @@ static void *ActiveRemoteThread(void *args)
 			Device->SkipDir = !strcasecmp(command, "beginff") ? true : false;
 		}
 		if (!strcasecmp(command, "playresume")) {
-			s32_t gap = gettime_ms() - Device->SkipStart;
+			int32_t gap = gettime_ms() - Device->SkipStart;
 			gap = (gap + 3) * (gap + 3) * (Device->SkipDir ? 1 : -1);
 			sq_notify(Device->SqueezeHandle, Device, SQ_FF_REW, NULL, &gap);
 		}
@@ -1084,7 +1027,7 @@ static void *ActiveRemoteThread(void *args)
 						LOG_INFO("[%p]: volume trigger %d (%s)", Device, Device->Volume, command);
 						Req->Data.Volume = Device->VolumeMapping[Device->Volume];
 						strcpy(Req->Type, "VOLUME");
-						QueueInsert(&Device->Queue, Req);
+						queue_insert(&Device->Queue, Req);
 						pthread_cond_signal(&Device->Cond);
 					}
 				/*
@@ -1094,7 +1037,7 @@ static void *ActiveRemoteThread(void *args)
 				} else if (Device->Config.VolumeMode != VOLUME_SOFT && Device->Config.VolumeFeedback) {
 					float volume;
 					int i;
-					u32_t now = gettime_ms();
+					uint32_t now = gettime_ms();
 
 					sscanf(command, "%*[^=]=%f", &volume);
 					if (strcasestr(command, ".volume=")) i = (int) volume;
@@ -1118,21 +1061,14 @@ static void *ActiveRemoteThread(void *args)
 		sprintf(buf, response, day[gmt.tm_wday], gmt.tm_mday, month[gmt.tm_mon],
 								gmt.tm_year + 1900, gmt.tm_hour, gmt.tm_min, gmt.tm_sec);
 		send(sd, buf, strlen(buf), 0);
-
-		close_socket(sd);
+		closesocket(sd);
 	}
-
 	return NULL;
 }
-
 /*----------------------------------------------------------------------------*/
-void StartActiveRemote(struct in_addr host)
-{
-	struct mdns_service *svc;
-	struct sockaddr_in my_addr;
+void StartActiveRemote(struct in_addr host) {
+	struct sockaddr_in addr;
 	socklen_t nlen = sizeof(struct sockaddr);
-	int port;
-	char buf[256];
 	const char *txt[] = {
 		"txtvers=1",
 		"Ver=131075",
@@ -1141,37 +1077,31 @@ void StartActiveRemote(struct in_addr host)
 		NULL
 	};
 	struct {
-		u16_t count, range;
-		u16_t offset;
+		uint16_t count, range;
+		uint16_t offset;
 	} aport = { 0 };
-
 	aport.range = glPortBase ? glPortRange : 1;
 	aport.offset = rand() % aport.range;
-
 	do {
 		if ((glActiveRemoteSock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
 			LOG_ERROR("Cannot create ActiveRemote socket", NULL);
 			return;
 		}
-
-		memset(&my_addr, 0, sizeof(my_addr));
-		my_addr.sin_addr.s_addr = host.s_addr;
-		my_addr.sin_family = AF_INET;
-		my_addr.sin_port = htons(glPortBase + ((aport.offset + aport.count++) % aport.range));
-
-		if (bind(glActiveRemoteSock, (struct sockaddr *) &my_addr, sizeof(my_addr)) < 0) {
+		memset(&addr, 0, sizeof(addr));
+		addr.sin_addr.s_addr = host.s_addr;
+		addr.sin_family = AF_INET;
+		addr.sin_port = htons(glPortBase + ((aport.offset + aport.count++) % aport.range));
+		if (bind(glActiveRemoteSock, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
 			closesocket(glActiveRemoteSock);
 			glActiveRemoteSock = -1;
 		}
 	} while (glActiveRemoteSock < 0 && aport.count < aport.range);
-
 	if (glActiveRemoteSock < 0) {
 		LOG_ERROR("Cannot bind ActiveRemote: %s", strerror(errno));
 		return;
 	}
-
-	getsockname(glActiveRemoteSock, (struct sockaddr *) &my_addr, &nlen);
-	port = ntohs(my_addr.sin_port);
+	getsockname(glActiveRemoteSock, (struct sockaddr *) &addr, &nlen);
+	uint16_t port = ntohs(addr.sin_port);
 	LOG_INFO("DACP port: %d", port);
 
 	// start mDNS responder
@@ -1180,21 +1110,24 @@ void StartActiveRemote(struct in_addr host)
 		return;
 	}
 
-	sprintf(buf, "%s.local", glHostName);
+	char buf[STR_LEN];
+	
+	// set hostname
+	gethostname(buf, sizeof(buf));
+	strcat(buf, ".local");
 	mdnsd_set_hostname(gl_mDNSResponder, buf, host);
-	sprintf(buf, "iTunes_Ctrl_%s", glDACPid);
-	svc = mdnsd_register_svc(gl_mDNSResponder, buf, "_dacp._tcp.local", port, NULL, txt);
+
+	// register service
+	snprintf(buf, sizeof(buf), "iTunes_Ctrl_%s", glDACPid);
+	struct mdns_service* svc = mdnsd_register_svc(gl_mDNSResponder, buf, "_dacp._tcp.local", port, NULL, txt);
 	mdns_service_destroy(svc);
 
 	// start ActiveRemote answering thread
 	pthread_create(&glActiveRemoteThread, NULL, ActiveRemoteThread, NULL);
 }
 
-
-
 /*----------------------------------------------------------------------------*/
-void StopActiveRemote(void)
-{
+void StopActiveRemote(void) {
 	if (glActiveRemoteSock != -1) {
 #if WIN
 		shutdown(glActiveRemoteSock, SD_BOTH);
@@ -1204,7 +1137,6 @@ void StopActiveRemote(void)
 		struct sockaddr addr;
 		socklen_t nlen = sizeof(struct sockaddr);
 		int sock = socket(AF_INET, SOCK_STREAM, 0);
-
 		getsockname(glActiveRemoteSock, (struct sockaddr *) &addr, &nlen);
 		connect(sock, (struct sockaddr*) &addr, sizeof(addr));
 		closesocket(sock);
@@ -1217,52 +1149,42 @@ void StopActiveRemote(void)
 	mdnsd_stop(gl_mDNSResponder);
 }
 
-
 /*----------------------------------------------------------------------------*/
-static bool IsExcluded(char *Model)
-{
-	char item[_STR_LEN_];
+static bool IsExcluded(char *Model) {
+	char item[STR_LEN];
 	char *p = glExcluded;
-
 	do {
 		sscanf(p, "%[^,]", item);
 		if (strcasestr(Model, item)) return true;
 		p += strlen(item);
 	} while (*p++);
-
 	return false;
 }
 
-
 #if BUSY_MODE
 /*----------------------------------------------------------------------------*/
-void BusyRaise(struct sMR *Device)
-{
+void BusyRaise(struct sMR *Device) {
 	LOG_DEBUG("[%p]: busy raise %u", Device, Device->Busy);
 	Device->Busy++;
 	pthread_mutex_unlock(&Device->Mutex);
 }
 
-
 /*----------------------------------------------------------------------------*/
-void BusyDrop(struct sMR *Device)
-{
+void BusyDrop(struct sMR *Device) {
 	pthread_mutex_lock(&Device->Mutex);
 	Device->Busy--;
 	if (!Device->Busy && Device->Delete) pthread_cond_signal(&Device->Cond);
 	LOG_DEBUG("[%p]: busy drop %u", Device, Device->Busy);
 	pthread_mutex_unlock(&Device->Mutex);
 }
-#endif
 
+#endif
 
 /*----------------------------------------------------------------------------*/
-static bool Start(void)
-{
+static bool Start(void) {
 	int i;
 
-	// manually load openSSL symbols to accept multiple versions
-	if (!load_ssl_symbols()) {
+	if (!cross_ssl_load()) {
 		LOG_ERROR("Cannot load SSL libraries", NULL);
 		return false;
 	}
@@ -1275,21 +1197,24 @@ static bool Start(void)
 
 	pthread_mutex_init(&glMainMutex, 0);
 	pthread_cond_init(&glMainCond, 0);
+
     for (i = 0; i < MAX_RENDERERS;  i++) {
 		pthread_mutex_init(&glMRDevices[i].Mutex, 0);
 		pthread_cond_init(&glMRDevices[i].Cond, 0);
 	}
 
-	glHost.s_addr = get_localhost(&glHostName);
+	// must bind to an address
 	if (!strstr(glInterface, "?")) glHost.s_addr = inet_addr(glInterface);
+	else get_interface(&glHost);
 
-	LOG_INFO("Binding to %s", inet_ntoa(glHost));
+	sq_init(glHost, glModelName);
 
 	/* start the mDNS devices discovery thread */
 	if ((glmDNSsearchHandle = init_mDNS(false, glHost)) == NULL) {;
 		LOG_ERROR("Cannot start mDNS searcher", NULL);
 		return false;
 	}
+
 	pthread_create(&glmDNSsearchThread, NULL, &mDNSsearchThread, NULL);
 
 	// Start the ActiveRemote server
@@ -1301,15 +1226,12 @@ static bool Start(void)
 	return true;
 }
 
-
 /*---------------------------------------------------------------------------*/
-static bool Stop(void)
-{
-	int i;
-
+static bool Stop(void) {
 	glMainRunning = false;
 
 	LOG_DEBUG("terminate search thread ...", NULL);
+
 	// this forces an ongoing search to end
 	close_mDNS(glmDNSsearchHandle);
 	pthread_join(glmDNSsearchThread, NULL);
@@ -1326,59 +1248,48 @@ static bool Stop(void)
 	pthread_join(glMainThread, NULL);
 	pthread_mutex_destroy(&glMainMutex);
 	pthread_cond_destroy(&glMainCond);
-	for (i = 0; i < MAX_RENDERERS;  i++) {
+
+	for (int i = 0; i < MAX_RENDERERS;  i++) {
 		pthread_mutex_destroy(&glMRDevices[i].Mutex);
 		pthread_cond_destroy(&glMRDevices[i].Cond);
 	}
 
-	free(glHostName);
-
 	if (glConfigID) ixmlDocument_free(glConfigID);
 
-#if WIN
-	winsock_close();
-#endif
-
-	free_ssl_symbols();
+	netsock_close();
+	cross_ssl_free();
 
 	return true;
 }
 
-
 /*---------------------------------------------------------------------------*/
 static void sighandler(int signum) {
 	static bool quit = false;
-
 	// give it some time to finish ...
 	if (quit) {
 		LOG_INFO("Please wait for clean exit!", NULL);
 		return;
 	}
-
 	quit = true;
 
 	if (!glGracefullShutdown) {
 		LOG_INFO("forced exit", NULL);
 		exit(EXIT_SUCCESS);
 	}
-
 	sq_end();
 	Stop();
 	exit(EXIT_SUCCESS);
 }
-
 
 /*---------------------------------------------------------------------------*/
 bool ParseArgs(int argc, char **argv) {
 	char *optarg = NULL;
 	int i, optind = 1;
 	char cmdline[256] = "";
-
 	for (i = 0; i < argc && (strlen(argv[i]) + strlen(cmdline) + 2 < sizeof(cmdline)); i++) {
 		strcat(cmdline, argv[i]);
 		strcat(cmdline, " ");
 	}
-
 	while (optind < argc && strlen(argv[optind]) >= 2 && argv[optind][0] == '-') {
 		char *opt = argv[optind] + 1;
 		if (strstr("astxdfpibmM", opt) && optind < argc - 1) {
@@ -1396,7 +1307,6 @@ bool ParseArgs(int argc, char **argv) {
 			printf("%s", usage);
 			return false;
 		}
-
 		switch (opt[0]) {
 		case 's':
 			strcpy(glDeviceParam.server, optarg);
@@ -1482,10 +1392,8 @@ bool ParseArgs(int argc, char **argv) {
 			break;
 		}
 	}
-
 	return true;
 }
-
 
 /*----------------------------------------------------------------------------*/
 /*																			  */
@@ -1494,7 +1402,6 @@ int main(int argc, char *argv[])
 {
 	int i;
 	char resp[20] = "";
-
 	signal(SIGINT, sighandler);
 	signal(SIGTERM, sighandler);
 #if defined(SIGPIPE)
@@ -1507,9 +1414,7 @@ int main(int argc, char *argv[])
 	signal(SIGHUP, sighandler);
 #endif
 
-#if WIN
-	winsock_init();
-#endif
+	netsock_init();
 
 	// first try to find a config file on the command line
 	for (i = 1; i < argc; i++) {
@@ -1517,10 +1422,8 @@ int main(int argc, char *argv[])
 			strcpy(glConfigName, argv[i+1]);
 		}
 	}
-
 	// load config from xml file
 	glConfigID = (void*) LoadConfig(glConfigName, &glMRConfig, &glDeviceParam);
-
 	// do some parameters migration
 	if (!glMigration || glMigration == 1 || glMigration == 2) {
 		glMigration = 3;
@@ -1530,23 +1433,18 @@ int main(int argc, char *argv[])
 
 	// potentially overwrite with some cmdline parameters
 	if (!ParseArgs(argc, argv)) exit(1);
-
 	// make sure port range is correct
 	sscanf(glPortOpen, "%hu:%hu", &glPortBase, &glPortRange);
 	if (glPortBase && !glPortRange) glPortRange = MAX_RENDERERS*4;
-
 	if (glLogFile) {
 		if (!freopen(glLogFile, "a", stderr)) {
 			fprintf(stderr, "error opening logfile %s: %s\n", glLogFile, strerror(errno));
 		}
 	}
-
 	LOG_ERROR("Starting squeeze2raop version: %s\n", VERSION);
-
 	if (!glConfigID) {
 		LOG_ERROR("\n\n!!!!!!!!!!!!!!!!!! ERROR LOADING CONFIG FILE !!!!!!!!!!!!!!!!!!!!!\n", NULL);
 	}
-
 	// just do device discovery and exit
 	if (glDiscovery) {
 		Start();
@@ -1562,7 +1460,6 @@ int main(int argc, char *argv[])
 		}
 	}
 #endif
-
 	if (glPidFile) {
 		FILE *pid_file;
 		pid_file = fopen(glPidFile, "wb");
@@ -1574,8 +1471,6 @@ int main(int argc, char *argv[])
 			LOG_ERROR("Cannot open PID file %s", glPidFile);
 		}
 	}
-
-	sq_init(glModelName);
 
 	if (!Start()) {
 		LOG_ERROR("Cannot start, exiting", NULL);
@@ -1616,7 +1511,7 @@ int main(int argc, char *argv[])
 		}
 
 		if (!strcmp(resp, "dump") || !strcmp(resp, "dumpall"))	{
-			u32_t now = gettime_ms();
+			uint32_t now = gettime_ms();
 			bool all = !strcmp(resp, "dumpall");
 
 			for (i = 0; i < MAX_RENDERERS; i++) {
@@ -1639,10 +1534,8 @@ int main(int argc, char *argv[])
 	LOG_INFO("stopping Raop devices ...", NULL);
 	Stop();
 	LOG_INFO("all done", NULL);
-
 	return true;
 }
-
 
 
 

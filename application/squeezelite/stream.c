@@ -162,7 +162,7 @@ static int connect_socket(bool use_ssl, struct thread_ctx_s *ctx) {
 	set_nonblock(sock);
 	set_nosigpipe(sock);
 
-	if (connect_timeout(sock, (struct sockaddr *) &ctx->stream.addr, sizeof(ctx->stream.addr), 10*1000) < 0) {
+	if (tcp_connect_timeout(sock, ctx->stream.addr, 10*1000) < 0) {
 		LOG_WARN("[%p] unable to connect to server", ctx);
 		closesocket(sock);
 		return -1;
@@ -192,7 +192,7 @@ static int connect_socket(bool use_ssl, struct thread_ctx_s *ctx) {
 				if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) continue;
 			}
 
-			LOG_WARN("[%p] unable to open SSL socket %d (%d)", ctx, status, err);
+			LOG_WARN("[%p]: unable to open SSL socket %d (%d)", ctx, status, err);
 
 			closesocket(sock);
 			SSL_free(ctx->ssl);
@@ -200,6 +200,7 @@ static int connect_socket(bool use_ssl, struct thread_ctx_s *ctx) {
 
 			return -1;
 		}
+		LOG_INFO("[%p]: streaming with SSL", ctx);
 	} else ctx->ssl = NULL;
 #endif
 
@@ -483,13 +484,10 @@ bool stream_thread_init(unsigned streambuf_size, struct thread_ctx_s *ctx) {
 	ctx->stream_running = true;
 	ctx->stream.state = STOPPED;
 	ctx->stream.header = malloc(MAX_HEADER);
-	*ctx->stream.header = '\0';
-
+	ctx->stream.header[0] = '\0';
 	ctx->fd = -1;
 
-#if LINUX || FREEBSD
 	touch_memory(ctx->streambuf->buf, ctx->streambuf->size);
-#endif
 
 	pthread_attr_init(&attr);
 	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + STREAM_THREAD_STACK_SIZE);
