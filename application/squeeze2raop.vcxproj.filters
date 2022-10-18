@@ -68,13 +68,14 @@
     <ClCompile Include="squeezelite\output_raop.c">
       <Filter>squeezelite</Filter>
     </ClCompile>
+    <ClCompile Include="squeezelite\mad.c" />
   </ItemGroup>
   <ItemGroup>
     <Library Include="libcodecs\targets\win32\x86\libcodecs.lib" />
     <Library Include="libmdns\targets\win32\x86\libmdns.lib" />
     <Library Include="libpupnp\targets\win32\x86\libpupnp.lib" />
-    <Library Include="pthreads4w\targets\win32\x86\libpthreadVC3.lib" />
-    <Library Include="raoptools\targets\win32\x86\libraop.lib" />
+    <Library Include="libpthreads4w\targets\win32\x86\libpthreadVC3.lib" />
+    <Library Include="libraop\targets\win32\x86\libraop.lib" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="crosstools">

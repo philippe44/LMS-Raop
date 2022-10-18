@@ -821,7 +821,7 @@ static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s) {
 
 	if (!memcmp(Device->sq_config.mac, "\0\0\0\0\0\0", 6)) {
 		uint32_t mac_size = 6;
-		if (SendARP(glHost.s_addr, INADDR_ANY, Device->sq_config.mac, &mac_size)) {
+		if (SendARP(s->addr.s_addr, INADDR_ANY, Device->sq_config.mac, &mac_size)) {
 			*(uint32_t*)(Device->sq_config.mac + 2) = hash32(Device->UDN);
 			LOG_INFO("[%p]: creating MAC", Device);
 		}

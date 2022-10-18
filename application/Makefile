@@ -43,14 +43,14 @@ INCLUDE = -I$(OPENSSL)/include \
 		  -I$(RAOP)/include \
 		  -I$(SRC)/inc \
 		  -I$(PUPNP)/include/upnp -I$(PUPNP)/include/ixml -I$(PUPNP)/include/addons \
-		  -I$(CODECS)/include/flac -I$(CODECS)/include/shine -I$(CODECS)/include/addons \
+		  -I$(CODECS)/include/flac -I$(CODECS)/include/mad -I$(CODECS)/include/addons \
 		  -I$(MDNS)/include/tinysvcmdns -I$(MDNS)/include/mdnssd \
 		  -I$(FETCHER)/include
 		  		  
 DEPS	= $(SRC)/inc/squeezedefs.h
 				  
 SOURCES = slimproto.c buffer.c output.c output_pack.c output_raop.c main.c \
-		  stream.c decode.c pcm.c resample.c process.c alac.c flac.c \
+		  stream.c decode.c pcm.c resample.c process.c alac.c flac.c mad.c \
 		  utils.c metadata.c \
 		  cross_util.c cross_log.c cross_net.c cross_thread.c platform.c \
 		  http_fetcher.c http_error_codes.c \

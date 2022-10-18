@@ -122,8 +122,7 @@ void decode_init(void) {
 	int i = 0;
 
 	codecs[i++] = register_pcm();
-	//if ((codecs[i] = register_mad()) == NULL) codecs[i] = register_mpg();
-	i++;
+	codecs[i++] = register_mad();
 	codecs[i++] = register_alac();
 	codecs[i++] = register_flac();
 	//codecs[i++] = register_faad();
@@ -138,8 +137,7 @@ void decode_init(void) {
 /*---------------------------------------------------------------------------*/
 void decode_end(void) {
 	deregister_pcm();
-	//deregister_mpg();
-	//deregister_mad();
+	deregister_mad();
 	deregister_flac();
 	deregister_alac();
 	//deregister_faad();
