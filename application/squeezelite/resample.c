@@ -398,4 +398,5 @@ void deregister_soxr(void) {
 #endif
 }
 
-#endif // #if RESAMPLE
+
+#endif // #if RESAMPLE

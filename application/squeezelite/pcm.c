@@ -125,7 +125,7 @@ static unsigned check_header(struct thread_ctx_s *ctx) {
 decode_state pcm_decode(struct thread_ctx_s *ctx) {
 	unsigned bytes, in, out;
 	frames_t frames;
-	u8_t *iptr, *optr, buf[3*8];
+	u8_t *iptr, *optr = NULL, buf[3*8];
 	struct pcm *p = ctx->decode.handle;
 	bool done = false;
 

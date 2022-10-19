@@ -126,8 +126,8 @@ void decode_init(void) {
 	codecs[i++] = register_alac();
 	codecs[i++] = register_flac();
 	//codecs[i++] = register_faad();
-	//codecs[i++] = register_vorbis();
-	//codecs[i++] = register_opus();
+	codecs[i++] = register_vorbis();
+	codecs[i++] = register_opus();
 #if RESAMPLE
 	register_soxr();
 #endif
@@ -141,8 +141,8 @@ void decode_end(void) {
 	deregister_flac();
 	deregister_alac();
 	//deregister_faad();
-	//deregister_vorbis();
-	//deregister_opus();
+	deregister_vorbis();
+	deregister_opus();
 #if RESAMPLE
 	deregister_soxr();
 #endif
