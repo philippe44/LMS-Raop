@@ -496,7 +496,7 @@ static decode_state faad_decode(struct thread_ctx_s *ctx) {
 	while (frames > 0) {
 		frames_t f;
 		frames_t count;
-		s16_t *optr;
+		s16_t *optr = NULL;
 
 		IF_DIRECT(
 			f = _buf_cont_write(ctx->outputbuf) / BYTES_PER_FRAME;

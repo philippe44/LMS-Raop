@@ -75,6 +75,9 @@
     <ClCompile Include="squeezelite\opus.c">
       <Filter>squeezelite</Filter>
     </ClCompile>
+    <ClCompile Include="squeezelite\faad.c">
+      <Filter>squeezelite</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Library Include="libcodecs\targets\win32\x86\libcodecs.lib" />

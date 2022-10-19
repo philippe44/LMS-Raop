@@ -13,7 +13,7 @@ LINKSTATIC 	= -static
 LDFLAGS 	+= -Wl,--gc-sections
 endif
 
-BUILDDIR	= build/$(PLATFORM)
+BUILDDIR	= bin/$(PLATFORM)
 EXECUTABLE 	= bin/squeeze2raop-$(PLATFORM)
 EXECUTABLE_STATIC = bin/squeeze2raop-$(PLATFORM)-static
 
@@ -42,8 +42,11 @@ INCLUDE = -I$(OPENSSL)/include \
 		  -I$(RAOP)/include \
 		  -I$(SRC)/inc \
 		  -I$(PUPNP)/include/upnp -I$(PUPNP)/include/ixml -I$(PUPNP)/include/addons \
-		  -I$(CODECS)/include/flac -I$(CODECS)/include/mad -I$(CODECS)/include/soxr -I$(CODECS)/include/addons \
+		  -I$(CODECS)/include/flac -I$(CODECS)/include/mad \
 		  -I$(CODECS)/include/ogg -I$(CODECS)/include/vorbis \
+		  -I$(CODECS)/include/opus -I$(CODECS)/include/opusfile \
+		  -I$(CODECS)/include/faad2 \
+		  -I$(CODECS)/include/soxr -I$(CODECS)/include/addons \
 		  -I$(MDNS)/include/tinysvcmdns -I$(MDNS)/include/mdnssd \
 		  -I$(FETCHER)/include
 		  		  
@@ -51,7 +54,7 @@ DEPS	= $(SRC)/inc/squeezedefs.h
 				  
 SOURCES = slimproto.c buffer.c output.c output_pack.c output_raop.c main.c \
 		  stream.c decode.c pcm.c resample.c process.c \
-                  alac.c flac.c mad.c vorbis.c \
+                  alac.c flac.c mad.c vorbis.c opus.c faad.c \
 		  utils.c metadata.c \
 		  cross_util.c cross_log.c cross_net.c cross_thread.c platform.c \
 		  http_fetcher.c http_error_codes.c \
