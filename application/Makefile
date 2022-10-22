@@ -5,17 +5,13 @@ endif
 PLATFORM ?= $(firstword $(subst -, ,$(CC)))
 HOST ?= $(word 2, $(subst -, ,$(CC)))
 
-ifeq ($(OS),Darwin)
-LINKSTATIC	=
-LDFLAGS 	+= -Wl,-dead_strip
-else
-LINKSTATIC 	= -static
-LDFLAGS 	+= -Wl,--gc-sections
+ifneq ($(HOST),macos)
+LINKSTATIC = -static
 endif
 
-BUILDDIR	= bin/$(PLATFORM)
-EXECUTABLE 	= bin/squeeze2raop-$(PLATFORM)
-EXECUTABLE_STATIC = bin/squeeze2raop-$(PLATFORM)-static
+BUILDDIR	= bin/$(HOST)/$(PLATFORM)
+EXECUTABLE 	= bin/squeeze2raop-$(HOST)-$(PLATFORM)
+EXECUTABLE_STATIC = bin/squeeze2raop-$(HOST)-$(PLATFORM)-static
 
 SRC		= squeeze2raop
 SQUEEZELITE	= squeezelite
@@ -31,7 +27,7 @@ FETCHER		= http-fetcher
 
 DEFINES 	= -DCODECS -DUSE_SSL -D_GNU_SOURCE -DUPNP_STATIC_LIB -DLINKALL -DRESAMPLE
 CFLAGS  	+= -Wall -Wno-deprecated-declarations -Wno-format-truncation -Wno-stringop-truncation -fPIC -ggdb -O2 $(DEFINES) -fdata-sections -ffunction-sections 
-LDFLAGS += -s -lpthread -ldl -lm -lrt -lstdc++ -L. 
+LDFLAGS += -s -lpthread -ldl -lm -lstdc++ -L. 
 
 vpath %.c $(TOOLS):$(SRC):$(SQUEEZELITE):$(FETCHER)/src
 vpath %.cpp $(TOOLS):$(SRC):$(SQUEEZELITE):$(FETCHER)/src
@@ -47,14 +43,14 @@ INCLUDE = -I$(OPENSSL)/include \
 		  -I$(CODECS)/include/opus -I$(CODECS)/include/opusfile \
 		  -I$(CODECS)/include/faad2 \
 		  -I$(CODECS)/include/soxr -I$(CODECS)/include/addons \
-		  -I$(MDNS)/include/tinysvcmdns -I$(MDNS)/include/mdnssd \
+		  -I$(MDNS)/include/mdnssvc -I$(MDNS)/include/mdnssd \
 		  -I$(FETCHER)/include
 		  		  
 DEPS	= $(SRC)/inc/squeezedefs.h
 				  
 SOURCES = slimproto.c buffer.c output.c output_pack.c output_raop.c main.c \
 		  stream.c decode.c pcm.c resample.c process.c \
-                  alac.c flac.c mad.c vorbis.c opus.c faad.c \
+          alac.c flac.c mad.c vorbis.c opus.c faad.c \
 		  utils.c metadata.c \
 		  cross_util.c cross_log.c cross_net.c cross_thread.c platform.c \
 		  http_fetcher.c http_error_codes.c \
@@ -80,7 +76,7 @@ $(EXECUTABLE): $(OBJECTS) $(DEPS)
 	$(CC) $(OBJECTS) $(LIBRARY) $(LDFLAGS) -o $@
 	
 $(EXECUTABLE_STATIC): $(OBJECTS_STATIC) $(DEPS)
-	$(CC) $(OBJECTS_STATIC) $(LIBRARY_STATIC) $(LDFLAGS) -static -o $@	
+	$(CC) $(OBJECTS_STATIC) $(LIBRARY_STATIC) $(LDFLAGS) $(LINKSTATIC) -o $@	
 
 directory:
 	@mkdir -p $(BUILDDIR)
@@ -90,7 +86,7 @@ $(BUILDDIR)/%.o : %.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(INCLUDE) $< -c -o $@
 
 $(BUILDDIR)/%-static.o : %.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -DSSL_LIB_STATIC $(INCLUDE) $< -c -o $(BUILDDIR)/$*-static.o	
+	$(CC) $(CFLAGS) $(CPPFLAGS) -DSSL_STATIC_LIB $(INCLUDE) $< -c -o $(BUILDDIR)/$*-static.o	
 	
 clean:
 	rm -f $(OBJECTS) $(EXECUTABLE) $(OBJECTS_STATIC) $(EXECUTABLE_STATIC) 

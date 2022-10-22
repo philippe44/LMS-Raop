@@ -36,7 +36,7 @@
 #include "metadata.h"
 
 #include "mdnssd.h"
-#include "tinysvcmdns.h"
+#include "mdnssvc.h"
 #include "http_fetcher.h"
 
 #define DISCOVERY_TIME 20
