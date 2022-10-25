@@ -331,7 +331,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, void 
 				device->VolumeStampTx = now;
 				device->Volume = Volume;
 
-				Req->Data.Volume = device->VolumeMapping[device->Volume];
+				Req->Data.Volume = device->VolumeMapping[(unsigned)device->Volume];
 				strcpy(Req->Type, "VOLUME");
 				queue_insert(&device->Queue, Req);
 				pthread_cond_signal(&device->Cond);
@@ -375,7 +375,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, void 
 }
 
 /*----------------------------------------------------------------------------*/
-static void* GetRequest(queue_t* Queue, pthread_mutex_t* Mutex, pthread_cond_t* Cond, uint32_t timeout) {
+static void* GetRequest(cross_queue_t* Queue, pthread_mutex_t* Mutex, pthread_cond_t* Cond, uint32_t timeout) {
 	pthread_mutex_lock(Mutex);
 
 	void* data = queue_extract(Queue);
@@ -509,7 +509,7 @@ static void *PlayerThread(void *args) {
 				LOG_WARN("[%p]: volume repeat or trigger timeout %d", Device, Device->Volume);
 				Device->VolumeReady = true;
 				// only send 'last' command if required (might be -1 in config)
-				if (Device->Volume != -1) raopcl_set_volume(Device->Raop, Device->VolumeMapping[Device->Volume]);
+				if (Device->Volume != -1) raopcl_set_volume(Device->Raop, Device->VolumeMapping[(unsigned)Device->Volume]);
 			}
 
 			continue;
@@ -1026,7 +1026,7 @@ static void *ActiveRemoteThread(void *args) {
 
 					if (Device->Config.VolumeMode == VOLUME_HARD || Device->Volume != -1) {
 						LOG_INFO("[%p]: volume trigger %d (%s)", Device, Device->Volume, command);
-						Req->Data.Volume = Device->VolumeMapping[Device->Volume];
+						Req->Data.Volume = Device->VolumeMapping[(unsigned)Device->Volume];
 						strcpy(Req->Type, "VOLUME");
 						queue_insert(&Device->Queue, Req);
 						pthread_cond_signal(&Device->Cond);
@@ -1194,6 +1194,10 @@ static bool Start(void) {
 	SSL_library_init();
 #endif
 
+	// must bind to an address
+	glHost = get_interface(!strchr(glInterface, '?') ? glInterface : NULL);
+	if (glHost.s_addr == INADDR_NONE) return false;
+
 	memset(&glMRDevices, 0, sizeof(glMRDevices));
 
 	pthread_mutex_init(&glMainMutex, 0);
@@ -1203,10 +1207,6 @@ static bool Start(void) {
 		pthread_mutex_init(&glMRDevices[i].Mutex, 0);
 		pthread_cond_init(&glMRDevices[i].Cond, 0);
 	}
-
-	// must bind to an address
-	if (!strstr(glInterface, "?")) glHost.s_addr = inet_addr(glInterface);
-	else get_interface(&glHost);
 
 	sq_init(glHost, glModelName);
 

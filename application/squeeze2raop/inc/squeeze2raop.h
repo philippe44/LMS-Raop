@@ -91,7 +91,7 @@ struct sMR {
 	pthread_cond_t	Cond;
 	bool			Delete;
 	uint32_t		Busy;
-	queue_t			Queue;
+	cross_queue_t	Queue;
 	uint32_t		LastFlush;
 	bool			DiscWait;
 	int				Sane;

@@ -214,17 +214,6 @@ void _wake_create(event_event*);
 #define wake_close(e) CloseHandle(e)
 #endif
 
-// printf/scanf formats for u64_t
-#if (LINUX && __WORDSIZE == 64) || (FREEBSD && __LP64__)
-#define FMT_u64 "%lu"
-#define FMT_x64 "%lx"
-#elif __GLIBC_HAVE_LONG_LONG || defined __GNUC__ || WIN
-#define FMT_u64 "%llu"
-#define FMT_x64 "%llx"
-#else
-#error can not support u64_t
-#endif
-
 #define MAX_SILENCE_FRAMES FRAMES_PER_BLOCK 		// 352 for RAOP protocol
 #define FIXED_ONE  0x10000
 #define MONO_RIGHT	0x02

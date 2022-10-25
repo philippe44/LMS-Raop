@@ -271,7 +271,7 @@ void _checkfade(bool start, struct thread_ctx_s *ctx) {
 			// if default setting used and nothing in buffer attempt to resize to provide full crossfade support
 			LOG_INFO("[%p]: resize outputbuf for crossfade", ctx);
 			_buf_resize(ctx->outputbuf, OUTPUTBUF_SIZE_CROSSFADE);
-#if LINUX || FREEBSD
+#if LINUX || FREEBSD || SUNOS
 			touch_memory(ctx->outputbuf->buf, ctx->outputbuf->size);
 #endif
 		}
