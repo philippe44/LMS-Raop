@@ -33,8 +33,6 @@ PLUGIN_RAOPBRIDGE_RESTART
 	
 PLUGIN_RAOPBRIDGE_BINARIES_DESC
 	EN	Select the squeeze2raop binary which best matches your machine's architecture. 
-	EN	<br>- on raspi, use only armv6hf version
-	EN	<br>- armv5te emulates floating point
 
 PLUGIN_RAOPBRIDGE_WARNING
 	EN	It is HIGHLY recommended to stop the bridge before changing parameters
@@ -140,7 +138,7 @@ PLUGIN_RAOPBRIDGE_NETWORK_DESC
 	EN	This set different global parameters for networking 
 	EN	<br>- <i>Authorized ports</i>: set usable ports for incoming connection (RTP & HTTP) with format &lt;base port&gt;[:&lt;count&gt;]. Leave it to empty or
 	EN	to 0:0 for automatic (random) port selection. Use this to limit your firewall opened ports. Note that 3 ports are needed per player. 
-	EN	<br>- <i>interface</i>: The network interface (ip address in format xxx.xxx.xxx.xxx) used by the bridge. This is especially useful if you have a
+	EN	<br>- <i>interface</i>: The network interface name or ip address (xxx.xxx.xxx.xxx) used by the bridge. This is especially useful if you have a
 	EN	computer with multiple network interfaces. Use ? to let the bridge decide or check "use LMS' network
 	EN	interface" to make sure the Bridge uses the same network as LMS
 

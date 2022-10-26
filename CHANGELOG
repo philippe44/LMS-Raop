@@ -1,5 +1,10 @@
 Note: beware of crypto version (see shairtunes)
 
+1.0.0
+ - new build backend 
+ - iface can be used for binding
+ - many small changes...
+
 0.4.63.1
  - crappy old bug that causes crash in raop debug loglevel
  - do not change xml loglevel when set from command line

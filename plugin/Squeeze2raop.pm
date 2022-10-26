@@ -23,42 +23,43 @@ sub binaries {
 	if ($os->{'os'} eq 'Linux') {
 
 		if ($os->{'osArch'} =~ /x86_64/) {
-			return qw(squeeze2raop-x86-64-static squeeze2raop-x86-64 );
+			return qw(squeeze2raop-linux_x86_64-static squeeze2raop-linux-x86_64 );
 		}
 		if ($os->{'binArch'} =~ /i386/) {
-			return qw(squeeze2raop-x86-static squeeze2raop-x86 );
+			return qw(squeeze2raop-linux-x86-static squeeze2raop-linux-x86 );
 		}
 		if ($os->{'osArch'} =~ /aarch64/) {
-			return qw(squeeze2raop-aarch64-static squeeze2raop-armv6hf-static squeeze2raop-aarch64 squeeze2raop-armv6hf );
+			return qw(squeeze2raop-linux-aarch64-static squeeze2raop-linux-aarch64 );
 		}
 		if ($os->{'binArch'} =~ /armhf/) {
-			return qw(squeeze2raop-armv6hf-static squeeze2raop-armv6hf );
+			return qw(squeeze2raop-linux-arm-static squeeze2raop-linux-arm );
 		}
-		if ($os->{'binArch'} =~ /arm/) {
-			return qw(squeeze2raop-armv5te-static squeeze2raop-armv5te );
+		if ($os->{'binArch'} =~ /powerpc/) {
+			return qw(squeeze2raop-linux-powerpc-static squeeze2raop-linux-powerpc );
+		}
+		if ($os->{'binArch'} =~ /sparc/) {
+			return qw(squeeze2raop-linux-sparc64-static squeeze2raop-linux-sparc64 );
 		}
 		
-		# fallback to offering all linux options for case when architecture detection does not work
-		return qw(squeeze2raop-x86-64 squeeze2raop-x86-64-static squeeze2raop-x86 squeeze2raop-x86-static squeeze2raop-armv6hf squeeze2raop-armv6hf-static squeeze2raop-aarch64 squeeze2raop-aarch64_static);
 	}
 	
 	if ($os->{'os'} eq 'Unix') {
 	
 		if ($os->{'osName'} eq 'solaris') {
-			return qw(squeeze2raop-i86pc-solaris-static squeeze2raop-i86pc-solaris );
+			return qw(squeeze2raop-solaris-x86_64-static squeeze2raop-solaris-x86_64 );
 		}	
 		if ($os->{'osName'} =~ /freebsd/) {
-			return qw( squeeze2raop-bsd-x64-static squeeze2raop-bsd-x64 );
+			return qw( squeeze2raop-freebsd-x86_64-static squeeze2raop-freebsd-x86_64 );
 		}
 		
 	}	
 	
 	if ($os->{'os'} eq 'Darwin') {
-		return qw(squeeze2raop-osx-multi-static squeeze2raop-osx-multi);
+		return qw(squeeze2raop-macos-x86_64-static squeeze2raop-macos-x86_64);
 	}
 	
 	if ($os->{'os'} eq 'Windows') {
-		return qw(squeeze2raop-win.exe);
+		return qw(squeeze2raop-static.exe squeeze2raop.exe);
 	}	
 }
 
