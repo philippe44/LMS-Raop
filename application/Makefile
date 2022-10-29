@@ -13,6 +13,10 @@ LDFLAGS += -lssp -lresolv
 endif
 endif
 
+ifeq ($(HOST)-$(PLATFORM), linux-x86_64)
+LDFLAGS += -lmvec
+endif
+
 BUILDDIR	= bin/$(HOST)/$(PLATFORM)
 EXECUTABLE 	= bin/squeeze2raop-$(HOST)-$(PLATFORM)
 EXECUTABLE_STATIC = bin/squeeze2raop-$(HOST)-$(PLATFORM)-static
@@ -76,11 +80,13 @@ LIBRARY_STATIC 	= $(LIBRARY) $(OPENSSL)/libopenssl.a
 
 all: directory $(EXECUTABLE) $(EXECUTABLE_STATIC)
 
-$(EXECUTABLE): $(OBJECTS) $(DEPS)
-	$(CC) $(OBJECTS) $(LIBRARY) $(LDFLAGS) -o $@
+$(EXECUTABLE): $(OBJECTS)
+	$(CC) $(OBJECTS) $(LIBRARY) $(CFLAGS) $(LDFLAGS) -o $@
 	
-$(EXECUTABLE_STATIC): $(OBJECTS_STATIC) $(DEPS)
-	$(CC) $(OBJECTS_STATIC) $(LIBRARY_STATIC) $(LDFLAGS) $(LINKSTATIC) -o $@	
+$(EXECUTABLE_STATIC): $(OBJECTS_STATIC)
+	$(CC) $(OBJECTS_STATIC) $(LIBRARY_STATIC) $(CFLAGS) $(LDFLAGS) $(LINKSTATIC) -o $@	
+
+$(OBJECTS) $(OBJECTS_STATIC): $(DEPS)
 
 directory:
 	@mkdir -p $(BUILDDIR)

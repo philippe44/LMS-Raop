@@ -102,4 +102,4 @@ _backup/
 *.store
 *.bak
 build/
-
+.vs/
