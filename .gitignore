@@ -103,3 +103,4 @@ _backup/
 *.bak
 build/
 .vs/
+*.bat
