@@ -1,5 +1,9 @@
 Note: beware of crypto version (see shairtunes)
 
+1.0.3
+ - fix mdns ttl that caused constant rediscovery
+ - add arm64 for M1
+
 1.0.2
  - update mdnsd that was binding to a specific port for no reason
  
