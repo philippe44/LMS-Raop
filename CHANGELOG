@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+1.0.5
+ - update mdnssd
+
 1.0.4
  - update libmdns (no unicast and compliant mode)
 

@@ -1210,8 +1210,10 @@ static bool Start(void) {
 
 	sq_init(glHost, glModelName);
 
+	LOG_INFO("Binding to %s", inet_ntoa(glHost));
+
 	/* start the mDNS devices discovery thread */
-	if ((glmDNSsearchHandle = mdnssd_init(false, glHost, true)) == NULL) {;
+	if ((glmDNSsearchHandle = mdnssd_init(true, glHost, true)) == NULL) {;
 		LOG_ERROR("Cannot start mDNS searcher", NULL);
 		return false;
 	}
