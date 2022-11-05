@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+1.0.4
+ - update libmdns (no unicast and compliant mode)
+
 1.0.3
  - fix mdns ttl that caused constant rediscovery
  - add arm64 for M1
