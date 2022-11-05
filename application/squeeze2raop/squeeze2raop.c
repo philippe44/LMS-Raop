@@ -130,7 +130,7 @@ static bool					glMainRunning = true;
 static char					*glPidFile = NULL;
 static bool					glAutoSaveConfigFile = false;
 static bool					glGracefullShutdown = true;
-static struct mDNShandle_s	*glmDNSsearchHandle = NULL;
+static struct mdnssd_handle_s	*glmDNSsearchHandle = NULL;
 static pthread_t 			glMainThread, glmDNSsearchThread;
 static bool					glDiscovery = false;
 static pthread_mutex_t		glMainMutex;
@@ -223,7 +223,7 @@ static char license[] =
 /*----------------------------------------------------------------------------*/
 /* prototypes */
 /*----------------------------------------------------------------------------*/
-static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s);
+static bool AddRaopDevice(struct sMR *Device, mdnssd_service_t *s);
 static void DelRaopDevice(struct sMR *Device);
 static bool IsExcluded(char *Model);
 
@@ -570,7 +570,7 @@ static void *PlayerThread(void *args) {
 }
 
 /*----------------------------------------------------------------------------*/
-char *GetmDNSAttribute(txt_attr_t *p, int count, char *name) {
+char *GetmDNSAttribute(mdnssd_txt_attr_t *p, int count, char *name) {
 	for (int i = 0; i < count; i++)	if (!strcasecmp(p[i].name, name))return strdup(p[i].value);
 	return NULL;
 }
@@ -582,9 +582,9 @@ struct sMR *SearchUDN(char *UDN) {
 }
 
 /*----------------------------------------------------------------------------*/
-bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop) {
+bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop) {
 	struct sMR *Device;
-	mDNSservice_t *s;
+	mdnssd_service_t *s;
 	uint32_t now = gettime_ms();
 
 	for (s = slist; s && glMainRunning; s = s->next) {
@@ -682,7 +682,7 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop) {
 /*----------------------------------------------------------------------------*/
 static void *mDNSsearchThread(void *args) {
 	// launch the query,
-	query_mDNS(glmDNSsearchHandle, "_raop._tcp.local", 120,
+	mdnssd_query(glmDNSsearchHandle, "_raop._tcp.local", false,
 			   glDiscovery ? DISCOVERY_TIME : 0, &mDNSsearchCallback, NULL);
 	return NULL;
 }
@@ -747,7 +747,7 @@ void SetVolumeMapping(struct sMR *Device) {
 }
 
 /*----------------------------------------------------------------------------*/
-static bool AddRaopDevice(struct sMR *Device, mDNSservice_t *s) {
+static bool AddRaopDevice(struct sMR *Device, mdnssd_service_t *s) {
 	pthread_attr_t pattr;
 	raop_crypto_t Crypto;
 	bool Auth = false;
@@ -1211,7 +1211,7 @@ static bool Start(void) {
 	sq_init(glHost, glModelName);
 
 	/* start the mDNS devices discovery thread */
-	if ((glmDNSsearchHandle = init_mDNS(false, glHost)) == NULL) {;
+	if ((glmDNSsearchHandle = mdnssd_init(false, glHost, true)) == NULL) {;
 		LOG_ERROR("Cannot start mDNS searcher", NULL);
 		return false;
 	}
@@ -1234,7 +1234,7 @@ static bool Stop(void) {
 	LOG_DEBUG("terminate search thread ...", NULL);
 
 	// this forces an ongoing search to end
-	close_mDNS(glmDNSsearchHandle);
+	mdnssd_close(glmDNSsearchHandle);
 	pthread_join(glmDNSsearchThread, NULL);
 
 	LOG_DEBUG("flush renderers ...", NULL);
