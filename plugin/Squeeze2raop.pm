@@ -32,7 +32,7 @@ sub binaries {
 			return qw(squeeze2raop-linux-aarch64 squeeze2raop-linux-aarch64-static );
 		}
 		if ($os->{'binArch'} =~ /armhf/) {
-			return qw(squeeze2raop-linux-arm squeeze2raop-linux-arm-static );
+			return qw(squeeze2raop-linux-arm squeeze2raop-linux-arm-static squeeze2raop-linux-armv6 squeeze2raop-linux-armv6-static);
 		}
 		if ($os->{'binArch'} =~ /powerpc/) {
 			return qw(squeeze2raop-linux squeeze2raop-linux-powerpc-static );
@@ -58,7 +58,14 @@ sub binaries {
 	}	
 	
 	if ($os->{'os'} eq 'Darwin') {
-		return qw(squeeze2raop-macos-x86_64 squeeze2raop-macos-x86_64-static);
+		
+		if ($os->{'binArch'} =~ /x86_64/) {
+			return qw(squeeze2raop-macos-x86_64 squeeze2raop-macos-x86_64-static);
+		}
+		if ($os->{'binArch'} =~ /arm64/) {
+			return qw(squeeze2raop-macos-arm64 squeeze2raop-macos-arm64-static);
+		}
+		
 	}
 	
 	if ($os->{'os'} eq 'Windows') {

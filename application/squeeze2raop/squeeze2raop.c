@@ -1436,18 +1436,27 @@ int main(int argc, char *argv[])
 
 	// potentially overwrite with some cmdline parameters
 	if (!ParseArgs(argc, argv)) exit(1);
+
 	// make sure port range is correct
 	sscanf(glPortOpen, "%hu:%hu", &glPortBase, &glPortRange);
 	if (glPortBase && !glPortRange) glPortRange = MAX_RENDERERS*4;
+
 	if (glLogFile) {
 		if (!freopen(glLogFile, "a", stderr)) {
 			fprintf(stderr, "error opening logfile %s: %s\n", glLogFile, strerror(errno));
 		}
 	}
+
 	LOG_ERROR("Starting squeeze2raop version: %s\n", VERSION);
+
+	if (strtod("0.30", NULL) != 0.30) {
+		LOG_WARN("weird GLIBC, try -static build in case of failure");
+	}
+
 	if (!glConfigID) {
 		LOG_ERROR("\n\n!!!!!!!!!!!!!!!!!! ERROR LOADING CONFIG FILE !!!!!!!!!!!!!!!!!!!!!\n", NULL);
 	}
+
 	// just do device discovery and exit
 	if (glDiscovery) {
 		Start();
