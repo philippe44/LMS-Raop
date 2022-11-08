@@ -317,11 +317,19 @@ PLUGIN_RAOPBRIDGE_POWEROFF
 PLUGIN_RAOPBRIDGE_STOP
 	EN	Stop
 	
+PLUGIN_RAOPBRIDGE_WAITPOWEROFF
+	EN	Wait+Off
+	
+PLUGIN_RAOPBRIDGE_WAITSTOP
+	EN	Wait+Stop
+	
 PLUGIN_RAOPBRIDGE_PERSISTENT
 	EN	Re-connect on error
 	
 PLUGIN_RAOPBRIDGE_OTHEROPTIONS_DESC
-	EN	- When AirPlay device disconnects locally (e.g. by using the remote of an AV amplifier to switch source, should LMS stop or poweroff the virtual SB player)
+	EN	- When AirPlay device disconnects locally (e.g. by using the remote of an AV amplifier to switch source, should LMS stop or 
+	EN	poweroff the virtual SB player). Some (faulty) players send a disconnect+reconnect sequence even when the track switch is 
+	EN	requested by LMS. the 'Wait+' option allows a delay of 1s after the disconnect to be sure...
 	EN	<br>- When there is a communication error, should the bridge try to reconnect (can happen when using another AirPlay controller)
 		
 PLUGIN_RAOPBRIDGE_NOCONFIG

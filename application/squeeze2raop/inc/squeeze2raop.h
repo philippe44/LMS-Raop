@@ -86,7 +86,7 @@ struct sMR {
 	struct raopcl_s	*Raop;
 	struct in_addr 	PlayerIP;
 	uint16_t		PlayerPort;
-	pthread_t		Thread;
+	pthread_t		Thread, Lambda;
 	pthread_mutex_t Mutex;
 	pthread_cond_t	Cond;
 	bool			Delete;

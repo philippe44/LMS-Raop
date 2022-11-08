@@ -1,5 +1,9 @@
 Note: beware of crypto version (see shairtunes)
 
+1.0.7
+ - add MacOS universal binaries
+ - add delayed remote stop
+
 1.0.6
  - add armv6
 

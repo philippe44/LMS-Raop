@@ -23,25 +23,25 @@ sub binaries {
 	if ($os->{'os'} eq 'Linux') {
 
 		if ($os->{'osArch'} =~ /x86_64/) {
-			return qw(squeeze2raop-linux_x86_64 squeeze2raop-linux-x86_64-static );
+			return qw(squeeze2raop-linux-x86_64 squeeze2raop-linux-x86_64-static);
 		}
 		if ($os->{'binArch'} =~ /i386/) {
-			return qw(squeeze2raop-linux-x86 squeeze2raop-linux-x86-static );
+			return qw(squeeze2raop-linux-x86 squeeze2raop-linux-x86-static);
 		}
 		if ($os->{'osArch'} =~ /aarch64/) {
-			return qw(squeeze2raop-linux-aarch64 squeeze2raop-linux-aarch64-static );
+			return qw(squeeze2raop-linux-aarch64 squeeze2raop-linux-aarch64-static);
 		}
 		if ($os->{'binArch'} =~ /armhf/) {
 			return qw(squeeze2raop-linux-arm squeeze2raop-linux-arm-static squeeze2raop-linux-armv6 squeeze2raop-linux-armv6-static);
 		}
 		if ($os->{'binArch'} =~ /powerpc/) {
-			return qw(squeeze2raop-linux squeeze2raop-linux-powerpc-static );
+			return qw(squeeze2raop-linux squeeze2raop-linux-powerpc-static);
 		}
 		if ($os->{'binArch'} =~ /sparc/) {
-			return qw(squeeze2raop-linux-sparc64 squeeze2raop-linux-sparc64-static );
+			return qw(squeeze2raop-linux-sparc64 squeeze2raop-linux-sparc64-static);
 		}
 		if ($os->{'binArch'} =~ /mips/) {
-			return qw(squeeze2raop-linux-mips squeeze2raop-linux-mips-static );
+			return qw(squeeze2raop-linux-mips squeeze2raop-linux-mips-static);
 		}
 		
 	}
@@ -49,23 +49,16 @@ sub binaries {
 	if ($os->{'os'} eq 'Unix') {
 	
 		if ($os->{'osName'} eq 'solaris') {
-			return qw(squeeze2raop-solaris-x86_64 squeeze2raop-solaris-x86_64-static );
+			return qw(squeeze2raop-solaris-x86_64 squeeze2raop-solaris-x86_64-static);
 		}	
 		if ($os->{'osName'} =~ /freebsd/) {
-			return qw( squeeze2raop-freebsd-x86_64 squeeze2raop-freebsd-x86_64-static );
+			return qw( squeeze2raop-freebsd-x86_64 squeeze2raop-freebsd-x86_64-static);
 		}
 		
 	}	
 	
 	if ($os->{'os'} eq 'Darwin') {
-		
-		if ($os->{'binArch'} =~ /x86_64/) {
-			return qw(squeeze2raop-macos-x86_64 squeeze2raop-macos-x86_64-static);
-		}
-		if ($os->{'binArch'} =~ /arm64/) {
-			return qw(squeeze2raop-macos-arm64 squeeze2raop-macos-arm64-static);
-		}
-		
+		return qw(squeeze2raop-macos squeeze2raop-macos-static);
 	}
 	
 	if ($os->{'os'} eq 'Windows') {

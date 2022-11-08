@@ -915,6 +915,23 @@ void DelRaopDevice(struct sMR *Device) {
 }
 
 /*----------------------------------------------------------------------------*/
+void* DelayedPreventPlayback(void *arg) {
+	usleep(1000 * 1000);
+	pthread_testcancel();
+
+	LOG_INFO("[%p]: remote asked to stop LMS (delayed)", arg);
+
+	struct sMR* Device = arg;
+	Device->DiscWait = true;
+
+	sq_notify(Device->SqueezeHandle, Device,
+		      strcasestr(Device->Config.PreventPlayback, "stop") ? SQ_STOP : SQ_OFF, 
+		      NULL, NULL);
+
+	return NULL;
+}
+
+/*----------------------------------------------------------------------------*/
 static void *ActiveRemoteThread(void *args) {
 	char buf[1024], command[128], ActiveRemote[16];
 	char response[] = "HTTP/1.1 204 No Content\r\nDate: %s,%02d %s %4d %02d:%02d:%02d "
@@ -1000,10 +1017,16 @@ static void *ActiveRemoteThread(void *args) {
 		if (strcasestr(command, "setproperty?dmcp")) {
 			// player is switched to something else, so require immediate disc
 			if (strcasestr(command, "device-prevent-playback=1")) {
-				Device->DiscWait = true;
-				sq_notify(Device->SqueezeHandle, Device,
-						!strcasecmp(Device->Config.PreventPlayback, "STOP") ? SQ_STOP : SQ_OFF,
-						NULL, NULL);
+				if (!strcasestr(Device->Config.PreventPlayback, "wait")) {
+					Device->DiscWait = true;
+					sq_notify(Device->SqueezeHandle, Device,
+					          strcasestr(Device->Config.PreventPlayback, "stop") ? SQ_STOP : SQ_OFF,
+							  NULL, NULL);
+				} else {
+					pthread_create(&Device->Lambda, NULL, DelayedPreventPlayback, Device);
+				}
+			} else if (strcasestr(command, "device-prevent-playback=0")) {
+				pthread_cancel(Device->Lambda);
 			}
 
 			/*

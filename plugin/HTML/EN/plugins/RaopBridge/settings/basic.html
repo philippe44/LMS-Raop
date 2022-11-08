@@ -175,7 +175,7 @@
 	[% END %]
 	
 	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_OTHEROPTIONS" desc="PLUGIN_RAOPBRIDGE_OTHEROPTIONS_DESC" %]
-		[% PREVENTPLAYBACKBOX = [['',''], ['PLUGIN_RAOPBRIDGE_STOP','stop'], ['PLUGIN_RAOPBRIDGE_POWEROFF','off']] %]
+		[% PREVENTPLAYBACKBOX = [['',''], ['PLUGIN_RAOPBRIDGE_STOP','stop'], ['PLUGIN_RAOPBRIDGE_POWEROFF','off'], ['PLUGIN_RAOPBRIDGE_WAITSTOP','wait+stop'], ['PLUGIN_RAOPBRIDGE_WAITPOWEROFF','wait+off']] %]
 		[% "PLUGIN_RAOPBRIDGE_PREVENTPLAYBACK" | string %]
 		<select class="stdedit" name="prevent_playback" id="prevent_playback">
 		[% FOREACH entry IN PREVENTPLAYBACKBOX %] 
