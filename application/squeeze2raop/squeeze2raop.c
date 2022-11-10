@@ -80,11 +80,8 @@ tMRConfig			glMRConfig = {
 							-1,				 // Volume = nothing at first connection
 							VOLUME_FEEDBACK, // volumeFeedback
 							"-30:1, -15:50, 0:100",
-							true,
-							false,
-							false,			 // VolumeTrigger
-							"stop",			 // PreventPlayback
-							false,			 // Persistent
+							true,			 // mute_on_pause
+							false,			 // alac_encode
 					};
 
 static uint8_t LMSVolumeMap[129] = {
@@ -249,15 +246,17 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, void 
 	if (action == SQ_ONOFF) {
 		device->on = *((bool*) param);
 
-		if (device->on && device->Config.AutoPlay)
+		if (device->on && device->Config.AutoPlay) {
+			// switching player back ON let us take over 
+			device->PlayerStatus = 0;
 			sq_notify(device->SqueezeHandle, device, SQ_PLAY, NULL, &device->on);
+		}
 
 		if (!device->on) {
+			// flush everything in queue
 			tRaopReq *Req = malloc(sizeof(tRaopReq));
-
-			queue_flush(&device->Queue);
 			strcpy(Req->Type, "OFF");
-
+			queue_flush(&device->Queue);
 			queue_insert(&device->Queue, Req);
 			pthread_cond_signal(&device->Cond);
 		}
@@ -297,7 +296,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, void 
 
 			device->TrackRunning = false;
 			device->sqState = SQ_PAUSE;
-			// see not in raop_client.h why this 2-stages pause is needed
+			// see note in raop_client.h why this 2-stages pause is needed
 			raopcl_pause(device->Raop);
 
 			Req = malloc(sizeof(tRaopReq));
@@ -323,14 +322,12 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, void 
 			uint32_t Volume = LMSVolumeMap[*(uint16_t*) param];
 			uint32_t now = gettime_ms();
 
-			if (device->Config.VolumeMode == VOLUME_HARD &&
-				(device->Config.VolumeFeedback == VOLUME_UNFILTERED || now > device->VolumeStampRx + 1000) &&
+			if (device->Config.VolumeMode == VOLUME_HARD &&	now > device->VolumeStampRx + 1000 &&
 				(Volume || device->Config.MuteOnPause || sq_get_mode(device->SqueezeHandle) == device->sqState)) {
-				tRaopReq *Req = malloc(sizeof(tRaopReq));
-
-				device->VolumeStampTx = now;
+				
 				device->Volume = Volume;
-
+				
+				tRaopReq *Req = malloc(sizeof(tRaopReq));
 				Req->Data.Volume = device->VolumeMapping[(unsigned)device->Volume];
 				strcpy(Req->Type, "VOLUME");
 				queue_insert(&device->Queue, Req);
@@ -402,6 +399,19 @@ static void *PlayerThread(void *args) {
 		// context is valid until this thread ends, no deletion issue
 		tRaopReq *req = GetRequest(&Device->Queue, &Device->Mutex, &Device->Cond, 1000);
 
+		// player is not ready to receive commands
+		if (Device->PlayerStatus & DMCP_PREVENT_PLAYBACK) {
+			if (req) {
+				pthread_mutex_lock(&Device->Mutex);
+				queue_insert_first(&Device->Queue, req);
+				pthread_mutex_unlock(&Device->Mutex);
+				usleep(50 * 1000);
+			}
+
+			LOG_INFO("[%p]: prevent playback %u", Device);
+			continue;
+		}
+
 		// empty means timeout every sec
 		if (!req) {
 			uint32_t now = gettime_ms();
@@ -409,7 +419,6 @@ static void *PlayerThread(void *args) {
 			LOG_DEBUG("[%p]: tick %u", Device, now);
 
 			if (Device->DiscWait && (Device->LastFlush + (Device->Config.IdleTimeout * 1000) - now > 1000) ) {
-				Device->VolumeReady = !Device->Config.VolumeTrigger;
 				LOG_INFO("[%p]: Disconnecting %u", Device, now);
 				raopcl_disconnect(Device->Raop);
 				Device->DiscWait = false;
@@ -417,14 +426,10 @@ static void *PlayerThread(void *args) {
 
 			Device->Sane = raopcl_is_sane(Device->Raop) ? 0 : Device->Sane + 1;
 			if (Device->Sane > 3) {
-				if (Device->Config.Persistent) {
-					LOG_ERROR("[%p]: broken connection, attempting repair", Device);
-					raopcl_repair(Device->Raop, !Device->Config.VolumeTrigger);
-				} else {
-					pthread_mutex_lock(&Device->Mutex);
-					sq_notify(Device->SqueezeHandle, Device, SQ_STOP, NULL, NULL);
-					pthread_mutex_unlock(&Device->Mutex);
-				}
+				LOG_WARN("[%p]: broken connection, giving up", Device);
+				pthread_mutex_lock(&Device->Mutex);
+				sq_notify(Device->SqueezeHandle, Device, SQ_OFF, NULL, NULL);
+				pthread_mutex_unlock(&Device->Mutex);
 			}
 
 			// after that, only check what's needed when running
@@ -468,8 +473,9 @@ static void *PlayerThread(void *args) {
 						char *image = NULL, *contentType = NULL;
 						int size = http_fetch(metadata.artwork, &contentType, &image);
 
-						if (size != -1)	raopcl_set_artwork(Device->Raop, contentType, size, image);
-						else {
+						if (size != -1) {
+							raopcl_set_artwork(Device->Raop, contentType, size, image);
+						} else {
 							LOG_WARN("[%p]: cannot get coverart %s", Device, metadata.artwork);
 						}
 
@@ -504,62 +510,34 @@ static void *PlayerThread(void *args) {
 
 			} else pthread_mutex_unlock(&Device->Mutex);
 
-			// repeating a volume after CONNECT or volume trigger never received
-			if (Device->VolumeReadyWait && !--Device->VolumeReadyWait) {
-				LOG_WARN("[%p]: volume repeat or trigger timeout %d", Device, Device->Volume);
-				Device->VolumeReady = true;
-				// only send 'last' command if required (might be -1 in config)
-				if (Device->Volume != -1) raopcl_set_volume(Device->Raop, Device->VolumeMapping[(unsigned)Device->Volume]);
-			}
-
 			continue;
 		}
 
 		if (!strcasecmp(req->Type, "CONNECT")) {
-
 			LOG_INFO("[%p]: raop connecting ...", Device);
-
-			/*
-			if needed to wait for a volume, set a timoeut in case player does
-			not send it otherwise repeat volume command for "stubborn" players
-            */
-			if (!Device->VolumeReady) Device->VolumeReadyWait = 3;
-			else Device->VolumeReadyWait = 1;
-
-			if (raopcl_connect(Device->Raop, Device->PlayerIP, Device->PlayerPort, !Device->Config.VolumeTrigger)) {
+			if (raopcl_connect(Device->Raop, Device->PlayerIP, Device->PlayerPort, true)) {
 				Device->DiscWait = false;
 				LOG_INFO("[%p]: raop connected", Device);
-			}
-			else {
+			} else {
 				LOG_ERROR("[%p]: raop failed to connect", Device);
 			}
 		}
 
 		if (!strcasecmp(req->Type, "FLUSH")) {
-			// to handle immediate disconnect when a player sends busy
-			if (Device->DiscWait) {
-				LOG_INFO("[%p]: disconnecting ...", Device);
-				Device->DiscWait = false;
-				Device->VolumeReady = !Device->Config.VolumeTrigger;
-				raopcl_disconnect(Device->Raop);
-			}
-			else {
-				LOG_INFO("[%p]: flushing ...", Device);
-				Device->LastFlush = gettime_ms();
-				Device->DiscWait = true;
-				raopcl_flush(Device->Raop);
-			}
+			LOG_INFO("[%p]: flushing ...", Device);
+			Device->LastFlush = gettime_ms();
+			Device->DiscWait = true;
+			raopcl_flush(Device->Raop);
 		}
 
 		if (!strcasecmp(req->Type, "OFF")) {
 			LOG_INFO("[%p]: processing off", Device);
-			Device->VolumeReady = !Device->Config.VolumeTrigger;
 			raopcl_disconnect(Device->Raop);
 			raopcl_sanitize(Device->Raop);
 		}
 
-		if (!strcasecmp(req->Type, "VOLUME") && Device->VolumeReady) {
-			LOG_INFO("[%p]: processing volume: %d (%.2f)", Device, Device->Volume, req->Data.Volume);
+		if (!strcasecmp(req->Type, "VOLUME")) {
+			LOG_INFO("[%p]: processing volume device:%d request:%.2f", Device, Device->Volume, req->Data.Volume);
 			raopcl_set_volume(Device->Raop, req->Data.Volume);
 		}
 
@@ -761,7 +739,6 @@ static bool AddRaopDevice(struct sMR *Device, mdnssd_service_t *s) {
 	if (!Device->Config.Enabled) return false;
 
 	if (strcasestr(s->name, "AirSonos")) {
-
 		LOG_DEBUG("[%p]: skipping AirSonos player (please use uPnPBridge)", Device);
 		return false;
 	}
@@ -789,13 +766,11 @@ static bool AddRaopDevice(struct sMR *Device, mdnssd_service_t *s) {
 	Device->SqueezeHandle 	= 0;
 	Device->Running 		= true;
 	// make sure that 1st volume is not missed
-	Device->VolumeStampRx 	= Device->VolumeStampTx = gettime_ms() - 2000;
+	Device->VolumeStampRx 	= gettime_ms() - 2000;
 	Device->PlayerIP 		= s->addr;
 	Device->PlayerPort 		= s->port;
 	Device->DiscWait 		= false;
 	Device->TrackRunning 	= false;
-	Device->VolumeReady 	= !Device->Config.VolumeTrigger;
-	Device->VolumeReadyWait = 0;
 	Device->Volume 			= Device->Config.Volume;
 	Device->SkipStart 		= 0;
 	Device->SkipDir 		= false;
@@ -837,7 +812,8 @@ static bool AddRaopDevice(struct sMR *Device, mdnssd_service_t *s) {
 		}
 	}
 
-	LOG_INFO("[%p]: adding renderer (%s) with mac %hX-%X", Device, Device->FriendlyName, *(uint16_t*)Device->sq_config.mac, *(uint32_t*)(Device->sq_config.mac + 2));
+	LOG_INFO("[%p]: adding renderer (%s@%s) with mac %hX-%X", Device, Device->FriendlyName, inet_ntoa(Device->PlayerIP),  
+	         *(uint16_t*)Device->sq_config.mac, *(uint32_t*)(Device->sq_config.mac + 2));
 
 	// gather RAOP device capabilities, to be matched mater
 	Device->SampleSize = GetmDNSAttribute(s->attr, s->attr_count, "ss");
@@ -861,7 +837,7 @@ static bool AddRaopDevice(struct sMR *Device, mdnssd_service_t *s) {
 								 Device->SampleRate ? atoi(Device->SampleRate) : 44100,
 								 Device->SampleSize ? atoi(Device->SampleSize) : 16,
 								 Device->Channels ? atoi(Device->Channels) : 2,
-								 raopcl_float_volume(Device->Volume));
+								 Device->Volume > 0 ? Device->VolumeMapping[(unsigned) Device->Volume] : -144.0);
 
 	NFREE(am);
 	NFREE(md);
@@ -915,23 +891,6 @@ void DelRaopDevice(struct sMR *Device) {
 }
 
 /*----------------------------------------------------------------------------*/
-void* DelayedPreventPlayback(void *arg) {
-	usleep(1000 * 1000);
-	pthread_testcancel();
-
-	LOG_INFO("[%p]: remote asked to stop LMS (delayed)", arg);
-
-	struct sMR* Device = arg;
-	Device->DiscWait = true;
-
-	sq_notify(Device->SqueezeHandle, Device,
-		      strcasestr(Device->Config.PreventPlayback, "stop") ? SQ_STOP : SQ_OFF, 
-		      NULL, NULL);
-
-	return NULL;
-}
-
-/*----------------------------------------------------------------------------*/
 static void *ActiveRemoteThread(void *args) {
 	char buf[1024], command[128], ActiveRemote[16];
 	char response[] = "HTTP/1.1 204 No Content\r\nDate: %s,%02d %s %4d %02d:%02d:%02d "
@@ -965,6 +924,8 @@ static void *ActiveRemoteThread(void *args) {
 		recv(sd, (void*) buf, sizeof(buf) - 1, 0);
 		buf[sizeof(buf) - 1] = '\0';
 		strlwr(buf);
+		LOG_ERROR("raw active remote: %s", buf);
+
 		// a pretty basic reading of command
 		p = strstr(buf, "active-remote:");
 		if (p) sscanf(p, "active-remote:%15s", ActiveRemote);
@@ -972,6 +933,7 @@ static void *ActiveRemoteThread(void *args) {
 		p = strstr(buf, "/ctrl-int/1/");
 		if (p) sscanf(p, "/ctrl-int/1/%127s", command);
 		command[sizeof(command) - 1] = '\0';
+
 		// find where this is coming from
 		for (i = 0; i < MAX_RENDERERS; i++) {
 			if (glMRDevices[i].Running && !strcmp(glMRDevices[i].ActiveRemote, ActiveRemote)) {
@@ -979,20 +941,25 @@ static void *ActiveRemoteThread(void *args) {
 				break;
 			}
 		}
+
 		if (!Device) {
 			LOG_ERROR("DACP from unknown player %s", buf);
 			closesocket(sd);
 			continue;
 		}
+
 		// this is async, so need to check context validity
 		pthread_mutex_lock(&Device->Mutex);
+
 		if (!Device->Running) {
 			LOG_WARN("[%p]: device has been removed", Device);
 			pthread_mutex_unlock(&Device->Mutex);
 			closesocket(sd);
 			continue;
 		}
+
 		LOG_INFO("[%p]: remote command %s", Device, command);
+
 		if (!strcasecmp(command, "pause")) sq_notify(Device->SqueezeHandle, Device, SQ_PAUSE, NULL, NULL);
 		if (!strcasecmp(command, "play")) sq_notify(Device->SqueezeHandle, Device, SQ_PLAY, NULL, NULL);
 		if (!strcasecmp(command, "playpause")) sq_notify(Device->SqueezeHandle, Device, SQ_PLAY_PAUSE, NULL, NULL);
@@ -1015,70 +982,54 @@ static void *ActiveRemoteThread(void *args) {
 
 		// handle DMCP commands
 		if (strcasestr(command, "setproperty?dmcp")) {
-			// player is switched to something else, so require immediate disc
+
+			// player can't handle requests or switched to another input
 			if (strcasestr(command, "device-prevent-playback=1")) {
-				if (!strcasestr(Device->Config.PreventPlayback, "wait")) {
-					Device->DiscWait = true;
-					sq_notify(Device->SqueezeHandle, Device,
-					          strcasestr(Device->Config.PreventPlayback, "stop") ? SQ_STOP : SQ_OFF,
-							  NULL, NULL);
-				} else {
-					pthread_create(&Device->Lambda, NULL, DelayedPreventPlayback, Device);
-				}
+				Device->PlayerStatus |= DMCP_PREVENT_PLAYBACK;
 			} else if (strcasestr(command, "device-prevent-playback=0")) {
-				pthread_cancel(Device->Lambda);
+				Device->PlayerStatus &= ~DMCP_PREVENT_PLAYBACK;
+			} else if (strcasestr(command, "device-busy=1")) {
+				Device->PlayerStatus |= DMCP_BUSY;
+				if (Device->PlayerStatus & DMCP_PREVENT_PLAYBACK) {
+					sq_notify(Device->SqueezeHandle, Device, SQ_OFF, NULL, NULL);
+				}
+			} else if (strcasestr(command, "device-busy=0")) {
+				Device->PlayerStatus &= ~DMCP_BUSY;
 			}
 
-			/*
-			 volume remote command in 2 formats
-				setproperty?dmcp.volume=0..100
-				setproperty?dmcp.device-volume=-30..0 (or -144)
-			*/
-			if (strcasestr(command, "device-volume=") || strcasestr(command, ".volume=")) {
-				/*
-				 When waiting for a first feedback before sending volume, new
-				 value shall only be sent if volume is HARDWARE or an initial
-				 has been set
-				*/
+			/* Volume remote command in 2 formats
+			 *	- setproperty?dmcp.volume=0..100
+			 *	- setproperty?dmcp.device-volume=-30..0 (or -144) 
+			 */
+			if ((strcasestr(command, "device-volume=") || strcasestr(command, ".volume=")) &&
+				Device->Config.VolumeMode != VOLUME_SOFT && Device->Config.VolumeFeedback) {
+				float volume;
+				int i;
+				uint32_t now = gettime_ms();
 
-				if (!Device->VolumeReady) {
-					tRaopReq *Req = malloc(sizeof(tRaopReq));
+				sscanf(command, "%*[^=]=%f", &volume);
+				if (strcasestr(command, ".volume=")) i = (int) volume;
+				else for (i = 0; i < 100 && volume > Device->VolumeMapping[i]; i++);
+				volume = Device->VolumeMapping[i];
 
-					Device->VolumeReady = true;
-					Device->VolumeReadyWait = 0;
+				LOG_INFO("[%p]: volume feedback %u (%.2f)", Device, i, volume);
 
-					if (Device->Config.VolumeMode == VOLUME_HARD || Device->Volume != -1) {
-						LOG_INFO("[%p]: volume trigger %d (%s)", Device, Device->Volume, command);
-						Req->Data.Volume = Device->VolumeMapping[(unsigned)Device->Volume];
-						strcpy(Req->Type, "VOLUME");
-						queue_insert(&Device->Queue, Req);
-						pthread_cond_signal(&Device->Cond);
-					}
-				/*
-				  Feedback does not make much sense with SOFT_VOLUME anyway, better
-				  set VOLUME_IGNORE in that case
-				*/
-				} else if (Device->Config.VolumeMode != VOLUME_SOFT && Device->Config.VolumeFeedback) {
-					float volume;
-					int i;
-					uint32_t now = gettime_ms();
+				if (i != Device->Volume) {
+					// in case of change, notify LMS (but we should ignore command)
+					char vol[10];
+					sprintf(vol, "%d", i);
+					Device->VolumeStampRx = now;
+					sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, vol);
 
-					sscanf(command, "%*[^=]=%f", &volume);
-					if (strcasestr(command, ".volume=")) i = (int) volume;
-					else for (i = 0; i < 100 && volume > Device->VolumeMapping[i]; i++);
-					LOG_INFO("[%p]: volume feedback %u (%.2f)", Device, i, volume);
-					if (i != Device->Volume && !Device->VolumeReadyWait && now > Device->VolumeStampTx + 1000) {
-						char vol[10];
-						sprintf(vol, "%d", i);
-						Device->VolumeStampRx = now;
-						sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, vol);
-					}
-				}
+					// some players expect contoller to update volume, it's a request not a notification	
+					tRaopReq* Req = malloc(sizeof(tRaopReq));
+					Req->Data.Volume = volume;
+					strcpy(Req->Type, "VOLUME");
+					queue_insert(&Device->Queue, Req);
+					pthread_cond_signal(&Device->Cond);
+				} 
 			}
 		}
-
-		// can free mutex at this point
-		pthread_mutex_unlock(&Device->Mutex);
 
 		// send pre-made response
 		gmt = *gmtime(&now);
@@ -1086,7 +1037,11 @@ static void *ActiveRemoteThread(void *args) {
 								gmt.tm_year + 1900, gmt.tm_hour, gmt.tm_min, gmt.tm_sec);
 		send(sd, buf, strlen(buf), 0);
 		closesocket(sd);
+
+		// don't free the mutex before answer has been given, in case a pthread_cond is emitted
+		pthread_mutex_unlock(&Device->Mutex);
 	}
+
 	return NULL;
 }
 /*----------------------------------------------------------------------------*/

@@ -187,7 +187,6 @@ PLUGIN_RAOPBRIDGE_VOLUMEMGMT_DESC
 	EN	<br>- <i>hardware</i>: LMS volume is transcoded into AirPlay commands (<b>HIGHLY recommended</b>)
 	EN	<br>- <i>software</i>: LMS volume is rendered by applying gain on digital samples. Note that volume feedback is disabled
 	EN	<br><b>Mute on Pause</b>: Allow LMS to mute player while paused 
-	EN	<br><b>Trigger</b>: Volume triggered by reception of player's volume status (set if volume is muted/ignored after un-pause)
 	EN	<br><b>Feedback</b>: Allows device's remote control to change LMS volume - please see the "Mapping" parameter and read User's Guide to set it to "raw"
 	EN	<br><b>Mapping</b>: Defines a few matching points between AirPlay volume (-30...0) and LMS volume (1..100). 
 	EN	This is a comma-separated set of pairs like "a1:l1, a2:l2 ... an:ln" (a=AirPlay, l=LMS).
@@ -210,9 +209,6 @@ PLUGIN_RAOPBRIDGE_VOLUMEFEEDBACK
 
 PLUGIN_RAOPBRIDGE_VOLUMEMAPPING
 	EN	Mapping
-
-PLUGIN_RAOPBRIDGE_VOLUMETRIGGER
-	EN	Trigger	
 
 PLUGIN_RAOPBRIDGE_SERVER
 	EN	LMS Server
@@ -305,33 +301,6 @@ PLUGIN_RAOPBRIDGE_SUBMIT
 PLUGIN_RAOPBRIDGE_PINCODE
 	EN	Enter PIN code
 
-PLUGIN_RAOPBRIDGE_OTHEROPTIONS
-	EN	Various Options
-
-PLUGIN_RAOPBRIDGE_PREVENTPLAYBACK
-	EN	When AirPlay disconnects
-	
-PLUGIN_RAOPBRIDGE_POWEROFF
-	EN	Off
-	
-PLUGIN_RAOPBRIDGE_STOP
-	EN	Stop
-	
-PLUGIN_RAOPBRIDGE_WAITPOWEROFF
-	EN	Wait+Off
-	
-PLUGIN_RAOPBRIDGE_WAITSTOP
-	EN	Wait+Stop
-	
-PLUGIN_RAOPBRIDGE_PERSISTENT
-	EN	Re-connect on error
-	
-PLUGIN_RAOPBRIDGE_OTHEROPTIONS_DESC
-	EN	- When AirPlay device disconnects locally (e.g. by using the remote of an AV amplifier to switch source, should LMS stop or 
-	EN	poweroff the virtual SB player). Some (faulty) players send a disconnect+reconnect sequence even when the track switch is 
-	EN	requested by LMS. the 'Wait+' option allows a delay of 1s after the disconnect to be sure...
-	EN	<br>- When there is a communication error, should the bridge try to reconnect (can happen when using another AirPlay controller)
-		
 PLUGIN_RAOPBRIDGE_NOCONFIG
 	EN	Configuration file missing - create one by clicking "generate" or, if autosave is on, refresh this page
 

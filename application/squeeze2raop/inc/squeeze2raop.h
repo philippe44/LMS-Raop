@@ -33,6 +33,9 @@
 
 #define PLAYER_LATENCY	1500
 
+#define DMCP_PREVENT_PLAYBACK	0x01
+#define DMCP_BUSY				0x02
+
 enum { CONFIG_CREATE, CONFIG_UPDATE, CONFIG_MIGRATE };
 
 typedef struct sRaopReq {
@@ -60,9 +63,6 @@ typedef struct sMRConfig
 	char		VolumeMapping[STR_LEN];
 	bool		MuteOnPause;
 	bool		AlacEncode;
-	bool		VolumeTrigger;
-	char 		PreventPlayback[STR_LEN];
-	bool 		Persistent;
 } tMRConfig;
 
 
@@ -79,14 +79,13 @@ struct sMR {
 	int	 			SqueezeHandle;
 	sq_action_t		sqState;
 	int8_t			Volume;
-	uint32_t		VolumeStampRx, VolumeStampTx;
+	uint32_t		VolumeStampRx;
 	float 			VolumeMapping[101];
-	bool			VolumeReady;
-	uint8_t			VolumeReadyWait;
 	struct raopcl_s	*Raop;
 	struct in_addr 	PlayerIP;
 	uint16_t		PlayerPort;
-	pthread_t		Thread, Lambda;
+	pthread_t		Thread;
+	uint8_t			PlayerStatus;
 	pthread_mutex_t Mutex;
 	pthread_cond_t	Cond;
 	bool			Delete;

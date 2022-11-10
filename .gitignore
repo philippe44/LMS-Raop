@@ -104,3 +104,4 @@ _backup/
 build/
 .vs/
 *.bat
+*.user

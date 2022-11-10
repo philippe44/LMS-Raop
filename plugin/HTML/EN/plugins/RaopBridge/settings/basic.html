@@ -105,19 +105,12 @@
 		[% FOREACH entry IN [ ['',''], ['PLUGIN_RAOPBRIDGE_VOLUMEIGNORE','0'], ['PLUGIN_RAOPBRIDGE_VOLUMESOFT','1'], ['PLUGIN_RAOPBRIDGE_VOLUMEHARD','2'] ] %]
 			<option [% IF entry.1 == volume_mode %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 		[% END %]</select>
-		&nbsp[% "PLUGIN_RAOPBRIDGE_PLAYERVOLUME" | string %]&nbsp<input type="text" class="stdedit" name="player_volume" id="player_volume" value="[% player_volume %]" size="2">
-		&nbsp[% "PLUGIN_RAOPBRIDGE_VOLUMEMAPPING" | string %]&nbsp<input type="text" class="stdedit" name="volume_mapping" id="volume_mapping" value="[% volume_mapping %]" size="30">
-		</p>
-		[% "PLUGIN_RAOPBRIDGE_MUTEONPAUSE" | string %]
+		&nbsp[% "PLUGIN_RAOPBRIDGE_PLAYERVOLUME" | string %]&nbsp<input type="text" class="stdedit" name="player_volume" id="player_volume" value="[% player_volume %]" size="1">
+		&nbsp[% "PLUGIN_RAOPBRIDGE_VOLUMEMAPPING" | string %]&nbsp<input type="text" class="stdedit" name="volume_mapping" id="volume_mapping" value="[% volume_mapping %]" size="15">
+		&nbsp[% "PLUGIN_RAOPBRIDGE_MUTEONPAUSE" | string %]
 		<select class="stdedit" name="mute_on_pause" id="mute_on_pause">
 		[% FOREACH entry IN YESNOBOX %] 
 			<option [% IF entry.1 == mute_on_pause %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
-		[% END %]
-		</select>
-		&nbsp[% "PLUGIN_RAOPBRIDGE_VOLUMETRIGGER" | string %]
-		<select class="stdedit" name="volume_trigger" id="volume_trigger">
-		[% FOREACH entry IN YESNOBOX %] 
-			<option [% IF entry.1 == volume_trigger %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
 		[% END %]
 		</select>
 		&nbsp[% "PLUGIN_RAOPBRIDGE_VOLUMEFEEDBACK" | string %]&nbsp<select class="stdedit" name="volume_feedback" id="volume_feedback">
@@ -172,22 +165,6 @@
 		[% END %]
 		</select>
 		&nbsp&nbsp[% "PLUGIN_RAOPBRIDGE_RESOLUTION" | string %]&nbsp<input type="text" class="stdedit" name="resolution" id="resolution" value="[% resolution %]" size="5">
-	[% END %]
-	
-	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_OTHEROPTIONS" desc="PLUGIN_RAOPBRIDGE_OTHEROPTIONS_DESC" %]
-		[% PREVENTPLAYBACKBOX = [['',''], ['PLUGIN_RAOPBRIDGE_STOP','stop'], ['PLUGIN_RAOPBRIDGE_POWEROFF','off'], ['PLUGIN_RAOPBRIDGE_WAITSTOP','wait+stop'], ['PLUGIN_RAOPBRIDGE_WAITPOWEROFF','wait+off']] %]
-		[% "PLUGIN_RAOPBRIDGE_PREVENTPLAYBACK" | string %]
-		<select class="stdedit" name="prevent_playback" id="prevent_playback">
-		[% FOREACH entry IN PREVENTPLAYBACKBOX %] 
-			<option [% IF entry.1 == prevent_playback %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
-		[% END %]
-		</select>
-		&nbsp&nbsp[% "PLUGIN_RAOPBRIDGE_PERSISTENT" | string %]
-		<select class="stdedit" name="persistent" id="persistent">
-		[% FOREACH entry IN YESNOBOX %] 
-			<option [% IF entry.1 == persistent %]selected[% END %] value="[% entry.1 %]">[% entry.0 | string %]</option>
-		[% END %]
-		</select>
 	[% END %]
 	
 	<hr>
