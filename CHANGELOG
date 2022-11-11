@@ -1,5 +1,7 @@
 Note: beware of crypto version (see shairtunes)
 
+1.1.0.2
+ - erase PlayerStatus when re-creating device
 1.1.0.1
  - timeout for PreventPlayback
  - few fixes for ActiveRemote reception loop

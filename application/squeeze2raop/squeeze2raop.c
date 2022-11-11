@@ -775,6 +775,7 @@ static bool AddRaopDevice(struct sMR *Device, mdnssd_service_t *s) {
 	Device->VolumeStampRx 	= gettime_ms() - 2000;
 	Device->PlayerIP 		= s->addr;
 	Device->PlayerPort 		= s->port;
+	Device->PlayerStatus	= 0;
 	Device->DiscWait 		= false;
 	Device->TrackRunning 	= false;
 	Device->Volume 			= Device->Config.Volume;

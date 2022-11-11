@@ -68,7 +68,6 @@
     <ClCompile Include="squeezelite\output_raop.c">
       <Filter>squeezelite</Filter>
     </ClCompile>
-    <ClCompile Include="squeezelite\mad.c" />
     <ClCompile Include="squeezelite\vorbis.c">
       <Filter>squeezelite</Filter>
     </ClCompile>
@@ -76,6 +75,9 @@
       <Filter>squeezelite</Filter>
     </ClCompile>
     <ClCompile Include="squeezelite\faad.c">
+      <Filter>squeezelite</Filter>
+    </ClCompile>
+    <ClCompile Include="squeezelite\mad.c">
       <Filter>squeezelite</Filter>
     </ClCompile>
   </ItemGroup>
