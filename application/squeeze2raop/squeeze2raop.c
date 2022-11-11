@@ -385,7 +385,7 @@ static void* GetRequest(cross_queue_t* Queue, pthread_mutex_t* Mutex, pthread_co
 /*----------------------------------------------------------------------------*/
 static void *PlayerThread(void *args) {
 	struct sMR *Device = (struct sMR*) args;
-	uint32_t KeepAlive = 0;
+	uint32_t KeepAlive = 0, Last = 0;
 
 	Device->Running = true;
 
@@ -398,24 +398,30 @@ static void *PlayerThread(void *args) {
 	while (Device->Running) {
 		// context is valid until this thread ends, no deletion issue
 		tRaopReq *req = GetRequest(&Device->Queue, &Device->Mutex, &Device->Cond, 1000);
+		uint32_t now = gettime_ms();
 
 		// player is not ready to receive commands
 		if (Device->PlayerStatus & DMCP_PREVENT_PLAYBACK) {
-			if (req) {
-				pthread_mutex_lock(&Device->Mutex);
+			pthread_mutex_lock(&Device->Mutex);
+
+			if (now > Last + 5000) {
+				LOG_WARN("[%p]: Player has been in 'PreventPlayback' for too long");
+				sq_notify(Device->SqueezeHandle, Device, SQ_OFF, NULL, NULL);
+			} else if (req) {
 				queue_insert_first(&Device->Queue, req);
-				pthread_mutex_unlock(&Device->Mutex);
-				usleep(50 * 1000);
 			}
 
-			LOG_INFO("[%p]: prevent playback %u", Device);
+			pthread_mutex_unlock(&Device->Mutex);
+			LOG_DEBUG("[%p]: PreventPlayback loop", Device);
+			usleep(50 * 1000);
+
 			continue;
 		}
+			
+		Last = now;
 
 		// empty means timeout every sec
 		if (!req) {
-			uint32_t now = gettime_ms();
-
 			LOG_DEBUG("[%p]: tick %u", Device, now);
 
 			if (Device->DiscWait && (Device->LastFlush + (Device->Config.IdleTimeout * 1000) - now > 1000) ) {
@@ -426,7 +432,7 @@ static void *PlayerThread(void *args) {
 
 			Device->Sane = raopcl_is_sane(Device->Raop) ? 0 : Device->Sane + 1;
 			if (Device->Sane > 3) {
-				LOG_WARN("[%p]: broken connection, giving up", Device);
+				LOG_WARN("[%p]: broken connection: switching off player", Device);
 				pthread_mutex_lock(&Device->Mutex);
 				sq_notify(Device->SqueezeHandle, Device, SQ_OFF, NULL, NULL);
 				pthread_mutex_unlock(&Device->Mutex);
@@ -893,16 +899,18 @@ void DelRaopDevice(struct sMR *Device) {
 /*----------------------------------------------------------------------------*/
 static void *ActiveRemoteThread(void *args) {
 	char buf[1024], command[128], ActiveRemote[16];
-	char response[] = "HTTP/1.1 204 No Content\r\nDate: %s,%02d %s %4d %02d:%02d:%02d "
+	char response[] = "HTTP/1.0 204 No Content\r\nDate: %s,%02d %s %4d %02d:%02d:%02d "
 					  "GMT\r\nDAAP-Server: iTunes/7.6.2 (Windows; N;)\r\nContent-Type: "
 					  "application/x-dmap-tagged\r\nContent-Length: 0\r\n"
 					  "Connection: close\r\n\r\n";
 	char *day[] = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
 	char *month[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sept", "Oct", "Nov", "Dec" };
+
 	if (listen(glActiveRemoteSock, 1) < 0) {
 		LOG_ERROR("Cannot listen %d", glActiveRemoteSock);
 		return NULL;
 	}
+
 	while (glMainRunning) {
 		int sd, i;
 		struct sockaddr cli_addr;
@@ -913,18 +921,25 @@ static void *ActiveRemoteThread(void *args) {
 		struct tm gmt;
 		sd = accept(glActiveRemoteSock, (struct sockaddr *) &cli_addr, &clilen);
 
-		if (sd < 0 || !glMainRunning) {
-			if (glMainRunning) {
-				LOG_WARN("Accept error", NULL);
-			}
+		if (!glMainRunning) break;
+		
+		if (sd < 0) {
+			LOG_WARN("Accept error", NULL);
 			continue;
 		}
 
 		// receive data, all should be in a single receive, hopefully
-		recv(sd, (void*) buf, sizeof(buf) - 1, 0);
-		buf[sizeof(buf) - 1] = '\0';
+		ssize_t n = recv(sd, (void*) buf, sizeof(buf) - 1, 0);
+
+		if (n < 0) {
+			LOG_WARN("error receving remote control data");
+			closesocket(sd);
+			continue;
+		}
+
+		buf[n] = '\0';
 		strlwr(buf);
-		LOG_ERROR("raw active remote: %s", buf);
+		LOG_INFO("raw active remote: %s", buf);
 
 		// a pretty basic reading of command
 		p = strstr(buf, "active-remote:");
@@ -943,7 +958,7 @@ static void *ActiveRemoteThread(void *args) {
 		}
 
 		if (!Device) {
-			LOG_ERROR("DACP from unknown player %s", buf);
+			LOG_WARN("DACP from unknown player %s", buf);
 			closesocket(sd);
 			continue;
 		}
@@ -1021,7 +1036,7 @@ static void *ActiveRemoteThread(void *args) {
 					Device->VolumeStampRx = now;
 					sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, vol);
 
-					// some players expect contoller to update volume, it's a request not a notification	
+					// some players expect controller to update volume, it's a request not a notification	
 					tRaopReq* Req = malloc(sizeof(tRaopReq));
 					Req->Data.Volume = volume;
 					strcpy(Req->Type, "VOLUME");

@@ -1,5 +1,9 @@
 Note: beware of crypto version (see shairtunes)
 
+1.1.0.1
+ - timeout for PreventPlayback
+ - few fixes for ActiveRemote reception loop
+
 1.1.0
  - remove persistent, trigger and prevent_playback parameters
  - detect busy/prevent_playback and either switch off or wait till player comes back
