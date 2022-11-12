@@ -251,7 +251,7 @@ PLUGIN_RAOPBRIDGE_SENDMETADATA
 	EN	Send LMS metadata to player
 	
 PLUGIN_RAOPBRIDGE_SEND_COVERART
-	EN	Include cover art
+	EN	Include artwork
 
 PLUGIN_RAOPBRIDGE_RESOLUTION
 	EN	Resolution

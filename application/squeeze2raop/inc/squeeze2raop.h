@@ -40,9 +40,15 @@ enum { CONFIG_CREATE, CONFIG_UPDATE, CONFIG_MIGRATE };
 
 typedef struct sRaopReq {
 	char Type[20];
-	union {
+	union sRaopReqData {
 		float Volume;
 		uint64_t FlushTS;
+		struct {
+			struct sMR* Device;
+			uint32_t Hash;
+			char* Url, *ContentType, *Image;
+			int Size;
+		} Artwork;
 	} Data;
 } tRaopReq;
 

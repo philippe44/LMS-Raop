@@ -372,6 +372,31 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, void 
 }
 
 /*----------------------------------------------------------------------------*/
+static void* GetArtworkThread(void *arg) {
+	union sRaopReqData* Data = &((tRaopReq*) arg)->Data;
+	struct sMR* Device = Data->Artwork.Device;
+
+	// try to get the image, might take a while
+	Data->Artwork.Size = http_fetch(Data->Artwork.Url, &Data->Artwork.ContentType, &Data->Artwork.Image);
+	pthread_mutex_lock(&Device->Mutex);
+
+	// need to make sure we have artwork, that device is active and this si the right query
+	if (Data->Artwork.Size > 0 && Device->Running && Device->MetadataHash == Data->Artwork.Hash) {
+		queue_insert(&Device->Queue, arg);
+		pthread_cond_signal(&Device->Cond);
+	} else {
+		LOG_WARN("[%p]: Can't get arwork or device not active", Device, Data->Artwork.Url);
+		NFREE(Data->Artwork.ContentType);
+		NFREE(Data->Artwork.Image);
+		free(Data->Artwork.Url);
+		free(arg);
+	}
+
+	pthread_mutex_unlock(&Device->Mutex);
+	return NULL;
+}
+
+/*----------------------------------------------------------------------------*/
 static void* GetRequest(cross_queue_t* Queue, pthread_mutex_t* Mutex, pthread_cond_t* Cond, uint32_t timeout) {
 	pthread_mutex_lock(Mutex);
 
@@ -476,17 +501,14 @@ static void *PlayerThread(void *args) {
 
 					// only get coverart if title has changed
 					if (metadata.artwork && Device->Config.SendCoverArt) {
-						char *image = NULL, *contentType = NULL;
-						int size = http_fetch(metadata.artwork, &contentType, &image);
+						tRaopReq* Req = calloc(1, sizeof(tRaopReq));
+						strcpy(Req->Type, "ARTWORK");
+						Req->Data.Artwork.Url = strdup(metadata.artwork);
+						Req->Data.Artwork.Device = Device;
+						Req->Data.Artwork.Hash = hash;
 
-						if (size != -1) {
-							raopcl_set_artwork(Device->Raop, contentType, size, image);
-						} else {
-							LOG_WARN("[%p]: cannot get coverart %s", Device, metadata.artwork);
-						}
-
-						NFREE(image);
-						NFREE(contentType);
+						pthread_t lambda;
+						pthread_create(&lambda, NULL, &GetArtworkThread, Req);
 					}
 
 					/*
@@ -511,6 +533,7 @@ static void *PlayerThread(void *args) {
 
 
 				} else Device->MetadataWait = 5;
+
 				metadata_free(&metadata);
 				LOG_DEBUG("[%p]: next metadata update %u", Device, Device->MetadataWait);
 
@@ -545,6 +568,22 @@ static void *PlayerThread(void *args) {
 		if (!strcasecmp(req->Type, "VOLUME")) {
 			LOG_INFO("[%p]: processing volume device:%d request:%.2f", Device, Device->Volume, req->Data.Volume);
 			raopcl_set_volume(Device->Raop, req->Data.Volume);
+		}
+
+		if (!strcasecmp(req->Type, "ARTWORK")) {
+			union sRaopReqData* Data = &((tRaopReq*)req)->Data;
+			LOG_INFO("[%p]: Got artwork for %s", Device, Data->Artwork.Url);
+
+			// need to make sure this is *really* for us
+			if (Device->MetadataHash == Data->Artwork.Hash) {
+				raopcl_set_artwork(Device->Raop, Data->Artwork.ContentType, Data->Artwork.Size, Data->Artwork.Image);
+			} else {
+				LOG_WARN("[%p]: Wrong artwork", Device);
+			}
+
+			NFREE(Data->Artwork.ContentType);
+			NFREE(Data->Artwork.Image);
+			free(Data->Artwork.Url);
 		}
 
 		free(req);
@@ -731,6 +770,17 @@ void SetVolumeMapping(struct sMR *Device) {
 }
 
 /*----------------------------------------------------------------------------*/
+static void RaopQueueFree(void* item) {
+	tRaopReq* p = item;
+	if (strcasestr(p->Type, "ARTWORK")) {
+		NFREE(p->Data.Artwork.ContentType);
+		NFREE(p->Data.Artwork.Image);
+		free(p->Data.Artwork.Url);
+	}
+	free(p);
+}
+
+/*----------------------------------------------------------------------------*/
 static bool AddRaopDevice(struct sMR *Device, mdnssd_service_t *s) {
 	pthread_attr_t pattr;
 	raop_crypto_t Crypto;
@@ -860,9 +910,6 @@ static bool AddRaopDevice(struct sMR *Device, mdnssd_service_t *s) {
 		return false;
 	}
 
-	pthread_mutex_init(&Device->Mutex, 0);
-	queue_init(&Device->Queue, false, free);
-
 	pthread_attr_init(&pattr);
 	pthread_attr_setstacksize(&pattr, PTHREAD_STACK_MIN + 64*1024);
 	pthread_create(&Device->Thread, NULL, &PlayerThread, Device);
@@ -887,6 +934,7 @@ void DelRaopDevice(struct sMR *Device) {
 	pthread_mutex_unlock(&Device->Mutex);
 	pthread_join(Device->Thread, NULL);
 	raopcl_destroy(Device->Raop);
+	queue_flush(&Device->Queue);
 
 	LOG_INFO("[%p]: Raop device stopped", Device);
 
@@ -1200,6 +1248,7 @@ static bool Start(void) {
     for (i = 0; i < MAX_RENDERERS;  i++) {
 		pthread_mutex_init(&glMRDevices[i].Mutex, 0);
 		pthread_cond_init(&glMRDevices[i].Cond, 0);
+		queue_init(&glMRDevices[i].Queue, false, RaopQueueFree);
 	}
 
 	sq_init(glHost, glModelName);
