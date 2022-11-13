@@ -42,7 +42,7 @@ JANSSON		= libjansson/targets/$(HOST)/$(PLATFORM)
 FETCHER		= http-fetcher
 #VALGRIND	= $(BASE)/valgrind
 
-DEFINES 	= -DCODECS -DUSE_SSL -D_GNU_SOURCE -DUPNP_STATIC_LIB -DLINKALL -DRESAMPLE
+DEFINES	 = -DCODECS -DUSE_SSL -D_GNU_SOURCE -DUPNP_STATIC_LIB -DLINKALL -DRESAMPLE
 CFLAGS  += -Wall -fPIC -ggdb -O2 $(DEFINES) -fdata-sections -ffunction-sections 
 LDFLAGS += -lpthread -ldl -lm -L. 
 

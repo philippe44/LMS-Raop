@@ -368,9 +368,8 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, bool next)
 		}
 
 		if (metadata->artwork && strncmp(metadata->artwork, "http", 4)) {
-			char *artwork = malloc(STR_LEN);
-
-			snprintf(artwork, STR_LEN, "http://%s:%s%s", ctx->server_ip, ctx->server_port, metadata->artwork);
+			char *artwork;
+			(void) !asprintf(&artwork, "http://%s:%s/%s", ctx->server_ip, ctx->server_port, metadata->artwork[0] == '/' ? metadata->artwork + 1 : metadata->artwork);
 			free(metadata->artwork);
 			metadata->artwork = artwork;
 		}

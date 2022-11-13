@@ -385,7 +385,7 @@ static void* GetArtworkThread(void *arg) {
 		queue_insert(&Device->Queue, arg);
 		pthread_cond_signal(&Device->Cond);
 	} else {
-		LOG_WARN("[%p]: Can't get arwork or device not active", Device, Data->Artwork.Url);
+		LOG_WARN("[%p]: Can't get artwork or device not active %s", Device, Data->Artwork.Url);
 		NFREE(Data->Artwork.ContentType);
 		NFREE(Data->Artwork.Image);
 		free(Data->Artwork.Url);

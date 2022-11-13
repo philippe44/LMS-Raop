@@ -50,6 +50,8 @@ sub initPlugin {
 	require Slim::Player::SqueezePlay;
 	$fade_volume = \&Slim::Player::SqueezePlay::fade_volume;
 	*Slim::Player::SqueezePlay::fade_volume = \&fade_volume;
+	
+	*Slim::Utils::Log::raopbridgeLogFile = sub { Plugins::RaopBridge::Squeeze2raop->logFile; };
 		
 	require Plugins::RaopBridge::Squeeze2raop;	
 	require	Plugins::RaopBridge::Pairing;
@@ -61,9 +63,10 @@ sub initPlugin {
 	if (!$::noweb) {
 		require Plugins::RaopBridge::Settings;
 		Plugins::RaopBridge::Settings->new;
-		Slim::Web::Pages->addPageFunction("^raopbridge-log.log", \&Plugins::RaopBridge::Squeeze2raop::logHandler);
-		Slim::Web::Pages->addPageFunction("^raopbridge-config.xml", \&Plugins::RaopBridge::Squeeze2raop::configHandler);
-		Slim::Web::Pages->addPageFunction("raopbridge-guide.htm", \&Plugins::RaopBridge::Squeeze2raop::guideHandler);
+		# there is a bug in LMS where the "content-type" set in handlers is ignored, only extension matters (and is html by default)
+		Slim::Web::Pages->addPageFunction("raopbridge-log", \&Plugins::RaopBridge::Squeeze2raop::logHandler);
+		Slim::Web::Pages->addPageFunction("raopbridge-config.xml", \&Plugins::RaopBridge::Squeeze2raop::configHandler);
+		Slim::Web::Pages->addPageFunction("raopbridge-guide", \&Plugins::RaopBridge::Squeeze2raop::guideHandler);
 	}
 	
 	$log->warn(Dumper(Slim::Utils::OSDetect::details()));

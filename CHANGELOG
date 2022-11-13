@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+1.1.0.4
+ - http_fetcher should stop when content-length has been reached
+ - compilers with static nss glibc
 1.1.0.3
  - grab artwok in a separated thread (SSL might take a long time)
  - do not re-init device's mutex when creating a device
