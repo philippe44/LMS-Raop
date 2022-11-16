@@ -1148,7 +1148,7 @@ void StartActiveRemote(struct in_addr host) {
 	LOG_INFO("DACP port: %d", port);
 
 	// start mDNS responder
-	if ((gl_mDNSResponder = mdnsd_start(host)) == NULL) {
+	if ((gl_mDNSResponder = mdnsd_start(host, false)) == NULL) {
 		LOG_ERROR("mdnsd responder start error", NULL);
 		return;
 	}
