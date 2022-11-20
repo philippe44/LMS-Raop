@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+1.1.0.7
+ - (P) Ed25519 library version( sigh)
+ 
 1.1.0.6
  - (P) add extra libs for 5.34 and 5.36
 
