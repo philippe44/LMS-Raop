@@ -22,23 +22,6 @@ use Slim::Utils::Misc qw(parseRevision);
 
 my $prefs = preferences('plugin.raopbridge');
 my $log   = logger('plugin.raopbridge');
-my $use_async = 0;
-
-=comment
-eval {
-	my (undef, $build) = parseRevision();
-	my ($month, $day, $time, $year) = $build =~ /\S+ (\S+) (\S+) (\S+) \S+ (\S+)/;
-	if (str2time("$day $month $year") < str2time('11 May 2019')) {
-		require Plugins::RaopBridge::Async::HTTP;
-		$log->error("LMS version is too old ($build), need own Aync::HTTP");
-		Plugins::RaopBridge::Async::HTTP::init();
-		$use_async = 0;
-	}	
-};	
-=cut
-require Plugins::RaopBridge::Async::HTTP;
-Plugins::RaopBridge::Async::HTTP::init();
-$use_async = 1;
 
 sub displayPIN {
 	my ($host) = @_;
@@ -61,7 +44,7 @@ sub displayPIN {
 	my $request = HTTP::Request->new( POST => "$host/pair-pin-start" ); 
 	$request->header( 'Connection' => 'Keep-Alive', 'Content-Type' => 'application/octet-stream' );
 				
-	my $session = $use_async ? Plugins::RaopBridge::Async::HTTP->new : Slim::Networking::Async::HTTP->new;
+	my $session = Slim::Networking::Async::HTTP->new;
 	$session->send_request( {
 		request  => $request,
 		onError  => sub { $log->error(Dumper(@_)); $log->error("Display PIN error") }, 
@@ -77,7 +60,7 @@ sub doPairing {
 	my $content = $bplist->write( { 'method' => 'pin', 'user' => $params->{I} } );
 	
 	my $request = HTTP::Request->new( POST => "$host/pair-setup-pin" ); 
-	$request->header( 'Connection' => 'keep-alive', 'Content-Type' => 'application/x-apple-binary-plist' );		
+	$request->header( 'Connection' => 'Keep-Alive', 'Content-Type' => 'application/x-apple-binary-plist' );		
 	$request->content( $content );
 	
 	$session->send_request( {
@@ -125,7 +108,7 @@ sub doStep2 {
 	my $content = $bplist->write( { 'pk' => $A, 'proof' => $M1 } );
 		
 	my $request = HTTP::Request->new( POST => "$host/pair-setup-pin" );
-	$request->header( 'Connection' => 'keep-alive', 'Content-Type' => 'application/x-apple-binary-plist' );		
+	$request->header( 'Connection' => 'Keep-Alive', 'Content-Type' => 'application/x-apple-binary-plist' );		
 	$request->content( $content );
 	
 	$session->send_request( {

@@ -1,5 +1,11 @@
 Note: beware of crypto version (see shairtunes)
 
+1.1.0.9
+ - sigh
+ 
+1.1.0.8
+ - (P) Remove own HTTP async
+ 
 1.1.0.7
  - (P) Ed25519 library version( sigh)
  
