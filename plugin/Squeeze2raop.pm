@@ -176,7 +176,7 @@ sub beat {
 		
 		if ($prefs->get('logging')) {
 			open(my $fh, ">>", $class->logFile);
-			print $fh "\nRetarting Squeeze2raop after crash: $path @args\n";
+			print $fh "\nRestarting Squeeze2raop after crash: $path @args\n";
 			close $fh;
 		}
 		

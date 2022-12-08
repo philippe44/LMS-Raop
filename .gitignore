@@ -86,7 +86,6 @@ __history
 /package*.*
 _backup/
 *.pcm
-*.*proj
 *.zip
 *.z
 *.local
