@@ -8,9 +8,9 @@
 		&nbsp&nbsp<b><a href="raopbridge-guide" target="guide">[% "PLUGIN_RAOPBRIDGE_USERGUIDELINK" | string %]</a></b>
 		[%IF running %] <b><font color="red">&nbsp&nbsp[% "PLUGIN_RAOPBRIDGE_WARNING" | string %]</font></b> [% END %]
 	[% END %]
-	
-	[% IF binaries.size > 1 %]
-		[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_BINARIES" desc="PLUGIN_RAOPBRIDGE_BINARIES_DESC" %]
+
+	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_BINARIES" desc="PLUGIN_RAOPBRIDGE_BINARIES_DESC" %]	
+        [% IF binaries.size > 1 %]
 			<select class="stdedit" name="bin" id="bin">
 			[% FOREACH entry IN binaries %]
 				<option [% IF entry == bin %]selected[% found = 1 %][% END %] value="[% entry %]">[% entry %]</option>
@@ -18,8 +18,9 @@
 			[% IF not found %]
 				<option selected value="">[% "PLUGIN_RAOPBRIDGE_BINARIES" | string %]</option>
 			[% END %]
-			</select>
+			</select>&nbsp
 		[% END %]
+        <b><a href="https://learn.microsoft.com/en-US/cpp/windows/latest-supported-vc-redist?view=msvc-170" target="vcredist">[% "PLUGIN_RAOPBRIDGE_VCREDIST" | string %]</a></b>        
 	[% END %]
 		
 	[% WRAPPER setting title="PLUGIN_RAOPBRIDGE_OPTIONS" desc="PLUGIN_RAOPBRIDGE_OPTIONS_DESC" %]
