@@ -1,5 +1,11 @@
 Note: beware of crypto version (see shairtunes)
 
+1.2.1.1
+ - detect iface name
+
+1.2.0
+ - don't discard announces from different subnets
+
 1.1.5
   - restore selection of binaries
   

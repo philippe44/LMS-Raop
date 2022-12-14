@@ -50,6 +50,7 @@ enum { VOLUME_FEEDBACK = 1, VOLUME_UNFILTERED = 2};
 /* globals 																	  */
 /*----------------------------------------------------------------------------*/
 int32_t				glLogLimit = -1;
+uint32_t			glMask;
 char 				glInterface[16] = "?";
 char				glExcluded[STR_LEN] = "aircast,airupnp,shairtunes2,airesp32";
 int					glMigration = 0;
@@ -616,7 +617,7 @@ bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop) {
 		NFREE(am);
 
 		// ignore excluded and announces made on behalf
-		if (!s->name || excluded || s->host.s_addr != s->addr.s_addr) continue;
+		if (!s->name || excluded || (s->host.s_addr != s->addr.s_addr && ((s->host.s_addr & glMask) == (s->addr.s_addr & glMask)))) continue;
 
 		// is that device already here
 		if ((Device = SearchUDN(s->name)) != NULL) {
@@ -1169,6 +1170,20 @@ void StartActiveRemote(struct in_addr host) {
 	pthread_create(&glActiveRemoteThread, NULL, ActiveRemoteThread, NULL);
 }
 
+/*/
+void getNetMask(int sock, char* iface) {
+	struct ifreq ifr;
+
+	memset(&ifr, 0, sizeof(ifr));
+	strncpy(ifr.ifr_name, iface, IF_NAMESIZE);
+
+	if ((ioctl(rsock, SIOCGIFNETMASK, &ifr)) == -1) {
+		perror("ioctl():");
+		return -1;
+	}
+}
+*/
+
 /*----------------------------------------------------------------------------*/
 void StopActiveRemote(void) {
 	if (glActiveRemoteSock != -1) {
@@ -1237,7 +1252,7 @@ static bool Start(void) {
 #endif
 
 	// must bind to an address
-	glHost = get_interface(!strchr(glInterface, '?') ? glInterface : NULL);
+	glHost = get_interface(!strchr(glInterface, '?') ? glInterface : NULL, NULL, &glMask);
 	if (glHost.s_addr == INADDR_NONE) return false;
 
 	memset(&glMRDevices, 0, sizeof(glMRDevices));
