@@ -520,6 +520,7 @@ struct thread_ctx_s {
 	sockfd 		sock, fd, cli_sock;
 #if USE_SSL
 	void		*ssl;
+	bool		ssl_error;
 #endif
 	char		cli_id[18];		// (6*2)+(5*':')+NULL
 	mutex_type	cli_mutex;

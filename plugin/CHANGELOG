@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+1.2.1.2
+ - better SSL error handling
+ 
 1.2.1.1
  - detect iface name
 
