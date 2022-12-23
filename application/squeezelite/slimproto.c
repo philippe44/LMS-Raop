@@ -55,17 +55,6 @@ static u32_t 	pcm_sample_rate[] = { 11025, 22050, 32000, 44100, 48000,
 									  176400, 192000, 352800, 384000 };
 static u8_t		pcm_channels[] = { 1, 2 };
 
-
-/*---------------------------------------------------------------------------*/
-bool ctx_callback(struct thread_ctx_s *ctx, sq_action_t action, void *param)
-{
-	bool rc = false;
-
-	if (ctx->callback) rc = ctx->callback(ctx->self, ctx->MR, action, param);
-	return rc;
-}
-
-
 /*---------------------------------------------------------------------------*/
 void send_packet(u8_t *packet, size_t len, sockfd sock) {
 	u8_t *ptr = packet;
@@ -264,7 +253,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			sendSTAT("STMf", 0, ctx);
 		}
 		buf_flush(ctx->streambuf);
-		if (ctx->last_command != 'q') ctx_callback(ctx, SQ_STOP, NULL);
+		if (ctx->last_command != 'q') ctx->callback(ctx->MR, SQ_STOP);
 		break;
 	case 'p':
 		 {
@@ -275,7 +264,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			UNLOCK_O;
 			if (!interval) {
 				sendSTAT("STMp", 0, ctx);
-				ctx_callback(ctx, SQ_PAUSE, NULL);
+				ctx->callback(ctx->MR, SQ_PAUSE);
             }
 			LOG_DEBUG("[%p]: pause interval: %u", ctx, interval);
 		}
@@ -293,7 +282,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	case 'u':
 		{
 			unsigned jiffies = unpackN(&strm->replay_gain);
-			ctx_callback(ctx, SQ_UNPAUSE, &jiffies);
+			ctx->callback(ctx->MR, SQ_UNPAUSE, jiffies);
 			LOCK_O;
 			ctx->output.state = OUTPUT_RUNNING;
 			ctx->output.start_at = jiffies;
@@ -355,7 +344,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			}
 
 			// TODO: must be changed if one day direct streaming is enabled
-			ctx_callback(ctx, SQ_CONNECT, NULL);
+			ctx->callback(ctx->MR, SQ_CONNECT);
 
 			stream_sock(ip, port, strm->flags & 0x20, header, header_len, strm->threshold * 1024, ctx->autostart >= 2, ctx);
 
@@ -419,13 +408,13 @@ static void process_aude(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	ctx->on = (aude->enable_spdif) ? true : false;
 	LOG_DEBUG("[%p] on/off using aude %d", ctx, ctx->on);
 	UNLOCK_O;
-	ctx_callback(ctx, SQ_ONOFF, &ctx->on);
+	ctx->callback(ctx->MR, SQ_ONOFF, ctx->on);
 }
 
 /*---------------------------------------------------------------------------*/
 static void process_audg(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	struct audg_packet *audg = (struct audg_packet *)pkt;
-	u16_t  gain;
+	int  gain;
 
 	audg->old_gainL = unpackN(&audg->old_gainL);
 	audg->old_gainR = unpackN(&audg->old_gainR);
@@ -447,7 +436,7 @@ static void process_audg(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 	UNLOCK_O;
 
 	if (audg->adjust) {
-		ctx_callback(ctx, SQ_VOLUME, (void*) &gain);
+		ctx->callback(ctx->MR, SQ_VOLUME, gain);
     }
 }
 
@@ -467,7 +456,7 @@ static void process_setd(u8_t *pkt, int len,struct thread_ctx_s *ctx) {
 			LOG_DEBUG("[%p] set name: %s", ctx, setd->data);
 			// confirm change to server
 			sendSETDName(setd->data, ctx->sock);
-			ctx_callback(ctx, SQ_SETNAME, (void*) ctx->config.name);
+			ctx->callback(ctx->MR, SQ_SETNAME, ctx->config.name);
 		}
 	}
 }
@@ -503,7 +492,7 @@ static void process_serv(u8_t *pkt, int len,struct thread_ctx_s *ctx) {
 		}
 	}
 	
-	ctx_callback(ctx, SQ_SETSERVER, (void*) &ctx->new_server);
+	ctx->callback(ctx->MR, SQ_SETSERVER, &ctx->new_server);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -668,7 +657,7 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 				memcpy(ctx->slim_run.header, ctx->stream.header, header_len);
 				_sendMETA = true;
 				ctx->stream.meta_send = false;
-				ctx_callback(ctx, SQ_METASEND, NULL);
+				ctx->callback(ctx->MR, SQ_METASEND);
 			}
 			UNLOCK_S;
 
@@ -684,13 +673,13 @@ static void slimproto_run(struct thread_ctx_s *ctx) {
 				_sendSTMs = true;
 				ctx->output.track_started = false;
 				ctx->status.stream_start = ctx->output.track_start_time;
-				ctx_callback(ctx, SQ_STARTED, &ctx->output.track_start_time);
+				ctx->callback(ctx->MR, SQ_STARTED, ctx->output.track_start_time);
 			}
 
 			if (ctx->output.state == OUTPUT_RUNNING && !ctx->sentSTMu && ctx->status.output_full == 0 && ctx->status.stream_state <= DISCONNECT) {
 				_sendSTMu = true;
 				ctx->sentSTMu = true;
-				ctx_callback(ctx, SQ_FINISHED, NULL);
+				ctx->callback(ctx->MR, SQ_FINISHED);
 			}
 			if (ctx->output.state == OUTPUT_RUNNING && !ctx->sentSTMo && ctx->status.output_full == 0 && ctx->status.stream_state == STREAMING_HTTP) {
 				_sendSTMo = true;

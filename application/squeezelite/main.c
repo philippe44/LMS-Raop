@@ -61,9 +61,13 @@ void sq_end() {
 #endif
 }
 
+static bool lambda(void* caller, sq_action_t action, ...) {
+	return true;
+}
+
 /*--------------------------------------------------------------------------*/
 void sq_wipe_device(struct thread_ctx_s *ctx) {
-	ctx->callback = NULL;
+	ctx->callback = lambda;
 	ctx->in_use = false;
 
 	slimproto_close(ctx);
@@ -442,7 +446,7 @@ bool sq_set_time(sq_dev_handle_t handle, char *pos)
 
 
 /*--------------------------------------------------------------------------*/
-void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *cookie, void *param)
+void sq_notify(sq_dev_handle_t handle, sq_event_t event, ...)
 {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
 	char cmd[128] = "", *rsp;
@@ -451,6 +455,9 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 
 	// squeezelite device has not started yet or is off ...
 	if (!ctx->running || !ctx->on || !handle || !ctx->in_use) return;
+
+	va_list args;
+	va_start(args, event);
 
 	switch (event) {
 		case SQ_PLAY_PAUSE: {
@@ -475,9 +482,10 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 			break;
 		}
 		case SQ_VOLUME: {
-			if (strstr(param, "up")) sprintf(cmd, "%s mixer volume +5", ctx->cli_id);
-			else if (strstr(param, "down")) sprintf(cmd, "%s mixer volume -5", ctx->cli_id);
-			else sprintf(cmd, "%s mixer volume %s", ctx->cli_id, (char*) param);
+			char* volume = va_arg(args, char*);
+			if (strstr(volume, "up")) sprintf(cmd, "%s mixer volume +5", ctx->cli_id);
+			else if (strstr(volume, "down")) sprintf(cmd, "%s mixer volume -5", ctx->cli_id);
+			else sprintf(cmd, "%s mixer volume %s", ctx->cli_id, volume);
 			break;
 		}
 		case SQ_MUTE_TOGGLE: {
@@ -498,7 +506,7 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 			break;
 		}
 		case SQ_FF_REW: {
-			sprintf(cmd, "%s time %+d", ctx->cli_id, *((s16_t*) param));
+			sprintf(cmd, "%s time %+d", ctx->cli_id, va_arg(args, s32_t));
 			break;
 		}
 		case SQ_OFF: {
@@ -508,6 +516,8 @@ void sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, u8_t *
 
 		default: break;
 	 }
+
+	va_end(args);
 
 	if (*cmd) {
 		rsp = cli_send_cmd(cmd, false, true, ctx);
@@ -541,16 +551,15 @@ sq_dev_handle_t sq_reserve_device(void *MR, sq_callback_t callback)
 	struct thread_ctx_s *ctx;
 
 	/* find a free thread context - this must be called in a LOCKED context */
-	for  (ctx_i = 0; ctx_i < MAX_PLAYER; ctx_i++)
-		if (!thread_ctx[ctx_i].in_use) break;
+	for  (ctx_i = 0; ctx_i < MAX_PLAYER; ctx_i++) if (!thread_ctx[ctx_i].in_use) break;
 
-	if (ctx_i < MAX_PLAYER)
-	{
+	if (ctx_i < MAX_PLAYER)	{
 		// this sets a LOT of data to proper defaults (NULL, false ...)
 		memset(&thread_ctx[ctx_i], 0, sizeof(struct thread_ctx_s));
 		thread_ctx[ctx_i].in_use = true;
+	} else {
+		return false;
 	}
-	else return false;
 
 	ctx = thread_ctx + ctx_i;
 	ctx->self = ctx_i + 1;

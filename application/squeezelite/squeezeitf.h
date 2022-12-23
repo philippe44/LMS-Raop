@@ -55,7 +55,7 @@ typedef	struct sq_dev_param_s {
 
 struct raopcl_s;
 
-typedef bool (*sq_callback_t)(sq_dev_handle_t handle, void *caller_id, sq_action_t action, void *param);
+typedef bool (*sq_callback_t)(void *caller, sq_action_t action, ...);
 
 void				sq_init(struct in_addr host, char *model_name);
 void				sq_end(void);
@@ -65,7 +65,7 @@ void				sq_delete_device(sq_dev_handle_t);
 sq_dev_handle_t		sq_reserve_device(void *caller_id, sq_callback_t callback);
 void				sq_release_device(sq_dev_handle_t);
 
-void				sq_notify(sq_dev_handle_t handle, void *caller_id, sq_event_t event, uint8_t *cookie, void *param);
+void				sq_notify(sq_dev_handle_t handle, sq_event_t event, ...);
 bool				sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, bool next);
 uint32_t			sq_get_time(sq_dev_handle_t handle);
 bool 				sq_set_time(sq_dev_handle_t handle, char *pos);

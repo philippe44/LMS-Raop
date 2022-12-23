@@ -231,7 +231,7 @@ static void BusyDrop(struct sMR *Device);
 #endif
 
 /*----------------------------------------------------------------------------*/
-bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, void *param)
+bool sq_callback(void *caller, sq_action_t action, ...)
 {
 	struct sMR *device = caller;
 	bool rc = true;
@@ -244,13 +244,16 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, void 
 		return false;
 	}
 
+	va_list args;
+	va_start(args, action);
+
 	if (action == SQ_ONOFF) {
-		device->on = *((bool*) param);
+		device->on = va_arg(args, int);
 
 		if (device->on && device->Config.AutoPlay) {
 			// switching player back ON let us take over 
 			device->PlayerStatus = 0;
-			sq_notify(device->SqueezeHandle, device, SQ_PLAY, NULL, &device->on);
+			sq_notify(device->SqueezeHandle, SQ_PLAY, device->on);
 		}
 
 		if (!device->on) {
@@ -268,6 +271,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, void 
 	if (!device->on && action != SQ_SETNAME && action != SQ_SETSERVER) {
 		LOG_DEBUG("[%p]: device off or not controlled by LMS", caller);
 		pthread_mutex_unlock(&device->Mutex);
+		va_end(args);
 		return false;
 	}
 
@@ -311,8 +315,9 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, void 
 
 			device->TrackRunning = true;
 			device->sqState = SQ_PLAY;
-			if (*((unsigned*) param))
-				raopcl_start_at(device->Raop, TIME_MS2NTP(*((unsigned*) param)) -
+			unsigned jiffies = va_arg(args, unsigned);
+			if (jiffies) 
+				raopcl_start_at(device->Raop, TIME_MS2NTP(jiffies) -
 								TS2NTP(raopcl_latency(device->Raop), raopcl_sample_rate(device->Raop)));
 			strcpy(Req->Type, "CONNECT");
 			queue_insert(&device->Queue, Req);
@@ -320,7 +325,7 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, void 
 			break;
 		}
 		case SQ_VOLUME: {
-			uint32_t Volume = LMSVolumeMap[*(uint16_t*) param];
+			uint32_t Volume = LMSVolumeMap[va_arg(args, int)];
 			uint32_t now = gettime_ms();
 
 			if (device->Config.VolumeMode == VOLUME_HARD &&	now > device->VolumeStampRx + 1000 &&
@@ -359,16 +364,17 @@ bool sq_callback(sq_dev_handle_t handle, void *caller, sq_action_t action, void 
 			device->MetadataHash++;
 			break;
 		case SQ_SETNAME:
-			strcpy(device->sq_config.name, (char*) param);
+			strcpy(device->sq_config.name, va_arg(args, char*));
 			break;
 		case SQ_SETSERVER:
-			strcpy(device->sq_config.dynamic.server, inet_ntoa(*(struct in_addr*) param));
+			strcpy(device->sq_config.dynamic.server, inet_ntoa(*va_arg(args, struct in_addr*)));
 			break;
 		default:
 			break;
 	}
 
 	pthread_mutex_unlock(&device->Mutex);
+	va_end(args);
 	return rc;
 }
 
@@ -432,7 +438,7 @@ static void *PlayerThread(void *args) {
 
 			if (now > Last + 5000) {
 				LOG_WARN("[%p]: Player has been in 'PreventPlayback' for too long");
-				sq_notify(Device->SqueezeHandle, Device, SQ_OFF, NULL, NULL);
+				sq_notify(Device->SqueezeHandle, SQ_OFF);
 			} else if (req) {
 				queue_insert_first(&Device->Queue, req);
 			}
@@ -460,7 +466,7 @@ static void *PlayerThread(void *args) {
 			if (Device->Sane > 3) {
 				LOG_WARN("[%p]: broken connection: switching off player", Device);
 				pthread_mutex_lock(&Device->Mutex);
-				sq_notify(Device->SqueezeHandle, Device, SQ_OFF, NULL, NULL);
+				sq_notify(Device->SqueezeHandle, SQ_OFF);
 				pthread_mutex_unlock(&Device->Mutex);
 			}
 
@@ -1025,16 +1031,16 @@ static void *ActiveRemoteThread(void *args) {
 
 		LOG_INFO("[%p]: remote command %s", Device, command);
 
-		if (!strcasecmp(command, "pause")) sq_notify(Device->SqueezeHandle, Device, SQ_PAUSE, NULL, NULL);
-		if (!strcasecmp(command, "play")) sq_notify(Device->SqueezeHandle, Device, SQ_PLAY, NULL, NULL);
-		if (!strcasecmp(command, "playpause")) sq_notify(Device->SqueezeHandle, Device, SQ_PLAY_PAUSE, NULL, NULL);
-		if (!strcasecmp(command, "stop")) sq_notify(Device->SqueezeHandle, Device, SQ_STOP, NULL, NULL);
-		if (!strcasecmp(command, "mutetoggle")) sq_notify(Device->SqueezeHandle, Device, SQ_MUTE_TOGGLE, NULL, NULL);
-		if (!strcasecmp(command, "nextitem")) sq_notify(Device->SqueezeHandle, Device, SQ_NEXT, NULL, NULL);
-		if (!strcasecmp(command, "previtem")) sq_notify(Device->SqueezeHandle, Device, SQ_PREVIOUS, NULL, NULL);
-		if (!strcasecmp(command, "volumeup")) sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, "up");
-		if (!strcasecmp(command, "volumedown")) sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, "down");
-		if (!strcasecmp(command, "shuffle_songs")) sq_notify(Device->SqueezeHandle, Device, SQ_SHUFFLE, NULL, NULL);
+		if (!strcasecmp(command, "pause")) sq_notify(Device->SqueezeHandle, SQ_PAUSE);
+		if (!strcasecmp(command, "play")) sq_notify(Device->SqueezeHandle, SQ_PLAY);
+		if (!strcasecmp(command, "playpause")) sq_notify(Device->SqueezeHandle, SQ_PLAY_PAUSE);
+		if (!strcasecmp(command, "stop")) sq_notify(Device->SqueezeHandle, SQ_STOP);
+		if (!strcasecmp(command, "mutetoggle")) sq_notify(Device->SqueezeHandle, SQ_MUTE_TOGGLE);
+		if (!strcasecmp(command, "nextitem")) sq_notify(Device->SqueezeHandle, SQ_NEXT);
+		if (!strcasecmp(command, "previtem")) sq_notify(Device->SqueezeHandle, SQ_PREVIOUS);
+		if (!strcasecmp(command, "volumeup")) sq_notify(Device->SqueezeHandle, SQ_VOLUME, "up");
+		if (!strcasecmp(command, "volumedown")) sq_notify(Device->SqueezeHandle, SQ_VOLUME, "down");
+		if (!strcasecmp(command, "shuffle_songs")) sq_notify(Device->SqueezeHandle, SQ_SHUFFLE);
 		if (!strcasecmp(command, "beginff") || !strcasecmp(command, "beginrew")) {
 			Device->SkipStart = gettime_ms();
 			Device->SkipDir = !strcasecmp(command, "beginff") ? true : false;
@@ -1042,7 +1048,7 @@ static void *ActiveRemoteThread(void *args) {
 		if (!strcasecmp(command, "playresume")) {
 			int32_t gap = gettime_ms() - Device->SkipStart;
 			gap = (gap + 3) * (gap + 3) * (Device->SkipDir ? 1 : -1);
-			sq_notify(Device->SqueezeHandle, Device, SQ_FF_REW, NULL, &gap);
+			sq_notify(Device->SqueezeHandle, SQ_FF_REW, gap);
 		}
 
 		// handle DMCP commands
@@ -1056,7 +1062,7 @@ static void *ActiveRemoteThread(void *args) {
 			} else if (strcasestr(command, "device-busy=1")) {
 				Device->PlayerStatus |= DMCP_BUSY;
 				if (Device->PlayerStatus & DMCP_PREVENT_PLAYBACK) {
-					sq_notify(Device->SqueezeHandle, Device, SQ_OFF, NULL, NULL);
+					sq_notify(Device->SqueezeHandle, SQ_OFF);
 				}
 			} else if (strcasestr(command, "device-busy=0")) {
 				Device->PlayerStatus &= ~DMCP_BUSY;
@@ -1084,7 +1090,7 @@ static void *ActiveRemoteThread(void *args) {
 					char vol[10];
 					sprintf(vol, "%d", i);
 					Device->VolumeStampRx = now;
-					sq_notify(Device->SqueezeHandle, Device, SQ_VOLUME, NULL, vol);
+					sq_notify(Device->SqueezeHandle, SQ_VOLUME, vol);
 
 					// some players expect controller to update volume, it's a request not a notification	
 					tRaopReq* Req = malloc(sizeof(tRaopReq));
