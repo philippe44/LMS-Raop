@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+1.2.2
+ - add back armv5
+
 1.2.1.5
  - fix once for all the TCPWindow size issue with Windows
  - cleanup notify/callback and use variadic

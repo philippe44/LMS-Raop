@@ -32,7 +32,7 @@ sub binaries {
 			return qw(squeeze2raop-linux-aarch64 squeeze2raop-linux-aarch64-static);
 		}
 		if ($os->{'binArch'} =~ /arm/) {
-			return qw(squeeze2raop-linux-armv6 squeeze2raop-linux-armv6-static squeeze2raop-linux-arm squeeze2raop-linux-arm-static);
+			return qw(squeeze2raop-linux-arm squeeze2raop-linux-arm-static squeeze2raop-linux-armv6 squeeze2raop-linux-armv6-static squeeze2raop-linux-armv5 squeeze2raop-linux-armv5-static);
 		}
 		if ($os->{'binArch'} =~ /powerpc/) {
 			return qw(squeeze2raop-linux squeeze2raop-linux-powerpc-static);
