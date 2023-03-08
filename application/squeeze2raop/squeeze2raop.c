@@ -551,7 +551,7 @@ static void *PlayerThread(void *args) {
 
 		if (!strcasecmp(req->Type, "CONNECT")) {
 			LOG_INFO("[%p]: raop connecting ...", Device);
-			if (raopcl_connect(Device->Raop, Device->PlayerIP, Device->PlayerPort, true)) {
+			if (raopcl_connect(Device->Raop, Device->PlayerIP, Device->PlayerPort, Device->Config.Volume != -1)) {
 				Device->DiscWait = false;
 				LOG_INFO("[%p]: raop connected", Device);
 			} else {

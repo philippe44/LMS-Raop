@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+1.2.3
+ - don't set volume at connect when value is -1
+
 1.2.2
  - add back armv5
 
