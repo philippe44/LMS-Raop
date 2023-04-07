@@ -59,15 +59,11 @@ static log_level *loglevel = &decode_loglevel;
 #if PROCESS
 #define LOCK_O_direct   if (ctx->decode.direct) mutex_lock(ctx->outputbuf->mutex)
 #define UNLOCK_O_direct if (ctx->decode.direct) mutex_unlock(ctx->outputbuf->mutex)
-#define LOCK_O_not_direct   if (!ctx->decode.direct) mutex_lock(ctx->outputbuf->mutex)
-#define UNLOCK_O_not_direct if (!ctx->decode.direct) mutex_unlock(ctx->outputbuf->mutex)
 #define IF_DIRECT(x)    if (ctx->decode.direct) { x }
 #define IF_PROCESS(x)   if (!ctx->decode.direct) { x }
 #else
 #define LOCK_O_direct   mutex_lock(ctx->outputbuf->mutex)
 #define UNLOCK_O_direct mutex_unlock(ctx->outputbuf->mutex)
-#define LOCK_O_not_direct
-#define UNLOCK_O_not_direct
 #define IF_DIRECT(x)    { x }
 #define IF_PROCESS(x)
 #endif
@@ -89,11 +85,19 @@ static size_t _read_cb(void *ptr, size_t size, size_t nmemb, void *datasource) {
 	size_t bytes;
 	struct thread_ctx_s *ctx = datasource;
 
-	bytes = min(_buf_used(ctx->streambuf), _buf_cont_read(ctx->streambuf));
-	bytes = min(bytes, size * nmemb);
+	while (1) {
+		LOCK_S;
+		bytes = min(_buf_used(ctx->streambuf), _buf_cont_read(ctx->streambuf));
+		bytes = min(bytes, size * nmemb);
+		if (bytes || ctx->stream.state <= DISCONNECT) break;
+
+		UNLOCK_S;
+		usleep(50 * 1000);
+	}
 
 	memcpy(ptr, ctx->streambuf->readp, bytes);
 	_buf_inc_readp(ctx->streambuf, bytes);
+	UNLOCK_S;
 
 	return bytes / size;
 }
@@ -108,22 +112,6 @@ static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
 	frames_t frames;
 	int bytes, s, n;
 	u8_t *write_buf = NULL;
-
-	LOCK_S;
-	LOCK_O_direct;
-
-	IF_DIRECT(
-		frames = min(_buf_space(ctx->outputbuf), _buf_cont_write(ctx->outputbuf)) / BYTES_PER_FRAME;
-	);
-	IF_PROCESS(
-		frames = ctx->process.max_in_frames;
-	);
-
-	if (!frames && ctx->stream.state <= DISCONNECT) {
-		UNLOCK_O_direct;
-		UNLOCK_S;
-		return DECODE_COMPLETE;
-	}
 
 	if (ctx->decode.new_stream) {
 		ov_callbacks cbs;
@@ -140,46 +128,41 @@ static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
 
 		if ((err = OV(&gv, open_callbacks, ctx, v->vf, NULL, 0, cbs)) < 0) {
 			LOG_WARN("[%p]: open_callbacks error: %d", ctx, err);
-			UNLOCK_O_direct;
-			UNLOCK_S;
 			return DECODE_COMPLETE;
 		}
 
-		v->opened = true;
-
 		info = OV(&gv, info, v->vf, -1);
 
-		LOG_INFO("[%p]: setting track_start", ctx);
-		LOCK_O_not_direct;
+		v->opened = true;
+		v->channels = info->channels;
+
+		LOCK_O;
 		// don't use next_sample_rate
 		ctx->output.current_sample_rate = decode_newstream(info->rate, ctx->output.supported_rates, ctx);
 		ctx->output.track_start = ctx->outputbuf->writep;
 		if (ctx->output.fade_mode) _checkfade(true, ctx);
 		ctx->decode.new_stream = false;
-		UNLOCK_O_not_direct;
-
-		IF_PROCESS(
-			frames = ctx->process.max_in_frames;
-		);
-
-		v->channels = info->channels;
+		UNLOCK_O;
 
 		if (v->channels > 2) {
 			LOG_WARN("[%p]: too many channels: %d", ctx, v->channels);
-			UNLOCK_O_direct;
-			UNLOCK_S;
 			return DECODE_ERROR;
 		}
+
+		LOG_INFO("[%p]: setting track_start", ctx);
 	}
 
-	bytes = frames * 2 * v->channels; // samples returned are 16 bits
-
+	LOCK_O_direct;
 	IF_DIRECT(
+		frames = min(_buf_space(ctx->outputbuf), _buf_cont_write(ctx->outputbuf)) / BYTES_PER_FRAME;
 		write_buf = ctx->outputbuf->writep;
 	);
 	IF_PROCESS(
+		frames = ctx->process.max_in_frames;
 		write_buf = ctx->process.inbuf;
 	);
+
+	bytes = frames * 2 * v->channels; // samples returned are 16 bits
 
 	// write the 16 bits decoded frames into outputbuf even when they are mono
 	if (!TREMOR(&gv)) {
@@ -231,7 +214,6 @@ static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
 		if (ctx->stream.state <= DISCONNECT) {
 			LOG_INFO("[%p]: partial decode", ctx);
 			UNLOCK_O_direct;
-			UNLOCK_S;
 			return DECODE_COMPLETE;
 		} else {
 			LOG_INFO("[%p]: no frame decoded", ctx);
@@ -246,13 +228,10 @@ static decode_state vorbis_decode( struct thread_ctx_s *ctx) {
 
 		LOG_INFO("[%p]: ov_read error: %d", ctx, n);
 		UNLOCK_O_direct;
-		UNLOCK_S;
 		return DECODE_COMPLETE;
 	}
 
 	UNLOCK_O_direct;
-	UNLOCK_S;
-
 	return DECODE_RUNNING;
 }
 

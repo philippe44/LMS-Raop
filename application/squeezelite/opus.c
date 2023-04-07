@@ -50,15 +50,11 @@ static log_level *loglevel = &decode_loglevel;
 #if PROCESS
 #define LOCK_O_direct   if (ctx->decode.direct) mutex_lock(ctx->outputbuf->mutex)
 #define UNLOCK_O_direct if (ctx->decode.direct) mutex_unlock(ctx->outputbuf->mutex)
-#define LOCK_O_not_direct   if (!ctx->decode.direct) mutex_lock(ctx->outputbuf->mutex)
-#define UNLOCK_O_not_direct if (!ctx->decode.direct) mutex_unlock(ctx->outputbuf->mutex)
 #define IF_DIRECT(x)    if (ctx->decode.direct) { x }
 #define IF_PROCESS(x)   if (!ctx->decode.direct) { x }
 #else
 #define LOCK_O_direct   mutex_lock(ctx->outputbuf->mutex)
 #define UNLOCK_O_direct mutex_unlock(ctx->outputbuf->mutex)
-#define LOCK_O_not_direct
-#define UNLOCK_O_not_direct
 #define IF_DIRECT(x)    { x }
 #define IF_PROCESS(x)
 #endif
@@ -75,11 +71,19 @@ static int _read_cb(void *datasource, char *ptr, int size) {
 	size_t bytes;
 	struct thread_ctx_s *ctx = datasource;
 
-	bytes = min(_buf_used(ctx->streambuf), _buf_cont_read(ctx->streambuf));
-	bytes = min(bytes, size);
+	while (1) {
+		LOCK_S;
+		bytes = min(_buf_used(ctx->streambuf), _buf_cont_read(ctx->streambuf));
+		bytes = min(bytes, size);
+		if (bytes || ctx->stream.state <= DISCONNECT) break;
+
+		UNLOCK_S;
+		usleep(50 * 1000);
+	}
 
 	memcpy(ptr, ctx->streambuf->readp, bytes);
 	_buf_inc_readp(ctx->streambuf, bytes);
+	UNLOCK_S;
 
 	return bytes;
 }
@@ -89,22 +93,6 @@ static decode_state opus_decompress( struct thread_ctx_s *ctx) {
 	frames_t frames;
 	int n;
 	u8_t *write_buf = NULL;
-
-	LOCK_S;
-	LOCK_O_direct;
-
-	IF_DIRECT(
-		frames = min(_buf_space(ctx->outputbuf), _buf_cont_write(ctx->outputbuf)) / BYTES_PER_FRAME;
-	);
-	IF_PROCESS(
-		frames = ctx->process.max_in_frames;
-	);
-
-	if (!frames && ctx->stream.state <= DISCONNECT) {
-		UNLOCK_O_direct;
-		UNLOCK_S;
-		return DECODE_COMPLETE;
-	}
 
 	if (ctx->decode.new_stream) {
 		struct OpusFileCallbacks cbs;
@@ -116,40 +104,36 @@ static decode_state opus_decompress( struct thread_ctx_s *ctx) {
 
 		if ((u->of = OP(&gu, open_callbacks, ctx, &cbs, NULL, 0, &err)) == NULL) {
 			LOG_WARN("open_callbacks error: %d", err);
-			UNLOCK_O_direct;
-			UNLOCK_S;
 			return DECODE_COMPLETE;
 		}
 
 		info = OP(&gu, head, u->of, -1);
+		u->channels = info->channel_count;
 
-		LOG_INFO("[%p]: setting track_start", ctx);
-		LOCK_O_not_direct;
+		LOCK_O;
 		ctx->output.current_sample_rate = decode_newstream(48000, ctx->output.supported_rates, ctx);
 		ctx->output.track_start = ctx->outputbuf->writep;
 		if (ctx->output.fade_mode) _checkfade(true, ctx);
 		ctx->decode.new_stream = false;
-		UNLOCK_O_not_direct;
-
-		IF_PROCESS(
-			frames = ctx->process.max_in_frames;
-		);
-
-		u->channels = info->channel_count;
+		UNLOCK_O;
 
 		if (u->channels > 2) {
 			LOG_WARN("[%p]: too many channels: %d", ctx, u->channels);
-			UNLOCK_O_direct;
-			UNLOCK_S;
 			return DECODE_ERROR;
 		}
+
+		LOG_INFO("[%p]: setting track_start", ctx);
 	}
 
+	LOCK_O_direct;
 	IF_DIRECT(
+		frames = min(_buf_space(ctx->outputbuf), _buf_cont_write(ctx->outputbuf)) / BYTES_PER_FRAME;
 		write_buf = ctx->outputbuf->writep;
 	);
 	IF_PROCESS(
+		frames = ctx->process.max_in_frames;
 		write_buf = ctx->process.inbuf;
+
 	);
 
 	// write the decoded frames into outputbuf (they are 16 bits)
@@ -189,9 +173,8 @@ static decode_state opus_decompress( struct thread_ctx_s *ctx) {
 	} else if (n == 0) {
 
 		if (ctx->stream.state <= DISCONNECT) {
-			LOG_INFO("[%p]: partial decode", ctx);
+			LOG_INFO("[%p]: end of decode", ctx);
 			UNLOCK_O_direct;
-			UNLOCK_S;
 			return DECODE_COMPLETE;
 		} else {
 			LOG_INFO("[%p]: no frame decoded", ctx);
@@ -206,13 +189,10 @@ static decode_state opus_decompress( struct thread_ctx_s *ctx) {
 
 		LOG_INFO("[%p]: op_read error: %d", ctx, n);
 		UNLOCK_O_direct;
-		UNLOCK_S;
 		return DECODE_COMPLETE;
 	}
 
 	UNLOCK_O_direct;
-	UNLOCK_S;
-
 	return DECODE_RUNNING;
 }
 
