@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+1.2.6
+ - fix artwork not loading because of http_fetcher
+
 1.2.5
  - opus and voris busy loop on read_cb and streaming active (case of large artwork)
  - don't return DECODE_COMPLETE on empty outputbuf for Vorbis and Opus (should only happen later when no decoded data and DISCONNECT)
