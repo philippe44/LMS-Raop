@@ -261,7 +261,7 @@ PLUGIN_RAOPBRIDGE_RESOLUTION
 
 PLUGIN_RAOPBRIDGE_SENDMETADATA_DESC
 	EN	When using an AirPlay device with display capabilities, LMS can send metadata (title, artist, album) to it. 
-	EN	<br>- Use <b>resolution</b> to force a fixed coverart resolution (eg: 300x300) - leave it empty otherwise
+	EN	<br>- Use <b>resolution</b> to force a fixed coverart resolution (eg: 300x300) - leave it empty otherwise. You must use LMS to 	EN	proxy artwork, not mysqueezebox.com for that to work
 	EN	<br>This <b>DOES NOT</b> work if you have set a password for LMS command access
 	
 PLUGIN_RAOPBRIDGE_PLAYEROPTIONS

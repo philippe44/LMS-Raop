@@ -345,6 +345,7 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, bool next)
 		metadata->artist = cli_find_tag(cur, "artist");
 		metadata->album = cli_find_tag(cur, "album");
 		metadata->genre = cli_find_tag(cur, "genre");
+		metadata->artwork = cli_find_tag(cur, "artwork_url");
 
 		if ((p = cli_find_tag(cur, "duration")) != NULL) {
 			metadata->duration = 1000 * atof(p);
@@ -361,19 +362,28 @@ bool sq_get_metadata(sq_dev_handle_t handle, metadata_t *metadata, bool next)
 			free(p);
 		}
 
-		metadata->artwork = cli_find_tag(cur, "artwork_url");
-		if (!metadata->artwork || !strlen(metadata->artwork) || *ctx->config.resolution) {
+		if (!metadata->artwork || !strlen(metadata->artwork)) {
 			NFREE(metadata->artwork);
 			if ((p = cli_find_tag(cur, "coverid")) != NULL) {
-				metadata->artwork = malloc(STR_LEN);
-				snprintf(metadata->artwork, STR_LEN, "http://%s:%s/music/%s/cover%s.jpg", ctx->server_ip, ctx->server_port, p, ctx->config.resolution);
+				(void)!asprintf(&metadata->artwork, "http://%s:%s/music/%s/cover_%s.jpg", ctx->server_ip, ctx->server_port, p, ctx->config.resolution);
 				free(p);
 			}
 		}
 
 		if (metadata->artwork && strncmp(metadata->artwork, "http", 4)) {
-			char *artwork;
-			(void) !asprintf(&artwork, "http://%s:%s/%s", ctx->server_ip, ctx->server_port, metadata->artwork[0] == '/' ? metadata->artwork + 1 : metadata->artwork);
+			char* artwork;
+
+			p = strrchr(metadata->artwork, '.');
+			if (*ctx->config.resolution && p && (strcasecmp(p, ".jpg") || strcasecmp(p, ".png"))) {
+				*p = '\0';
+				(void)!asprintf(&artwork, "http://%s:%s/%s_%s.%s", ctx->server_ip, ctx->server_port,
+					*(metadata->artwork) == '/' ? metadata->artwork + 1 : metadata->artwork,
+					ctx->config.resolution, p + 1);
+			} else {
+				(void)!asprintf(&artwork, "http://%s:%s/%s", ctx->server_ip, ctx->server_port,
+					*(metadata->artwork) == '/' ? metadata->artwork + 1 : metadata->artwork);
+			}
+
 			free(metadata->artwork);
 			metadata->artwork = artwork;
 		}

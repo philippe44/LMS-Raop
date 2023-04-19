@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+1.2.7
+ - fix artwork resize and http_fetcher ssl detection
+ 
 1.2.6
  - fix artwork not loading because of http_fetcher
 
