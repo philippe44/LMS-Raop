@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+1.2.8
+ - mDNS loop call even when empty
+ 
 1.2.7
  - fix artwork resize and http_fetcher ssl detection
  
