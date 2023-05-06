@@ -1,5 +1,9 @@
 Note: beware of crypto version (see shairtunes)
 
+1.2.9
+ - fix netmask endianness to properly eliminate on behalf announces
+ - some squeeze2cast functions should have been static
+
 1.2.8
  - mDNS loop call even when empty
  

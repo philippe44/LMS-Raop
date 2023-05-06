@@ -50,7 +50,7 @@ enum { VOLUME_FEEDBACK = 1, VOLUME_UNFILTERED = 2};
 /* globals 																	  */
 /*----------------------------------------------------------------------------*/
 int32_t				glLogLimit = -1;
-uint32_t			glMask;
+uint32_t			glNetmask;
 char 				glInterface[16] = "?";
 char				glExcluded[STR_LEN] = "aircast,airupnp,shairtunes2,airesp32";
 int					glMigration = 0;
@@ -600,19 +600,44 @@ static void *PlayerThread(void *args) {
 }
 
 /*----------------------------------------------------------------------------*/
-char *GetmDNSAttribute(mdnssd_txt_attr_t *p, int count, char *name) {
+static char *GetmDNSAttribute(mdnssd_txt_attr_t *p, int count, char *name) {
 	for (int i = 0; i < count; i++)	if (!strcasecmp(p[i].name, name))return strdup(p[i].value);
 	return NULL;
 }
 
 /*----------------------------------------------------------------------------*/
-struct sMR *SearchUDN(char *UDN) {
+static struct sMR *SearchUDN(char *UDN) {
 	for (int i = 0; i < MAX_RENDERERS; i++) if (glMRDevices[i].Running && !strcmp(glMRDevices[i].UDN, UDN))	return glMRDevices + i;
 	return NULL;
 }
 
 /*----------------------------------------------------------------------------*/
-bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop) {
+static void UpdateDevices(void) {
+	bool Updated = false;
+	uint32_t now = gettime_ms();
+
+	pthread_mutex_lock(&glMainMutex);
+
+	// walk through the list for device whose timeout expired
+	for (int i = 0; i < MAX_RENDERERS; i++) {
+		struct sMR* Device = glMRDevices + i;
+		if (!Device->Running || Device->Config.RemoveTimeout <= 0 || !Device->Expired || now < Device->Expired + Device->Config.RemoveTimeout * 1000) continue;
+
+		LOG_INFO("[%p]: removing renderer (%s) on timeout", Device, Device->FriendlyName);
+		if (Device->SqueezeHandle) sq_delete_device(Device->SqueezeHandle);
+		DelRaopDevice(Device);
+	}
+
+	if ((Updated && glAutoSaveConfigFile) || glDiscovery) {
+		LOG_DEBUG("Updating configuration %s", glConfigName);
+		SaveConfig(glConfigName, glConfigID, false);
+	}
+
+	pthread_mutex_unlock(&glMainMutex);
+}
+
+/*----------------------------------------------------------------------------*/
+static bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop) {
 	struct sMR *Device;
 	mdnssd_service_t *s;
 	uint32_t now = gettime_ms();
@@ -623,7 +648,7 @@ bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop) {
 		NFREE(am);
 
 		// ignore excluded and announces made on behalf
-		if (!s->name || excluded || (s->host.s_addr != s->addr.s_addr && ((s->host.s_addr & glMask) == (s->addr.s_addr & glMask)))) continue;
+		if (!s->name || excluded || (s->host.s_addr != s->addr.s_addr && ((s->host.s_addr & glNetmask) == (s->addr.s_addr & glNetmask)))) continue;
 
 		// is that device already here
 		if ((Device = SearchUDN(s->name)) != NULL) {
@@ -689,22 +714,9 @@ bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop) {
 		}
 	}
 
-	// walk through the list for device whose timeout expired
-	for (int i = 0; i < MAX_RENDERERS; i++) {
-		Device = glMRDevices + i;
-		if (!Device->Running || Device->Config.RemoveTimeout <= 0 || !Device->Expired || now < Device->Expired + Device->Config.RemoveTimeout*1000) continue;
+	UpdateDevices();
 
-		LOG_INFO("[%p]: removing renderer (%s) on timeout", Device, Device->FriendlyName);
-		if (Device->SqueezeHandle) sq_delete_device(Device->SqueezeHandle);
-		DelRaopDevice(Device);
-	}
-
-	if (glAutoSaveConfigFile || glDiscovery) {
-		LOG_DEBUG("Updating configuration %s", glConfigName);
-		SaveConfig(glConfigName, glConfigID, false);
-	}
-
-	// we have not released the slist
+	// we have intentionally not released the slist
 	return false;
 }
 
@@ -723,6 +735,7 @@ static void *MainThread(void *args) {
 		pthread_mutex_lock(&glMainMutex);
 		pthread_cond_reltimedwait(&glMainCond, &glMainMutex, 30*1000);
 		pthread_mutex_unlock(&glMainMutex);
+		if (!glMainRunning) break;
 
 		if (glLogFile && glLogLimit != - 1) {
 			int32_t size = ftell(stderr);
@@ -745,13 +758,15 @@ static void *MainThread(void *args) {
 				}
 			}
 		}
+
+		UpdateDevices();
 	}
 
 	return NULL;
 }
 
 /*----------------------------------------------------------------------------*/
-void SetVolumeMapping(struct sMR *Device) {
+static void SetVolumeMapping(struct sMR *Device) {
 	char *p;
 	int i = 1;
 	float a1 = 1, b1 = -30, a2 = 0, b2 = 0;
@@ -926,7 +941,7 @@ static bool AddRaopDevice(struct sMR *Device, mdnssd_service_t *s) {
 }
 
 /*----------------------------------------------------------------------------*/
-void FlushRaopDevices(void) {
+static void FlushRaopDevices(void) {
 	for (int i = 0; i < MAX_RENDERERS; i++) {
 		struct sMR *p = &glMRDevices[i];
 		if (p->Running) DelRaopDevice(p);
@@ -934,7 +949,7 @@ void FlushRaopDevices(void) {
 }
 
 /*----------------------------------------------------------------------------*/
-void DelRaopDevice(struct sMR *Device) {
+static void DelRaopDevice(struct sMR *Device) {
 	pthread_mutex_lock(&Device->Mutex);
 	Device->Running = false;
 	pthread_cond_signal(&Device->Cond);
@@ -1116,7 +1131,7 @@ static void *ActiveRemoteThread(void *args) {
 	return NULL;
 }
 /*----------------------------------------------------------------------------*/
-void StartActiveRemote(struct in_addr host) {
+static void StartActiveRemote(struct in_addr host) {
 	struct sockaddr_in addr;
 	socklen_t nlen = sizeof(struct sockaddr);
 	const char *txt[] = {
@@ -1176,22 +1191,8 @@ void StartActiveRemote(struct in_addr host) {
 	pthread_create(&glActiveRemoteThread, NULL, ActiveRemoteThread, NULL);
 }
 
-/*/
-void getNetMask(int sock, char* iface) {
-	struct ifreq ifr;
-
-	memset(&ifr, 0, sizeof(ifr));
-	strncpy(ifr.ifr_name, iface, IF_NAMESIZE);
-
-	if ((ioctl(rsock, SIOCGIFNETMASK, &ifr)) == -1) {
-		perror("ioctl():");
-		return -1;
-	}
-}
-*/
-
 /*----------------------------------------------------------------------------*/
-void StopActiveRemote(void) {
+static void StopActiveRemote(void) {
 	if (glActiveRemoteSock != -1) {
 #if WIN
 		shutdown(glActiveRemoteSock, SD_BOTH);
@@ -1258,7 +1259,7 @@ static bool Start(void) {
 #endif
 
 	// must bind to an address
-	glHost = get_interface(!strchr(glInterface, '?') ? glInterface : NULL, NULL, &glMask);
+	glHost = get_interface(!strchr(glInterface, '?') ? glInterface : NULL, NULL, &glNetmask);
 	if (glHost.s_addr == INADDR_NONE) return false;
 
 	memset(&glMRDevices, 0, sizeof(glMRDevices));
@@ -1349,7 +1350,7 @@ static void sighandler(int signum) {
 }
 
 /*---------------------------------------------------------------------------*/
-bool ParseArgs(int argc, char **argv) {
+static bool ParseArgs(int argc, char **argv) {
 	char *optarg = NULL;
 	int i, optind = 1;
 	char cmdline[256] = "";
