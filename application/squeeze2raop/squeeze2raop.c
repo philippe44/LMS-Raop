@@ -612,8 +612,7 @@ static struct sMR *SearchUDN(char *UDN) {
 }
 
 /*----------------------------------------------------------------------------*/
-static void UpdateDevices(void) {
-	bool Updated = false;
+static void UpdateDevices(bool Updated) {
 	uint32_t now = gettime_ms();
 
 	pthread_mutex_lock(&glMainMutex);
@@ -641,6 +640,7 @@ static bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop
 	struct sMR *Device;
 	mdnssd_service_t *s;
 	uint32_t now = gettime_ms();
+	bool Updated = false;
 
 	for (s = slist; s && glMainRunning; s = s->next) {
 		char *am = GetmDNSAttribute(s->attr, s->attr_count, "am");
@@ -710,11 +710,13 @@ static bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop
 				Device->SqueezeHandle = 0;
 				LOG_ERROR("[%p]: cannot create squeezelite instance (%s)", Device, Device->FriendlyName);
 				DelRaopDevice(Device);
+			} else {
+				Updated = true;
 			}
 		}
 	}
 
-	UpdateDevices();
+	UpdateDevices(Updated);
 
 	// we have intentionally not released the slist
 	return false;
@@ -759,7 +761,7 @@ static void *MainThread(void *args) {
 			}
 		}
 
-		UpdateDevices();
+		UpdateDevices(false);
 	}
 
 	return NULL;
