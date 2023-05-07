@@ -1,7 +1,13 @@
 Note: beware of crypto version (see shairtunes)
 
+1.2.12
+ - Just call SaveConfig upon SETNAME
+ 
+1.2.11
+ - UpdatedDevices must set "Updated" flag upon device deletion
+
 1.2.10
- - UpdateDevice shoudl also create devices
+ - as a parameter to UpdateDevice as it must save configuration when devices are created
  
 1.2.9
  - fix netmask endianness to properly eliminate on behalf announces

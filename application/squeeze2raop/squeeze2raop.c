@@ -365,6 +365,12 @@ bool sq_callback(void *caller, sq_action_t action, ...)
 			break;
 		case SQ_SETNAME:
 			strcpy(device->sq_config.name, va_arg(args, char*));
+			if (glAutoSaveConfigFile) {
+				LOG_DEBUG("Updating configuration %s", glConfigName);
+				pthread_mutex_lock(&glMainMutex);
+				SaveConfig(glConfigName, glConfigID, false);
+				pthread_mutex_unlock(&glMainMutex);
+			}
 			break;
 		case SQ_SETSERVER:
 			strcpy(device->sq_config.dynamic.server, inet_ntoa(*va_arg(args, struct in_addr*)));
@@ -625,6 +631,7 @@ static void UpdateDevices(bool Updated) {
 		LOG_INFO("[%p]: removing renderer (%s) on timeout", Device, Device->FriendlyName);
 		if (Device->SqueezeHandle) sq_delete_device(Device->SqueezeHandle);
 		DelRaopDevice(Device);
+		Updated = true;
 	}
 
 	if ((Updated && glAutoSaveConfigFile) || glDiscovery) {
@@ -716,6 +723,7 @@ static bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop
 		}
 	}
 
+	// add new devices and remove expired ones
 	UpdateDevices(Updated);
 
 	// we have intentionally not released the slist
@@ -737,6 +745,7 @@ static void *MainThread(void *args) {
 		pthread_mutex_lock(&glMainMutex);
 		pthread_cond_reltimedwait(&glMainCond, &glMainMutex, 30*1000);
 		pthread_mutex_unlock(&glMainMutex);
+
 		if (!glMainRunning) break;
 
 		if (glLogFile && glLogLimit != - 1) {
@@ -761,6 +770,7 @@ static void *MainThread(void *args) {
 			}
 		}
 
+		// check for expired devices and update accordingly
 		UpdateDevices(false);
 	}
 
