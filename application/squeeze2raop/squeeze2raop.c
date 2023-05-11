@@ -144,6 +144,7 @@ static char					glConfigName[STR_LEN] = "./config.xml";
 static struct in_addr 		glHost;
 static char					glModelName[STR_LEN] = MODEL_NAME_STRING;
 static uint16_t				glPortBase, glPortRange;
+static bool					glPairing;
 
 static char usage[] =
 
@@ -155,6 +156,7 @@ static char usage[] =
 		   "  -b <address>]\tNetwork address to bind to\n"
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
 		   "  -i <config file>\tdiscover players, save <config file> and exit\n"
+		   "  -l \t\t\tAppleTV pairing\n"
    		   "  -m <name1,name2...>\texclude from search devices whose model name contains name1 or name 2 ...\n"
 		   "  -I \t\t\tauto save config at every network scan\n"
 		   "  -f <logfile>\t\tWrite debug to logfile\n"
@@ -366,7 +368,7 @@ bool sq_callback(void *caller, sq_action_t action, ...)
 		case SQ_SETNAME:
 			strcpy(device->sq_config.name, va_arg(args, char*));
 			if (glAutoSaveConfigFile) {
-				LOG_DEBUG("Updating configuration %s", glConfigName);
+				LOG_INFO("Updating configuration %s", glConfigName);
 				pthread_mutex_lock(&glMainMutex);
 				SaveConfig(glConfigName, glConfigID, false);
 				pthread_mutex_unlock(&glMainMutex);
@@ -618,7 +620,7 @@ static struct sMR *SearchUDN(char *UDN) {
 }
 
 /*----------------------------------------------------------------------------*/
-static void UpdateDevices(bool Updated) {
+static void UpdateDevices() {
 	uint32_t now = gettime_ms();
 
 	pthread_mutex_lock(&glMainMutex);
@@ -631,12 +633,6 @@ static void UpdateDevices(bool Updated) {
 		LOG_INFO("[%p]: removing renderer (%s) on timeout", Device, Device->FriendlyName);
 		if (Device->SqueezeHandle) sq_delete_device(Device->SqueezeHandle);
 		DelRaopDevice(Device);
-		Updated = true;
-	}
-
-	if ((Updated && glAutoSaveConfigFile) || glDiscovery) {
-		LOG_DEBUG("Updating configuration %s", glConfigName);
-		SaveConfig(glConfigName, glConfigID, false);
 	}
 
 	pthread_mutex_unlock(&glMainMutex);
@@ -724,7 +720,14 @@ static bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop
 	}
 
 	// add new devices and remove expired ones
-	UpdateDevices(Updated);
+	UpdateDevices();
+
+	if ((Updated && glAutoSaveConfigFile) || glDiscovery) {
+		if (!glDiscovery) LOG_INFO("Updating configuration %s", glConfigName);
+		pthread_mutex_lock(&glMainMutex);
+		SaveConfig(glConfigName, glConfigID, false);
+		pthread_mutex_unlock(&glMainMutex);
+	}
 
 	// we have intentionally not released the slist
 	return false;
@@ -771,7 +774,7 @@ static void *MainThread(void *args) {
 		}
 
 		// check for expired devices and update accordingly
-		UpdateDevices(false);
+		UpdateDevices();
 	}
 
 	return NULL;
@@ -1375,7 +1378,7 @@ static bool ParseArgs(int argc, char **argv) {
 		if (strstr("astxdfpibmM", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
-		} else if (strstr("tzZIk"
+		} else if (strstr("tzZIkl"
 #if defined(RESAMPLE)
 						  "uR"
 #endif
@@ -1433,6 +1436,9 @@ static bool ParseArgs(int argc, char **argv) {
 			break;
 		case 'm':
 			strcpy(glExcluded, optarg);
+			break;
+		case 'l':
+			glPairing = true;
 			break;
 #if LINUX || FREEBSD || SUNOS
 		case 'z':
@@ -1538,6 +1544,32 @@ int main(int argc, char *argv[])
 	if (glDiscovery) {
 		Start();
 		sleep(DISCOVERY_TIME + 1);
+		Stop();
+		return(0);
+	}
+
+	// just do pairing
+	if (glPairing) {
+		glDiscovery = true;
+		Start();
+
+		printf("\n*************** Wait 5 seconds for player discovery **************\n");
+		sleep(5);
+		printf("\n***************************** done *******************************\n");
+
+		char* UDN = NULL, * secret = NULL;
+		while (AppleTVpairing(NULL, &UDN, &secret)) {
+			if (!UDN || !secret) continue;
+			for (int i = 0; i < MAX_RENDERERS; i++) {
+				if (glMRDevices[i].Running && !strcasecmp(glMRDevices[i].UDN, UDN)) {
+					sprintf(glMRDevices[i].Config.Credentials, "%s@%s:%hu", secret, inet_ntoa(glMRDevices[i].PlayerIP), glMRDevices[i].PlayerPort);
+					SaveConfig(glConfigName, glConfigID, CONFIG_UPDATE);
+					break;
+				}
+			}
+			NFREE(UDN); NFREE(secret);
+		}
+
 		Stop();
 		return(0);
 	}
