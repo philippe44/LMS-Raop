@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+1.3.1
+ - libraop update (delay for daap:artwork)
+
 1.3.0
  - update openssl to 1.1.1u
  - add -l option to have built-in AppleTV pairing (no need to use Perl external solution)
