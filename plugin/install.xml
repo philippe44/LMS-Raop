@@ -4,10 +4,10 @@
   <targetApplication>
     <maxVersion>*</maxVersion>
     <id>SlimServer</id>
-    <minVersion>8.2</minVersion>
+    <minVersion>8.0</minVersion>
   </targetApplication>
   <creator>Philippe</creator>
-  <version>1.3.1</version>
+  <version>1.3.2</version>
   <name>PLUGIN_RAOPBRIDGE</name>
   <description>PLUGIN_RAOPBRIDGE_DESC</description>
   <email>philippe_44@outlook.com</email>
