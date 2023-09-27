@@ -1274,7 +1274,11 @@ static bool Start(void) {
 #endif
 
 	// must bind to an address
-	glHost = get_interface(!strchr(glInterface, '?') ? glInterface : NULL, NULL, &glNetmask);
+	char* iface = NULL;
+	glHost = get_interface(!strchr(glInterface, '?') ? glInterface : NULL, &iface, &glNetmask);
+	LOG_INFO("Binding to %s [%s] with mask 0x%08x", inet_ntoa(glHost), iface, ntohl(glNetmask));
+	NFREE(iface);
+
 	if (glHost.s_addr == INADDR_NONE) return false;
 
 	memset(&glMRDevices, 0, sizeof(glMRDevices));
@@ -1289,8 +1293,6 @@ static bool Start(void) {
 	}
 
 	sq_init(glHost, glModelName);
-
-	LOG_INFO("Binding to %s", inet_ntoa(glHost));
 
 	/* start the mDNS devices discovery thread */
 	if ((glmDNSsearchHandle = mdnssd_init(false, glHost, true)) == NULL) {;

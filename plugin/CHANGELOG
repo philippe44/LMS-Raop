@@ -1,5 +1,12 @@
 Note: beware of crypto version (see shairtunes)
 
+1.3.5
+ - maybe a fix why some server or name were never updated (XML_UpdateNode bug)
+ - display interface upon startup
+
+1.3.4
+ - libraop log crash issue when error happens (missing token)
+
 1.3.3
  - fu..ing SHA and repository signature
  
