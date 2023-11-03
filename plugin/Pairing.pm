@@ -13,8 +13,6 @@ use Date::Parse;
 use Encode qw(decode encode);
 use version;
 
-eval "use CryptX";
-
 use Slim::Utils::Prefs;
 use Slim::Utils::Log;
 use Slim::Networking::Async::HTTP;
@@ -28,6 +26,7 @@ sub displayPIN {
 
 	eval {
 		require CryptX;
+		import->CryptX;
 		require Crypt::SRP;
 		require Crypt::Digest::SHA512;
 		require Crypt::Ed25519;
