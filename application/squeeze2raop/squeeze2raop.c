@@ -72,10 +72,11 @@ tMRConfig			glMRConfig = {
 							true,
 							true,
 							false,
-							30, 			// IdleTimeout
-							0,				// RemoveTimeout
+							30, 			 // IdleTimeout
+							0,				 // RemoveTimeout
 							false,
 							"",				 // credentials
+							"",				 // password
 							1000,			 // read_ahead
 							2,				 // VolumeMode = HARDWARE
 							-1,				 // Volume = nothing at first connection
@@ -144,31 +145,32 @@ static char					glConfigName[STR_LEN] = "./config.xml";
 static struct in_addr 		glHost;
 static char					glModelName[STR_LEN] = MODEL_NAME_STRING;
 static uint16_t				glPortBase, glPortRange;
-static bool					glPairing;
+static bool					glPairing, glPassword;
 
 static char usage[] =
 
 			VERSION "\n"
 		   "See -t for license terms\n"
 		   "Usage: [options]\n"
-		   "  -s <server>[:<port>]\tConnect to specified server, otherwise uses autodiscovery to find server\n"
-		   "  -a <port>[:<count>]\tset inbound port base and range\n"
-		   "  -b <address>]\tNetwork address to bind to\n"
-		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
-		   "  -i <config file>\tdiscover players, save <config file> and exit\n"
-		   "  -l \t\t\tAppleTV pairing\n"
-   		   "  -m <name1,name2...>\texclude from search devices whose model name contains name1 or name 2 ...\n"
-		   "  -I \t\t\tauto save config at every network scan\n"
-		   "  -f <logfile>\t\tWrite debug to logfile\n"
-  		   "  -p <pid file>\t\twrite PID in file\n"
-		   "  -d <log>=<level>\tSet logging level, logs: all|slimproto|stream|decode|output|web|main|util|raop, level: error|warn|info|debug|sdebug\n"
-		   "  -M <modelname>\tSet the squeezelite player model name sent to the server (default: " MODEL_NAME_STRING ")\n"
+		   "  -s <server>[:<port>] connect to specified server, otherwise uses autodiscovery to find server\n"
+		   "  -a <port>[:<count>]  set inbound port base and range\n"
+		   "  -b <address>]        network address to bind to\n"
+		   "  -x <config file>     read config from file (default is ./config.xml)\n"
+		   "  -i <config file>     discover players, save <config file> and exit\n"
+		   "  -l                   AppleTV pairing\n"
+		   "  -P                   set player password\n"
+   		   "  -m <name1,name2...>  exclude from search devices whose model name contains name1 or name 2 ...\n"
+		   "  -I                   auto save config at every network scan\n"
+		   "  -f <logfile>         write debug to logfile\n"
+  		   "  -p <pid file>        write PID in file\n"
+		   "  -d <log>=<level>     set logging level, logs: all|slimproto|stream|decode|output|web|main|util|raop, level: error|warn|info|debug|sdebug\n"
+		   "  -M <modelname>       set the squeezelite player model name sent to the server (default: " MODEL_NAME_STRING ")\n"
 #if LINUX || FREEBSD || SUNOS
-		   "  -z \t\t\tDaemonize\n"
+		   "  -z                   Daemonize\n"
 #endif
-		   "  -Z \t\t\tNOT interactive\n"
-		   "  -k \t\t\tImmediate exit on SIGQUIT and SIGTERM\n"
-		   "  -t \t\t\tLicense terms\n"
+		   "  -Z                   NOT interactive\n"
+		   "  -k                   immediate exit on SIGQUIT and SIGTERM\n"
+		   "  -t                   license terms\n"
 		   "\n"
 		   "Build options:"
 #if LINUX
@@ -225,7 +227,7 @@ static char license[] =
 /*----------------------------------------------------------------------------*/
 static bool AddRaopDevice(struct sMR *Device, mdnssd_service_t *s);
 static void DelRaopDevice(struct sMR *Device);
-static bool IsExcluded(char *Model);
+static bool IsExcluded(char *Model, char *Name);
 
 #if BUSY_MODE
 static void BusyRaise(struct sMR *Device);
@@ -647,7 +649,7 @@ static bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop
 
 	for (s = slist; s && glMainRunning; s = s->next) {
 		char *am = GetmDNSAttribute(s->attr, s->attr_count, "am");
-		bool excluded = am ? IsExcluded(am) : false;
+		bool excluded = am ? IsExcluded(am, s->name) : false;
 		NFREE(am);
 
 		// ignore excluded and announces made on behalf
@@ -923,16 +925,34 @@ static bool AddRaopDevice(struct sMR *Device, mdnssd_service_t *s) {
 	if ((Device->Config.Encryption || Auth) && strchr(Device->Crypto, '1'))	Crypto = RAOP_RSA;
 	else Crypto = RAOP_CLEAR;
 
+	char *password = NULL;
+
+	if (*Device->Config.Password) {
+		char* encrypted;
+
+		// add up to 2 trailing '=' and adjust size
+		asprintf(&encrypted, "%s==", Device->Config.Password);
+		encrypted[strlen(Device->Config.Password) + strlen(Device->Config.Password) % 4] = '\0';
+		password = malloc(strlen(encrypted));
+		size_t len = base64_decode(encrypted, password);
+		free(encrypted);
+
+		// xor with UDN
+		for (size_t i = 0; i < len; i++) password[i] ^= Device->UDN[i];
+		password[len] = '\0';
+	}
+
 	Device->Raop = raopcl_create(glHost, glPortBase, glPortRange,
 								 glDACPid, Device->ActiveRemote,
 								 Device->Config.AlacEncode ? RAOP_ALAC : RAOP_ALAC_RAW , FRAMES_PER_BLOCK,
 								 (uint32_t) MS2TS(Device->Config.ReadAhead, Device->SampleRate ? atoi(Device->SampleRate) : 44100),
-								 Crypto, Auth, Secret, Device->Crypto, md,
+								 Crypto, Auth, Secret, password, Device->Crypto, md,
 								 Device->SampleRate ? atoi(Device->SampleRate) : 44100,
 								 Device->SampleSize ? atoi(Device->SampleSize) : 16,
 								 Device->Channels ? atoi(Device->Channels) : 2,
 								 Device->Volume > 0 ? Device->VolumeMapping[(unsigned) Device->Volume] : -144.0);
 
+	NFREE(password);
 	NFREE(am);
 	NFREE(md);
 	NFREE(pk);
@@ -1230,10 +1250,11 @@ static void StopActiveRemote(void) {
 }
 
 /*----------------------------------------------------------------------------*/
-static bool IsExcluded(char *Model) {
-	char item[STR_LEN];
+static bool IsExcluded(char *Model, char *Name) {
+	if (!Model) return false;
 	char *p = glExcluded;
 	do {
+		char item[STR_LEN];
 		sscanf(p, "%[^,]", item);
 		if (strcasestr(Model, item)) return true;
 		p += strlen(item);
@@ -1380,7 +1401,7 @@ static bool ParseArgs(int argc, char **argv) {
 		if (strstr("astxdfpibmM", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
-		} else if (strstr("tzZIkl"
+		} else if (strstr("tzZIklP"
 #if defined(RESAMPLE)
 						  "uR"
 #endif
@@ -1441,6 +1462,9 @@ static bool ParseArgs(int argc, char **argv) {
 			break;
 		case 'l':
 			glPairing = true;
+			break;
+		case 'P':
+			glPassword = true;
 			break;
 #if LINUX || FREEBSD || SUNOS
 		case 'z':
@@ -1576,6 +1600,46 @@ int main(int argc, char *argv[])
 		return(0);
 	}
 
+	// just set password(s)
+	if (glPassword) {
+		glDiscovery = true;
+		Start();
+
+		printf("\n*************** Wait 5 seconds for player discovery **************\n");
+		sleep(5);
+		printf("\n***************************** done *******************************\n");
+
+		char* UDN = NULL, * passwd = NULL;
+		while (AirPlayPassword(NULL, IsExcluded, &UDN, &passwd)) {
+			if (!UDN) continue;
+
+			for (int i = 0; i < MAX_RENDERERS; i++) {
+				if (glMRDevices[i].Running && !strcasecmp(glMRDevices[i].UDN, UDN)) {
+					*glMRDevices[i].Config.Password = '\0';
+					if (passwd && *passwd) {
+						char* encrypted;
+						size_t len = strlen(passwd);
+
+						// xor it with UDN
+						for (size_t j = len; j--; passwd[j] ^= glMRDevices[i].UDN[j]);
+						base64_encode(passwd, len, &encrypted);
+
+						// remove trailing '='
+						for (char* p = encrypted + strlen(encrypted); *--p == '='; *p = '\0');
+						strcpy(glMRDevices[i].Config.Password, encrypted);
+						free(encrypted);
+					}
+					SaveConfig(glConfigName, glConfigID, CONFIG_UPDATE);
+					break;
+				}
+			}
+			NFREE(UDN); NFREE(passwd);
+		}
+
+		Stop();
+		return(0);
+	}
+
 #if LINUX || FREEBSD || SUNOS
 	if (glDaemonize) {
 		if (daemon(1, glLogFile ? 1 : 0)) {
@@ -1659,6 +1723,3 @@ int main(int argc, char *argv[])
 	LOG_INFO("all done", NULL);
 	return true;
 }
-
-
-

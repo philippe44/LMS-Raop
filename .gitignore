@@ -105,3 +105,4 @@ build/
 *.bat
 *.user
 application/bin/
+application/*.dll

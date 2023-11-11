@@ -123,6 +123,8 @@ void SaveConfig(char *name, void *ref, int mode) {
 
 			XMLUpdateNode(doc, dev_node, true, "friendly_name", p->FriendlyName);
 			XMLUpdateNode(doc, dev_node, true, "name", p->sq_config.name);
+			if (*p->Config.Password) XMLUpdateNode(doc, dev_node, true, "password", p->Config.Password);
+			else XMLDelNode(dev_node, "password");
 			if (*p->Config.Credentials) XMLUpdateNode(doc, dev_node, true, "credentials", p->Config.Credentials);
 			if (*p->sq_config.dynamic.server) XMLUpdateNode(doc, dev_node, true, "server", p->sq_config.dynamic.server);
 		}
@@ -194,6 +196,7 @@ static void LoadConfigItem(tMRConfig *Conf, sq_dev_param_t *sq_conf, char *name,
 	if (!strcmp(name, "remove_timeout")) Conf->RemoveTimeout = atol(val);
 	if (!strcmp(name, "encryption")) Conf->Encryption = atol(val);
 	if (!strcmp(name, "credentials")) strcpy(Conf->Credentials, val);
+	if (!strcmp(name, "password")) strcpy(Conf->Password, val);
 	if (!strcmp(name, "read_ahead")) Conf->ReadAhead = atol(val);
 	if (!strcmp(name, "send_metadata")) Conf->SendMetaData = atol(val);
 	if (!strcmp(name, "send_coverart")) Conf->SendCoverArt = atol(val);

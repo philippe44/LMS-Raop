@@ -6,17 +6,17 @@ use File::Spec::Functions;
 use LWP::Simple;
 use base qw(Slim::Web::Settings);
 use XML::Simple;
+use MIME::Base64 qw(encode_base64 decode_base64);
 use Data::Dumper;
 use Slim::Utils::PluginManager;
 use Slim::Utils::Prefs;
 use Slim::Utils::Log;
 
-
 my $prefs = preferences('plugin.raopbridge');
 my $log   = logger('plugin.raopbridge');
 my @xmlmainskip = qw(interface);
 my @xmlmain = ( @xmlmainskip, qw(log_limit ports) );
-my @xmldevice = qw(name mac codecs enabled remove_timeout send_metadata send_coverart resolution player_volume idle_timeout read_ahead encryption server volume_feedback volume_mode volume_mapping mute_on_pause alac_encode);
+my @xmldevice = qw(name mac codecs enabled remove_timeout send_metadata send_coverart resolution player_volume idle_timeout read_ahead encryption server volume_feedback volume_mode volume_mapping mute_on_pause alac_encode password);
 my @prefs_bool  = qw(autorun logging autosave eraselog useLMSsocket);
 my @prefs_other = qw(output bin debugs opts);
 
@@ -161,7 +161,12 @@ sub handler {
 					if ($params->{ $p } eq '') {
 						delete $device->{ $p };
 					} else {
-						$device->{ $p } = $params->{ $p };
+						if ($p eq 'password') {
+							$device->{ $p } = $params->{ $p } ^ substr($device->{'udn'}, 0, length $params->{ $p });
+							$device->{ $p } = encode_base64($device->{ $p }) =~ s/=+$//r;
+						} else {
+							$device->{ $p } = $params->{ $p };
+						}
 					}
 				}	
 			}	
@@ -287,7 +292,13 @@ sub handler2 {
 			my $device = findUDN($params->{'seldevice'}, $params->{'devices'});
 			
 			for my $p (@xmldevice) {
-				$params->{ $p } = $device->{ $p };
+				if ($p eq 'password') {
+					use bytes;
+					$params->{ $p } = decode_base64($device->{ $p } . '=' x (length($device->{ $p }) % 4));
+					$params->{ $p } ^= substr($device->{'udn'}, 0, length $params->{ $p });
+				} else {
+					$params->{ $p } = $device->{ $p };
+				}
 			}
 		}
 		$params->{'prevseldevice'} = $params->{'seldevice'};

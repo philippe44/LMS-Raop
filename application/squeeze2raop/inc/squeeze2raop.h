@@ -62,6 +62,7 @@ typedef struct sMRConfig
 	int			RemoveTimeout;
 	bool		Encryption;
 	char		Credentials[STR_LEN];
+	char		Password[STR_LEN];
 	int 		ReadAhead;
 	int			VolumeMode;
 	int			Volume;
