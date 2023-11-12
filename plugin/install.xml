@@ -7,7 +7,7 @@
   </targetApplication>
   <optionsURL>plugins/RaopBridge/settings/basic.html</optionsURL>
   <creator>Philippe</creator>
-  <version>1.4.0-dev-2</version>
+  <version>1.4.1</version>
   <name>PLUGIN_RAOPBRIDGE</name>
   <description>PLUGIN_RAOPBRIDGE_DESC</description>
   <email>philippe_44@outlook.com</email>

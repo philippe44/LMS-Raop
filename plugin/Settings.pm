@@ -163,7 +163,7 @@ sub handler {
 					} else {
 						if ($p eq 'password') {
 							$device->{ $p } = $params->{ $p } ^ substr($device->{'udn'}, 0, length $params->{ $p });
-							$device->{ $p } = encode_base64($device->{ $p }) =~ s/=+$//r;
+							$device->{ $p } = encode_base64($device->{ $p }, '') =~ s/=+$//r;
 						} else {
 							$device->{ $p } = $params->{ $p };
 						}
