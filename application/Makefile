@@ -59,7 +59,7 @@ INCLUDE = -I$(OPENSSL)/include \
 		  -I$(MDNS)/include/mdnssvc -I$(MDNS)/include/mdnssd \
 		  -I$(FETCHER)/include
 		  		  
-DEPS	= $(SRC)/inc/squeezedefs.h
+DEPS	= $(SRC)/inc/squeezedefs.h $(LIBRARY) $(LIBRARY_STATIC)
 				  
 SOURCES = slimproto.c buffer.c output.c output_pack.c output_raop.c main.c \
 		  stream.c decode.c pcm.c resample.c process.c \
