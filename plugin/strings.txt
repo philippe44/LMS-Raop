@@ -276,7 +276,7 @@ PLUGIN_RAOPBRIDGE_PLAYEROPTIONS_DESC
 	EN	using digital volume
 	EN	<br><b>Encrypt</b>: Use encryption if available (needed for ShairTunes and all cheap AirPlay boxes)
 	EN	<br><b>Compress</b>: Re-encode audio using ALAC (saves network bandwidth but uses CPU)
-    EN	<br><b>Password</b>: Device password
+	EN	<br><b>Password</b>: Device password
 
 PLUGIN_RAOPBRIDGE_READAHEAD
 	EN	Audio buffer (ms)	 
