@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+1.4.5
+ - (P) CryptX symbols were not imported
+
 1.4.4
  - update libs & fix memory leaks
  - fix strings.txt

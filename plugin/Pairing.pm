@@ -26,7 +26,7 @@ sub displayPIN {
 
 	eval {
 		require CryptX;
-		import->CryptX;
+		CryptX->import;
 		require Crypt::SRP;
 		require Crypt::Digest::SHA512;
 		require Crypt::Ed25519;
