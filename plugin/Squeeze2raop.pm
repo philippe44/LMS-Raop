@@ -57,6 +57,10 @@ sub binaries {
 		
 	}	
 	
+	if ($os->{'os'} eq 'FreeBSD') {
+		return qw( squeeze2raop-freebsd-x86_64 squeeze2raop-freebsd-x86_64-static);
+	}
+	
 	if ($os->{'os'} eq 'Darwin') {
 		return qw(squeeze2raop-macos squeeze2raop-macos-static);
 	}
