@@ -170,8 +170,8 @@ static int connect_socket(bool use_ssl, struct thread_ctx_s *ctx) {
 	   Windows uses a different amount than what it reports... oh well
 	*/
 	unsigned int opt, len = sizeof(opt);
-	getsockopt(sock, SOL_SOCKET, SO_RCVBUF, (void*)&opt, &len);
-	setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (void*)&opt, sizeof(opt));
+	getsockopt(sock, SOL_SOCKET, SO_RCVBUF, (void*) &opt, &len);
+	setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (void*) &opt, sizeof(opt));
 	LOG_INFO("[%p] set SO_RCVBUF at %d bytes", ctx, opt);
 
 	set_nonblock(sock);

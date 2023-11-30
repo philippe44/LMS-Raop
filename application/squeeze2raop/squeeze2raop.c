@@ -526,6 +526,7 @@ static void *PlayerThread(void *args) {
 
 						pthread_t lambda;
 						pthread_create(&lambda, NULL, &GetArtworkThread, Req);
+						pthread_detach(lambda);
 					}
 
 					/*
@@ -642,12 +643,11 @@ static void UpdateDevices() {
 
 /*----------------------------------------------------------------------------*/
 static bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop) {
-	struct sMR *Device;
-	mdnssd_service_t *s;
 	uint32_t now = gettime_ms();
 	bool Updated = false;
-
-	for (s = slist; s && glMainRunning; s = s->next) {
+		
+	for (mdnssd_service_t* s = slist; s && glMainRunning; s = s->next) {
+		struct sMR* Device;
 		char *am = GetmDNSAttribute(s->attr, s->attr_count, "am");
 		bool excluded = am ? IsExcluded(am, s->name) : false;
 		NFREE(am);
@@ -821,7 +821,6 @@ static void RaopQueueFree(void* item) {
 
 /*----------------------------------------------------------------------------*/
 static bool AddRaopDevice(struct sMR *Device, mdnssd_service_t *s) {
-	pthread_attr_t pattr;
 	raop_crypto_t Crypto;
 	bool Auth = false;
 	char *p, *am, *md, *pk;
@@ -967,11 +966,7 @@ static bool AddRaopDevice(struct sMR *Device, mdnssd_service_t *s) {
 		return false;
 	}
 
-	pthread_attr_init(&pattr);
-	pthread_attr_setstacksize(&pattr, PTHREAD_STACK_MIN + 64*1024);
 	pthread_create(&Device->Thread, NULL, &PlayerThread, Device);
-	pthread_attr_destroy(&pattr);
-
 	return true;
 }
 
@@ -1336,20 +1331,19 @@ static bool Start(void) {
 static bool Stop(void) {
 	glMainRunning = false;
 
-	LOG_DEBUG("terminate search thread ...", NULL);
-
 	// this forces an ongoing search to end
+	LOG_INFO("terminate search thread ...", NULL);
 	mdnssd_close(glmDNSsearchHandle);
 	pthread_join(glmDNSsearchThread, NULL);
 
-	LOG_DEBUG("flush renderers ...", NULL);
+	LOG_INFO("flush renderers ...", NULL);
 	FlushRaopDevices();
 
 	// Stop ActiveRemote server
-	LOG_DEBUG("terminate mDNS responder", NULL);
+	LOG_INFO("terminate mDNS responder", NULL);
 	StopActiveRemote();
 
-	LOG_DEBUG("terminate main thread ...", NULL);
+	LOG_INFO("terminate main thread ...", NULL);
 	pthread_cond_signal(&glMainCond);
 	pthread_join(glMainThread, NULL);
 	pthread_mutex_destroy(&glMainMutex);
@@ -1716,9 +1710,9 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	LOG_INFO("stopping squeezelite devices ...", NULL);
+	LOG_INFO("stop squeezelite devices ...", NULL);
 	sq_end();
-	LOG_INFO("stopping Raop devices ...", NULL);
+	LOG_INFO("stop Raop devices ...", NULL);
 	Stop();
 	LOG_INFO("all done", NULL);
 	return true;

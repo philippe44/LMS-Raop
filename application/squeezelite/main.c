@@ -586,7 +586,6 @@ bool sq_run_device(sq_dev_handle_t handle, struct raopcl_s *raopcl, sq_dev_param
 {
 	struct thread_ctx_s *ctx = &thread_ctx[handle - 1];
 
-
 	memcpy(&ctx->config, param, sizeof(sq_dev_param_t));
 
 	sprintf(ctx->cli_id, "%02x:%02x:%02x:%02x:%02x:%02x",
