@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+1.4.6
+ - updated libraries with more memory leaks fixed
+
 1.4.5
  - (P) CryptX symbols were not imported
 
