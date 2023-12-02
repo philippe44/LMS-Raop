@@ -1,5 +1,9 @@
 Note: beware of crypto version (see shairtunes)
 
+1.4.7
+ - fix remaining issues in raop_streamer.c (libraop)
+ - previous version had a miss build
+
 1.4.6
  - updated libraries with more memory leaks fixed
 
