@@ -1,5 +1,10 @@
 Note: beware of crypto version (see shairtunes)
 
+1.5.0
+ - use fixed libcodecs and libraop for alac
+ - add '-c' to set codec on command line
+ - fix memory leak when using -t (only on exit)
+
 1.4.7
  - fix remaining issues in raop_streamer.c (libraop)
  - previous version had a miss build

@@ -155,16 +155,18 @@ static char usage[] =
 		   "  -s <server>[:<port>] connect to specified server, otherwise uses autodiscovery to find server\n"
 		   "  -a <port>[:<count>]  set inbound port base and range\n"
 		   "  -b <address>]        network address to bind to\n"
+		   "  -M <modelname>       set the squeezelite player model name sent to the server (default: " MODEL_NAME_STRING ")\n"
+		   "  -m <name1,name2...>  exclude from search devices whose model name contains name1 or name 2 ...\n"
 		   "  -x <config file>     read config from file (default is ./config.xml)\n"
 		   "  -i <config file>     discover players, save <config file> and exit\n"
-		   "  -l                   AppleTV pairing\n"
-		   "  -P                   set player password\n"
-   		   "  -m <name1,name2...>  exclude from search devices whose model name contains name1 or name 2 ...\n"
 		   "  -I                   auto save config at every network scan\n"
-		   "  -f <logfile>         write debug to logfile\n"
-  		   "  -p <pid file>        write PID in file\n"
 		   "  -d <log>=<level>     set logging level, logs: all|slimproto|stream|decode|output|web|main|util|raop, level: error|warn|info|debug|sdebug\n"
-		   "  -M <modelname>       set the squeezelite player model name sent to the server (default: " MODEL_NAME_STRING ")\n"
+	       "  -f <logfile>         write debug to logfile\n"
+		   "  -p <pid file>        write PID in file\n"
+		   "  -c pcm|alac		   set codec\n"
+		   "  -l                   AppleTV pairing\n"
+		   "  -P                   set player password\n"	   
+	
 #if LINUX || FREEBSD || SUNOS
 		   "  -z                   Daemonize\n"
 #endif
@@ -1392,7 +1394,7 @@ static bool ParseArgs(int argc, char **argv) {
 	}
 	while (optind < argc && strlen(argv[optind]) >= 2 && argv[optind][0] == '-') {
 		char *opt = argv[optind] + 1;
-		if (strstr("astxdfpibmM", opt) && optind < argc - 1) {
+		if (strstr("asxdfpibmMc", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
 		} else if (strstr("tzZIklP"
@@ -1402,12 +1404,14 @@ static bool ParseArgs(int argc, char **argv) {
 		  , opt)) {
 			optarg = NULL;
 			optind += 1;
-		}
-		else {
+		} else {
 			printf("%s", usage);
 			return false;
 		}
 		switch (opt[0]) {
+		case 'c':
+			if (!strcasecmp(optarg, "alac")) glMRConfig.AlacEncode = true;
+			break;
 		case 's':
 			strcpy(glDeviceParam.server, optarg);
 			break;
@@ -1520,8 +1524,6 @@ int main(int argc, char *argv[])
 	signal(SIGHUP, sighandler);
 #endif
 
-	netsock_init();
-
 	// first try to find a config file on the command line
 	for (i = 1; i < argc; i++) {
 		if (!strcmp(argv[i], "-x")) {
@@ -1538,7 +1540,13 @@ int main(int argc, char *argv[])
 	}
 
 	// potentially overwrite with some cmdline parameters
-	if (!ParseArgs(argc, argv)) exit(1);
+	if (!ParseArgs(argc, argv)) {
+		if (glConfigID) ixmlDocument_free(glConfigID);
+		exit(1);
+	}
+
+	// do that after potential exit
+	netsock_init();
 
 	// make sure port range is correct
 	sscanf(glPortOpen, "%hu:%hu", &glPortBase, &glPortRange);
