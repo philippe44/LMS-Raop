@@ -251,7 +251,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 		{
 			decode_flush(ctx);
 			bool flushed = output_flush_streaming(ctx);
-			if (flushed | stream_disconnect(ctx)) {
+			if (stream_disconnect(ctx) || flushed) {
 				// this is noop for LMS up to 8.4 at least
 				sendSTAT("STMf", 0, ctx);
 			}
