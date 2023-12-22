@@ -439,6 +439,7 @@ struct outputstate {
 void output_init(const char *device, unsigned output_buf_size, unsigned rates[], struct thread_ctx_s *ctx);
 void output_close(struct thread_ctx_s *ctx);
 void output_flush(struct thread_ctx_s *ctx);
+bool output_flush_streaming(struct thread_ctx_s* ctx);
 // _* called with mutex locked
 frames_t _output_frames(frames_t avail, struct thread_ctx_s *ctx);
 void _checkfade(bool, struct thread_ctx_s *ctx);

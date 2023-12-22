@@ -328,7 +328,7 @@ void output_close_common(struct thread_ctx_s *ctx) {
 
 /*---------------------------------------------------------------------------*/
 void output_flush(struct thread_ctx_s *ctx) {
-	LOG_DEBUG("[%p]: flush output buffer", ctx);
+	LOG_INFO("[%p]: flush output buffer (full)", ctx);
 	buf_flush(ctx->outputbuf);
 	LOCK;
 	ctx->output.fade = FADE_INACTIVE;
@@ -341,7 +341,21 @@ void output_flush(struct thread_ctx_s *ctx) {
 	}
 	ctx->output.frames_played = ctx->output.frames_played_dmp = 0;
 	ctx->output.track_start_time = -1;
+	ctx->output.track_start = NULL;
 	UNLOCK;
+}
+
+/*---------------------------------------------------------------------------*/
+bool output_flush_streaming(struct thread_ctx_s* ctx) {
+	LOG_INFO("[%p]: flush output buffer (streaming)", ctx);
+	LOCK;
+	bool flushed = ctx->output.track_start != NULL;
+	if (ctx->output.track_start) {
+		ctx->outputbuf->writep = ctx->output.track_start;
+		ctx->output.track_start = NULL;
+	}
+	UNLOCK;
+	return flushed;
 }
 
 

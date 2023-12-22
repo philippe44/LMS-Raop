@@ -1,5 +1,9 @@
 Note: beware of crypto version (see shairtunes)
 
+1.5.1
+ - 'q' and 'f' have been inverted forever in slimproto
+ - make 'f' work as expected: only flush streaming part of a track
+
 1.5.0
  - use fixed libcodecs and libraop for alac
  - add '-c' to set codec on command line

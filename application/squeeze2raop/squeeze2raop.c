@@ -378,9 +378,12 @@ bool sq_callback(void *caller, sq_action_t action, ...)
 				pthread_mutex_unlock(&glMainMutex);
 			}
 			break;
-		case SQ_SETSERVER:
-			strcpy(device->sq_config.dynamic.server, inet_ntoa(*va_arg(args, struct in_addr*)));
+		case SQ_SETSERVER: {
+            struct in_addr server;
+            server.s_addr = va_arg(args, uint32_t);
+            strcpy(device->sq_config.dynamic.server, inet_ntoa(server));
 			break;
+        }
 		default:
 			break;
 	}
@@ -1079,6 +1082,7 @@ static void *ActiveRemoteThread(void *args) {
 		LOG_INFO("[%p]: remote command %s", Device, command);
 
 		if (!strcasecmp(command, "pause")) sq_notify(Device->SqueezeHandle, SQ_PAUSE);
+		if (!strcasecmp(command, "discrete-pause")) sq_notify(Device->SqueezeHandle, SQ_PAUSE);
 		if (!strcasecmp(command, "play")) sq_notify(Device->SqueezeHandle, SQ_PLAY);
 		if (!strcasecmp(command, "playpause")) sq_notify(Device->SqueezeHandle, SQ_PLAY_PAUSE);
 		if (!strcasecmp(command, "stop")) sq_notify(Device->SqueezeHandle, SQ_STOP);
