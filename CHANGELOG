@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+1.5.3
+ - when player don't respond to mDNS search, keep them as long as they respond to ping
+
 1.5.2
  - invert 'f' stream_disconnect() and flush test order
 

@@ -636,11 +636,18 @@ static void UpdateDevices() {
 	// walk through the list for device whose timeout expired
 	for (int i = 0; i < MAX_RENDERERS; i++) {
 		struct sMR* Device = glMRDevices + i;
-		if (!Device->Running || Device->Config.RemoveTimeout <= 0 || !Device->Expired || now < Device->Expired + Device->Config.RemoveTimeout * 1000) continue;
+		if (!Device->Running || Device->Config.RemoveTimeout <= 0 || !Device->Expired || 
+			now < Device->Expired + Device->Config.RemoveTimeout * 1000) continue;
 
-		LOG_INFO("[%p]: removing renderer (%s) on timeout", Device, Device->FriendlyName);
-		if (Device->SqueezeHandle) sq_delete_device(Device->SqueezeHandle);
-		DelRaopDevice(Device);
+		if (!ping_host(Device->PlayerIP, 100)) {
+			LOG_INFO("[%p]: removing renderer (%s) on timeout", Device, Device->FriendlyName);
+			if (Device->SqueezeHandle) sq_delete_device(Device->SqueezeHandle);
+			DelRaopDevice(Device);
+		} else {
+			// device is in trouble, but let's renew grace period
+			Device->Expired = now | 0x01;
+			LOG_INFO("[%p]: %s mute to mDNS search, but answers ping, so keep it", Device, Device->FriendlyName);
+		}
 	}
 
 	pthread_mutex_unlock(&glMainMutex);
@@ -665,13 +672,13 @@ static bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop
 			Device->Expired = 0;
 			// device disconnected
 			if (s->expired) {
-				if (!raopcl_is_connected(Device->Raop) && !Device->Config.RemoveTimeout) {
+				if (!raopcl_is_connected(Device->Raop) && !Device->Config.RemoveTimeout && !ping_host(s->addr, 100)) {
 					LOG_INFO("[%p]: removing renderer (%s)", Device, Device->FriendlyName);
 					if (Device->SqueezeHandle) sq_delete_device(Device->SqueezeHandle);
 					DelRaopDevice(Device);
 				} else {
 					LOG_INFO("[%p]: keep missing renderer (%s)", Device, Device->FriendlyName);
-					Device->Expired = now ? now : 1;
+					Device->Expired = now | 0x01;
 				}
 			// device update - ignore changes in TXT
 			} else if (s->port != Device->PlayerPort || s->addr.s_addr != Device->PlayerIP.s_addr) {
