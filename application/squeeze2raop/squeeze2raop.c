@@ -160,10 +160,12 @@ static char usage[] =
 		   "  -x <config file>     read config from file (default is ./config.xml)\n"
 		   "  -i <config file>     discover players, save <config file> and exit\n"
 		   "  -I                   auto save config at every network scan\n"
-		   "  -d <log>=<level>     set logging level, logs: all|slimproto|stream|decode|output|web|main|util|raop, level: error|warn|info|debug|sdebug\n"
+		   "  -d <log>=<level>     set logging level\n" 
+	       "                       logs: all|slimproto|stream|decode|output|main|util|raop\n"
+	       "                       level: error|warn|info|debug|sdebug\n"
 	       "  -f <logfile>         write debug to logfile\n"
 		   "  -p <pid file>        write PID in file\n"
-		   "  -c pcm|alac		   set codec\n"
+		   "  -c pcm|alac          set codec\n"
 		   "  -l                   AppleTV pairing\n"
 		   "  -P                   set player password\n"	   
 	
@@ -204,6 +206,12 @@ static char usage[] =
 #endif
 #if USE_SSL
 		   " SSL"
+#endif
+#if USE_LIBOGG
+		   " LIBOGG"
+#endif
+#if LINKALL
+		   " LINKALL"
 #endif
 		   "\n\n";
 static char license[] =

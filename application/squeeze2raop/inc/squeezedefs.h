@@ -9,7 +9,7 @@
 
 #pragma once
 
-#define VERSION "v1.5.3"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v1.6.1"" ("__DATE__" @ "__TIME__")"
 
 #define STR_LEN 256
 
@@ -52,5 +52,12 @@
 #define LINKALL   1 // link all libraries at build time - requires all to be available at run time
 #else
 #define LINKALL   0
+#endif
+
+#if defined(USE_LIBOGG)
+#undef USE_LIBOGG
+#define USE_LIBOGG 1
+#else
+#define USE_LIBOGG 0
 #endif
 

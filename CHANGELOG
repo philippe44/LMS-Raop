@@ -1,5 +1,11 @@
 Note: beware of crypto version (see shairtunes)
 
+1.6.1
+ - add USE_LIBOGG mode
+
+1.6.0
+ - add ogg (vorbis/opus) metadata forwarding
+
 1.5.3
  - when player don't respond to mDNS search, keep them as long as they respond to ping
 

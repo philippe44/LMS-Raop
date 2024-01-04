@@ -349,7 +349,7 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			// TODO: must be changed if one day direct streaming is enabled
 			ctx->callback(ctx->MR, SQ_CONNECT);
 
-			stream_sock(ip, port, strm->flags & 0x20, header, header_len, strm->threshold * 1024, ctx->autostart >= 2, ctx);
+			stream_sock(ip, port, strm->flags & 0x20, strm->format, header, header_len, strm->threshold * 1024, ctx->autostart >= 2, ctx);
 
 			sendSTAT("STMc", 0, ctx);
 			ctx->sentSTMu = ctx->sentSTMo = ctx->sentSTMl = ctx->sentSTMd = false;

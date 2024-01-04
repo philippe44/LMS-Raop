@@ -32,13 +32,6 @@ static log_level 	*loglevel = &output_loglevel;
 #define LOCK_S   mutex_lock(ctx->streambuf->mutex)
 #define UNLOCK_S mutex_unlock(ctx->streambuf->mutex)
 
-
-/*---------------------------------------------------------------------------*/
-void wake_output(struct thread_ctx_s *ctx) {
-	return;
-}
-
-
 /*---------------------------------------------------------------------------*/
 static int _raop_write_frames(struct thread_ctx_s *ctx, frames_t out_frames, bool silence, s32_t gainL, s32_t gainR, u8_t flags,
 								s32_t cross_gain_in, s32_t cross_gain_out, s16_t **cross_ptr) {

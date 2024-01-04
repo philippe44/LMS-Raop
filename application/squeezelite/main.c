@@ -59,6 +59,7 @@ void sq_end() {
 #if RESAMPLE
 	deregister_soxr();
 #endif
+	stream_end();
 }
 
 static bool lambda(void* caller, sq_action_t action, ...) {
@@ -546,6 +547,7 @@ void sq_init(struct in_addr host, char *model_name)
 #if RESAMPLE
 	soxr_loaded = register_soxr();
 #endif
+	stream_init();
 }
 
 /*---------------------------------------------------------------------------*/
