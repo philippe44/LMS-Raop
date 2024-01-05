@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+1.6.2
+ - don't block in ov_read callbacks unless it's for headers
+
 1.6.1
  - add USE_LIBOGG mode
 
