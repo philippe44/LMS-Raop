@@ -1,5 +1,9 @@
 Note: beware of crypto version (see shairtunes)
 
+1.7.0.1
+ - outout.threshold is in frames, so comparison to exit OUTPUT_BUFFER state should not include BYTES_PER_FRAME
+ - use hacked flac codec to have ogf with multiple streams
+
 1.6.2
  - don't block in ov_read callbacks unless it's for headers
 

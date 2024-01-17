@@ -301,7 +301,6 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			unsigned header_len = len - sizeof(struct strm_packet);
 			char *header = (char *)(pkt + sizeof(struct strm_packet));
 			in_addr_t ip = (in_addr_t)strm->server_ip; // keep in network byte order
-			u16_t port = strm->server_port; // keep in network byte order
 			if (ip == 0) ip = ctx->slimproto_ip;
 
 			LOG_INFO("[%p], strm s autostart: %c transition period: %u transition type: %u codec: %c",
@@ -349,7 +348,9 @@ static void process_strm(u8_t *pkt, int len, struct thread_ctx_s *ctx) {
 			// TODO: must be changed if one day direct streaming is enabled
 			ctx->callback(ctx->MR, SQ_CONNECT);
 
-			stream_sock(ip, port, strm->flags & 0x20, strm->format, header, header_len, strm->threshold * 1024, ctx->autostart >= 2, ctx);
+			stream_sock(ip, strm->server_port, strm->flags & 0x20, 
+				        strm->format == 'o' || strm->format == 'u' || (strm->format == 'f' && strm->pcm_sample_size == 'o'),
+						header, header_len, strm->threshold * 1024, ctx->autostart >= 2, ctx);
 
 			sendSTAT("STMc", 0, ctx);
 			ctx->sentSTMu = ctx->sentSTMo = ctx->sentSTMl = ctx->sentSTMd = false;
