@@ -1,5 +1,9 @@
 Note: beware of crypto version (see shairtunes)
 
+1.7.2
+ - remove USE_LIBOGG option, too much work to maintain
+ - use setlocale() so that atof does not fail on '.'
+
 1.7.1
  - outout.threshold is in frames, so comparison to exit OUTPUT_BUFFER state should not include BYTES_PER_FRAME
  - use semi-hacked flac codec to have ogf with multiple streams

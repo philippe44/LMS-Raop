@@ -48,14 +48,11 @@ static struct {
 } go;
 #endif
 
-#if USE_LIBOGG
 #if LINKALL
 #define OG(h, fn, ...) (ogg_ ## fn)(__VA_ARGS__)
 #else
 #define OG(h, fn, ...) (h)->ogg_##fn(__VA_ARGS__)
 #endif
-#endif
-
 
 extern log_level	stream_loglevel;
 static log_level 	*loglevel = &stream_loglevel;
@@ -160,15 +157,10 @@ static void _disconnect(stream_state state, disconnect_code disconnect, struct t
 #endif
 	closesocket(ctx->fd);
 	ctx->fd = -1;
-#if USE_LIBOGG
 	if (ctx->stream.ogg.active) {
 		OG(&go, stream_clear, &ctx->stream.ogg.state);
 		OG(&go, sync_clear, &ctx->stream.ogg.sync);
-}
-#else
-	if (ctx->stream.ogg.state == STREAM_OGG_PAGE && ctx->stream.ogg.data) free(ctx->stream.ogg.data);
-	ctx->stream.ogg.data = NULL;
-#endif
+	}
 	wake_controller(ctx);
 }
 
@@ -247,138 +239,10 @@ static u32_t inline itohl(u32_t littlelong) {
 #endif
 }
 
-#if !USE_LIBOGG
-static size_t memfind(const u8_t* haystack, size_t n, const char* needle, size_t len, size_t* offset) {
-	size_t i;
-	for (i = 0; i < n && *offset != len; i++) *offset = (haystack[i] == needle[*offset]) ? *offset + 1 : 0;
-	return i;
-}
-
 /* https://xiph.org/ogg/doc/framing.html
  * https://xiph.org/flac/ogg_mapping.html
  * https://xiph.org/vorbis/doc/Vorbis_I_spec.html#x1-610004.2 */
 
-static void stream_ogg(struct thread_ctx_s* ctx, size_t n) {
-	if (ctx->stream.ogg.state == STREAM_OGG_OFF) return;
-	u8_t* p = ctx->streambuf->writep;
-
-	while (n) {
-		size_t consumed = min(ctx->stream.ogg.miss, n);
-
-		// copy as many bytes as possible and come back later if we don't have enough
-		if (ctx->stream.ogg.data) {
-			memcpy(ctx->stream.ogg.data + ctx->stream.ogg.want - ctx->stream.ogg.miss, p, consumed);
-			ctx->stream.ogg.miss -= consumed;
-			if (ctx->stream.ogg.miss) return;
-		}
-
-		// we have what we want, let's parse
-		switch (ctx->stream.ogg.state) {
-		case STREAM_OGG_SYNC:
-			ctx->stream.ogg.miss -= consumed;
-			if (consumed) break;
-
-			// we have to memorize position in case any of last 3 bytes match...
-			size_t pos = memfind(p, n, "OggS", 4, &ctx->stream.ogg.match);
-			if (ctx->stream.ogg.match == 4) {
-				consumed = pos - ctx->stream.ogg.match;
-				ctx->stream.ogg.state = STREAM_OGG_HEADER;
-				ctx->stream.ogg.miss = ctx->stream.ogg.want = sizeof(ctx->stream.ogg.header);
-				ctx->stream.ogg.data = (u8_t*)&ctx->stream.ogg.header;
-				ctx->stream.ogg.match = 0;
-			}
-			else {
-				if (!ctx->stream.ogg.match) LOG_INFO("[%p]: OggS not at expected position", ctx);
-				return;
-			}
-			break;
-		case STREAM_OGG_HEADER:
-			if (!memcmp(ctx->stream.ogg.header.pattern, "OggS", 4)) {
-				ctx->stream.ogg.miss = ctx->stream.ogg.want = ctx->stream.ogg.header.count;
-				ctx->stream.ogg.data = ctx->stream.ogg.segments;
-				ctx->stream.ogg.state = STREAM_OGG_SEGMENTS;
-			}
-			else {
-				ctx->stream.ogg.state = STREAM_OGG_SYNC;
-				ctx->stream.ogg.data = NULL;
-			}
-			break;
-		case STREAM_OGG_SEGMENTS:
-			// calculate size of page using lacing values
-			for (size_t i = 0; i < ctx->stream.ogg.want; i++) ctx->stream.ogg.miss += ctx->stream.ogg.data[i];
-			ctx->stream.ogg.want = ctx->stream.ogg.miss;
-
-			if (ctx->stream.ogg.header.granule == 0 ||
-				(ctx->stream.ogg.header.granule == -1 && ctx->stream.ogg.granule == 0)) {
-				// granule 0 means a new stream, so let's look into it
-				ctx->stream.ogg.state = STREAM_OGG_PAGE;
-				ctx->stream.ogg.data = malloc(ctx->stream.ogg.want);
-			}
-			else {
-				// otherwise, jump over data
-				ctx->stream.ogg.state = STREAM_OGG_SYNC;
-				ctx->stream.ogg.data = NULL;
-			}
-
-			// memorize granule for next page
-			if (ctx->stream.ogg.header.granule != -1) ctx->stream.ogg.granule = ctx->stream.ogg.header.granule;
-			break;
-		case STREAM_OGG_PAGE: {
-			char** tag = (char* []){ "\x3vorbis", "OpusTags", NULL };
-			size_t ofs = 0;
-
-			/* with OggFlac, we need the next page (packet) - VorbisComment is wrapped into a FLAC_METADATA
-			 * and except with vorbis, comment packet starts a new page but even in vorbis, it won't span
-			 * accross multiple pages */
-			if (ctx->stream.ogg.flac) ofs = 4;
-			else if (!memcmp(ctx->stream.ogg.data, "\x7f""FLAC", 5)) ctx->stream.ogg.flac = true;
-			else for (size_t n = 0; *tag; tag++, ofs = 0) if ((ofs = memfind(ctx->stream.ogg.data, ctx->stream.ogg.want, *tag, strlen(*tag), &n)) && n == strlen(*tag)) break;
-
-			if (ofs) {
-				// u32:len,char[]:vendorId, u32:N, N x (u32:len,char[]:comment)
-				char* p = (char*)ctx->stream.ogg.data + ofs;
-				p += itohl(*p) + 4;
-				u32_t count = itohl(*p);
-				p += 4;
-
-				// LMS metadata format for Ogg is "Ogg", N x (u16:len,char[]:comment)
-				memcpy(ctx->stream.header, "Ogg", 3);
-				ctx->stream.header_len = 3;
-
-				for (u32_t len; count--; p += len) {
-					len = itohl(*p);
-					p += 4;
-
-					// only report what we use and don't overflow (network byte order)
-					if (!strncasecmp(p, "TITLE=", 6) || !strncasecmp(p, "ARTIST=", 7) || !strncasecmp(p, "ALBUM=", 6)) {
-						if (ctx->stream.header_len + len > MAX_HEADER) break;
-						ctx->stream.header[ctx->stream.header_len++] = len >> 8;
-						ctx->stream.header[ctx->stream.header_len++] = len;
-						memcpy(ctx->stream.header + ctx->stream.header_len, p, len);
-						ctx->stream.header_len += len;
-						LOG_INFO("[%p]: metadata: %.*s", ctx, len, p);
-					}
-				}
-
-				ctx->stream.ogg.flac = false;
-				ctx->stream.meta_send = true;
-				wake_controller(ctx);
-				LOG_INFO("[%p]: Ogg metadata length: %u", ctx, ctx->stream.header_len);
-			}
-			free(ctx->stream.ogg.data);
-			ctx->stream.ogg.data = NULL;
-			ctx->stream.ogg.state = STREAM_OGG_SYNC;
-			break;
-		}
-		default:
-			break;
-		}
-
-		p += consumed;
-		n -= consumed;
-	}
-}
-#else
 static void stream_ogg(struct thread_ctx_s* ctx, size_t n) {
 	if (!ctx->stream.ogg.active) return;
 
@@ -389,11 +253,23 @@ static void stream_ogg(struct thread_ctx_s* ctx, size_t n) {
 
 	// extract a page from sync buffer
 	while (OG(&go, sync_pageout, &ctx->stream.ogg.sync, &ctx->stream.ogg.page) > 0) {
-		// always set stream serialno if we have a new one
-		if (OG(&go, page_bos, &ctx->stream.ogg.page)) OG(&go, stream_reset_serialno, &ctx->stream.ogg.state, OG(&go, page_serialno, &ctx->stream.ogg.page));
+		uint32_t serial = OG(&go, page_serialno, &ctx->stream.ogg.page);
 
-		// bring new page in (there should be one) but we only care about granule 0 (not audio)
-		if (OG(&go, stream_pagein, &ctx->stream.ogg.state, &ctx->stream.ogg.page) || OG(&go, page_granulepos, &ctx->stream.ogg.page)) continue;
+		// set stream serialno if we wait for a new one (no multiplexed streams)
+		if (ctx->stream.ogg.serial == ULLONG_MAX && OG(&go, page_bos, &ctx->stream.ogg.page)) {
+			ctx->stream.ogg.serial = serial;
+			OG(&go, stream_reset_serialno, &ctx->stream.ogg.state, serial);
+		}
+
+		// if we overshot, restart searching for headers
+		int64_t granule = OG(&go.dl, page_granulepos, &ctx->stream.ogg.page);
+		if (ctx->stream.ogg.serial == serial && granule != -1 && granule != 0) ctx->stream.ogg.serial = ULLONG_MAX;
+
+		// if we don't have a serial number or it's not us, don't bring page in to avoid build-up
+		if (ctx->stream.ogg.serial != serial) continue;
+
+		// bring new page in (there should be one but multiplexed streams are not supported)
+		if (OG(&go, stream_pagein, &ctx->stream.ogg.state, &ctx->stream.ogg.page)) continue;
 
 		// get a packet (there might be more than one in a page)
 		while (OG(&go, stream_packetout, &ctx->stream.ogg.state, &ctx->stream.ogg.packet) > 0) {
@@ -433,6 +309,7 @@ static void stream_ogg(struct thread_ctx_s* ctx, size_t n) {
 
 			// ogg_packet_clear does not need to be called
 			ctx->stream.ogg.flac = false;
+			ctx->stream.ogg.serial = ULLONG_MAX;
 			ctx->stream.meta_send = true;
 			wake_controller(ctx);
 			LOG_INFO("[%p]: Ogg metadata length: %u", ctx, ctx->stream.header_len - 3);
@@ -442,7 +319,6 @@ static void stream_ogg(struct thread_ctx_s* ctx, size_t n) {
 		}
 	}
 }
-#endif
 
 static void *stream_thread(struct thread_ctx_s *ctx) {
 	while (ctx->stream_running) {
@@ -855,7 +731,6 @@ void stream_sock(u32_t ip, u16_t port, bool use_ssl, bool use_ogg, const char *h
 	ctx->stream.bytes = 0;
 	ctx->stream.threshold = threshold;
 
-#if USE_LIBOGG
 #if !LINKALL
 	ctx->stream.ogg.active = use_ogg && ogg.dl.handle;
 #else 
@@ -866,11 +741,8 @@ void stream_sock(u32_t ip, u16_t port, bool use_ssl, bool use_ogg, const char *h
 		OG(&go, sync_clear, &ctx->stream.ogg.sync);
 		OG(&go, stream_init, &ctx->stream.ogg.state, -1);
 	}
-#else
-	ctx->stream.ogg.miss = ctx->stream.ogg.match = 0;
-	ctx->stream.ogg.state = use_ogg ? STREAM_OGG_SYNC : STREAM_OGG_OFF;
-#endif
 	ctx->stream.ogg.flac = false;
+	ctx->stream.ogg.serial = ULLONG_MAX;
 
 	UNLOCK_S;
 }
@@ -891,15 +763,10 @@ bool stream_disconnect(struct thread_ctx_s* ctx) {
 		disc = true;
 	}
 	ctx->stream.state = STOPPED;
-#if USE_LIBOGG
 	if (ctx->stream.ogg.active) {
 		OG(&go, stream_clear, &ctx->stream.ogg.state);
 		OG(&go, sync_clear, &ctx->stream.ogg.sync);
-}
-#else
-	if (ctx->stream.ogg.state == STREAM_OGG_PAGE && ctx->stream.ogg.data) free(ctx->stream.ogg.data);
-	ctx->stream.ogg.data = NULL;
-#endif
+	}
 
 	UNLOCK_S;
 	return disc;

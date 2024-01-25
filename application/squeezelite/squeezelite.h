@@ -25,9 +25,7 @@
 #include "platform.h"
 #include "squeezedefs.h"
 
-#if USE_LIBOGG
 #include <ogg/ogg.h>
-#endif
 
 #if !defined(LOOPBACK)
 #if LINUX && !defined(SELFPIPE)
@@ -325,27 +323,12 @@ struct streamstate {
 	char host[256];
 	struct {
 		bool flac;
-#if USE_LIBOGG
+		u64_t serial;
 		bool active;
 		ogg_stream_state state;
 		ogg_packet packet;
 		ogg_sync_state sync;
 		ogg_page page;
-#else
-		enum { STREAM_OGG_OFF, STREAM_OGG_SYNC, STREAM_OGG_HEADER, STREAM_OGG_SEGMENTS, STREAM_OGG_PAGE } state;
-		size_t want, miss, match;
-		u64_t granule;
-		u8_t* data, segments[255];
-#pragma pack(push, 1)
-		struct {
-			char pattern[4];
-			u8_t version, type;
-			u64_t granule;
-			u32_t serial, page, checksum;
-			u8_t count;
-		} header;
-#pragma pack(pop)
-#endif
 	} ogg;
 };
 

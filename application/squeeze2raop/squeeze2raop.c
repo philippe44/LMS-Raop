@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include <limits.h>
 #include <string.h>
+#include <locale.h>
 
 #include "platform.h"
 #include "squeezedefs.h"
@@ -206,9 +207,6 @@ static char usage[] =
 #endif
 #if USE_SSL
 		   " SSL"
-#endif
-#if USE_LIBOGG
-		   " LIBOGG"
 #endif
 #if LINKALL
 		   " LINKALL"
@@ -1543,6 +1541,9 @@ int main(int argc, char *argv[])
 	signal(SIGHUP, sighandler);
 #endif
 
+	// otherwise some atof/strtod fail with '.'
+	setlocale(LC_NUMERIC, "C");
+
 	// first try to find a config file on the command line
 	for (i = 1; i < argc; i++) {
 		if (!strcmp(argv[i], "-x")) {
@@ -1578,10 +1579,6 @@ int main(int argc, char *argv[])
 	}
 
 	LOG_ERROR("Starting squeeze2raop version: %s\n", VERSION);
-
-	if (strtod("0.30", NULL) != 0.30) {
-		LOG_WARN("weird GLIBC, try -static build in case of failure");
-	}
 
 	if (!glConfigID) {
 		LOG_ERROR("\n\n!!!!!!!!!!!!!!!!!! ERROR LOADING CONFIG FILE !!!!!!!!!!!!!!!!!!!!!\n", NULL);
