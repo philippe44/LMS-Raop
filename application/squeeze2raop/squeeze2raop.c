@@ -841,7 +841,7 @@ static void RaopQueueFree(void* item) {
 static bool AddRaopDevice(struct sMR *Device, mdnssd_service_t *s) {
 	raop_crypto_t Crypto;
 	bool Auth = false;
-	char *p, *am, *md, *pk;
+	char *p, *am, *md, *pk, *pw;
 	char Secret[STR_LEN] = "";
 	// read parameters from default then config file
 	memcpy(&Device->Config, &glMRConfig, sizeof(tMRConfig));
@@ -858,6 +858,7 @@ static bool AddRaopDevice(struct sMR *Device, mdnssd_service_t *s) {
 	am = GetmDNSAttribute(s->attr, s->attr_count, "am");
 	pk = GetmDNSAttribute(s->attr, s->attr_count, "pk");
 	md = GetmDNSAttribute(s->attr, s->attr_count, "md");
+	pw = GetmDNSAttribute(s->attr, s->attr_count, "pw");
 
 	// if airport express, force auth
 	if (am && strcasestr(am, "airport")) {
@@ -944,7 +945,7 @@ static bool AddRaopDevice(struct sMR *Device, mdnssd_service_t *s) {
 
 	char *password = NULL;
 
-	if (*Device->Config.Password) {
+	if (*Device->Config.Password && pw && !strcasecmp(pw, "true")) {
 		char* encrypted;
 
 		// add up to 2 trailing '=' and adjust size
@@ -973,6 +974,7 @@ static bool AddRaopDevice(struct sMR *Device, mdnssd_service_t *s) {
 	NFREE(am);
 	NFREE(md);
 	NFREE(pk);
+	NFREE(pw);
 
 	if (!Device->Raop) {
 		LOG_ERROR("[%p]: cannot create raop device", Device);

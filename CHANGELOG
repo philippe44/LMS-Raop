@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+1.7.3
+ - only read config's password if "pw" entry is set in TXT
+
 1.7.2
  - remove USE_LIBOGG option, too much work to maintain
  - use setlocale() so that atof does not fail on '.'
