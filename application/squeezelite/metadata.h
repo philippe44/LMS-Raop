@@ -28,7 +28,6 @@ typedef struct metadata_s {
 	uint8_t  channels;
 	uint32_t bitrate;
 	bool remote;
-	int repeating;
 } metadata_t;
 
 struct metadata_s* metadata_init(struct metadata_s* self);
