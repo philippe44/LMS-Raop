@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+1.7.4
+ - use updated libflac with chaining enabler
+
 1.7.3
  - only read config's password if "pw" entry is set in TXT
 
