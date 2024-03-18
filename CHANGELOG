@@ -1,5 +1,11 @@
 Note: beware of crypto version (see shairtunes)
 
+1.7.6
+ - trace left by mistake
+
+1.7.5
+ - fix stream/ogg 32 bits len when inverting
+
 1.7.4
  - use updated libflac with chaining enabler
 
