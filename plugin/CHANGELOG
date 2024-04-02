@@ -1,5 +1,9 @@
 Note: beware of crypto version (see shairtunes)
 
+1.7.7
+ - change OggFlac library detection 
+ - fix f-up builds
+
 1.7.6
  - trace left by mistake
 
