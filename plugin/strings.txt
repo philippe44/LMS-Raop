@@ -1,143 +1,198 @@
 PLUGIN_RAOPBRIDGE
+	DA	AirPlay bro
 	EN	AirPlay bridge
 
 PLUGIN_RAOPBRIDGE_DESC
+	DA	Benyt AirPlay-kompatible enheder i LMS
 	EN	Use AirPlay compatible devices in LMS 
-	
+
 PLUGIN_RAOPBRIDGE_YES
+	DA	Ja
 	EN	Yes
-		
+
 PLUGIN_RAOPBRIDGE_NO
+	DA	Nej
 	EN	No
-	
+
 PLUGIN_RAOPBRIDGE_AUTORUN
+	DA	Start broen
 	EN	Start the Bridge
 
 PLUGIN_RAOPBRIDGE_AUTORUN_DESC
+	DA	Start AirPlay broen automatisk, når serveren starter.
 	EN	Automatically start the AirPlay bridge instance when the server starts.
 
 PLUGIN_RAOPBRIDGE_RUNNING_0
+	DA	Kører ikke
 	EN	Not Running
 
 PLUGIN_RAOPBRIDGE_RUNNING_1
+	DA	Kører
 	EN	Running
-	
+
 PLUGIN_RAOPBRIDGE_USERGUIDELINK
+	DA	Vis brugervejledningen
 	EN	View User Guide
-	
+
 PLUGIN_RAOPBRIDGE_BINARIES
+	DA	Vælg binær
 	EN	Select Binary
-	
+
 PLUGIN_RAOPBRIDGE_RESTART
+	DA	Genstart
 	EN	Restart
-	
+
 PLUGIN_RAOPBRIDGE_BINARIES_DESC
+	DA	Vælg den squeeze2raop binære fil, som bedst matcher din maskines arkitektur.
 	EN	Select the squeeze2raop binary which best matches your machine's architecture. 
 
 PLUGIN_RAOPBRIDGE_WARNING
+	DA	Det anbefales STÆRKT at stoppe din bro før du ændrer parametre
 	EN	It is HIGHLY recommended to stop the bridge before changing parameters
-    
+
 PLUGIN_RAOPBRIDGE_VCREDIST
+	DA	Windows brugere, venligst installér dette
 	EN	Windows users, please install this    
-	
+
 PLUGIN_RAOPBRIDGE_PARAMINFO
+	DA	En TOM parameterværdi betyder, at [default parameter] benyttes
 	EN	An EMPTY parameter value means that [default parameter] is used
-	
+
 PLUGIN_RAOPBRIDGE_COMMONPARAMINFO
+	DA	Disse parametre sætter standardindstillingerne for alle afspillere (TOM værdi betyder at indbyggede standardindstillinger benyttes)
 	EN	These parameters set the defaults for all players (EMPTY value means use built-in default)
 
 PLUGIN_RAOPBRIDGE_OPTIONS
+	DA	Ekstra kommandolinjeindstillinger
 	EN	Extra command line options
 
 PLUGIN_RAOPBRIDGE_OPTIONS_DESC
+	DA	Tilføj flere kommandolinjeindstillinger for squeeze2raop opstart her.
+	DA	Se brugervejledningen på https://github.com/philippe44/LMS-to-Raop for detaljer.
 	EN	Add additional squeeze2raop startup command line options here.  See the user guide in https://github.com/philippe44/LMS-to-Raop 
 	EN	for details.
 
 PLUGIN_RAOPBRIDGE_DEBUG
+	DA	Mere fejlfinding
 	EN	Additional debugging
 
 PLUGIN_RAOPBRIDGE_DEBUG_DESC
+	DA	Specificér fejlfindingsniveau for skrivning til logfilen.
 	EN	Specify debugging level for writing to the log file.
 
 PLUGIN_RAOPBRIDGE_
+	DA	ingen
 	EN	none
-	
+
 PLUGIN_RAOPBRIDGE_ALL
+	DA	Alle enheder herunder
 	EN	All items below
-	
+
 PLUGIN_RAOPBRIDGE_OUTPUT
+	DA	Fejlfinding for output enheder
 	EN	Output device debugging
 
 PLUGIN_RAOPBRIDGE_STREAM
+	DA	Stream fejlfinding
 	EN	Stream debugging
 
 PLUGIN_RAOPBRIDGE_SLIMPROTO
+	DA	Styring af protokol for fejlfinding (slimproto)
 	EN	Control protocol debugging (slimproto)
 
 PLUGIN_RAOPBRIDGE_DECODE
+	DA	Decode fejlfinding
 	EN	Decode debugging
 
 PLUGIN_RAOPBRIDGE_RAOP
+	DA	Raop fejlfinding
 	EN	Raop debugging
 
 PLUGIN_RAOPBRIDGE_UTIL
+	DA	Hjælpeprogrammer fejlfinding
 	EN	Utilities debugging
 
 PLUGIN_RAOPBRIDGE_SLIMMAIN
+	DA	Primær slimdevice fejlfinding
 	EN	Main slimdevice debugging
 
 PLUGIN_RAOPBRIDGE_MAIN
+	DA	Hovedprogram fejlfinding
 	EN	Main application debugging
 
 PLUGIN_RAOPBRIDGE_LOGGING
+	DA	Muligheder for logning
 	EN	Logging options
-	
+
 PLUGIN_RAOPBRIDGE_LOGGING_DESC
+	DA	Aktivér logning af fejl- og fejlfindingsmeddelelser.
+	DA	<br>- Sæt en værdi i MB for at begrænse logstørrelsen (-1 for ubegrænset)
 	EN	Enable logging of error and debug messages.
 	EN	<br>- Set a value in MB to limit log size (-1 for unlimited)
 
 PLUGIN_RAOPBRIDGE_LOGENABLE
+	DA	Aktivér
 	EN	Enable
 
 PLUGIN_RAOPBRIDGE_LOGLINK
+	DA	Vis
 	EN	View
-	
+
 PLUGIN_RAOPBRIDGE_ERASELOG
+	DA	Slet ved opstart
 	EN	Erase at start
-	
+
 PLUGIN_RAOPBRIDGE_LOGSIZE
+	DA	Maks størrelse (MB)
 	EN	Max size (MB)
 
 PLUGIN_RAOPBRIDGE_CLEANLOG
+	DA	Rens
 	EN	Clean
-	
+
 PLUGIN_RAOPBRIDGE_PLAYER
+	DA	Vælg AirPlay afspiller
 	EN	Select AirPlay player
-		
+
 PLUGIN_RAOPBRIDGE_CONFIG
+	DA	Konfigurationsfil
 	EN	Configuration file
 
 PLUGIN_RAOPBRIDGE_CONFIG_DESC
+	DA	<i>Genererer</i> genscanninger af netværket og bygger en konfigurationsfil inklusive alle opdagede afspillere, mens
+	DA	eksisterende parametre og afspillere bevares (dette stopper din bro i ~30 sekunder)
+	DA	<br>Når autogem er markeret, vil konfigurationsfilen automatisk blive opdateret, hver gang en afspiller kobler til eller fra
 	EN	<i>Generate</i> re-scans the network and builds a configuration file including all discovered players while retaining
 	EN	existing parameters and players (this will stop the bridge for ~30s)
 	EN	<br>When autosave is checked, the configuration file will be automatically updated every time a player connects or disconnects
 
 PLUGIN_RAOPBRIDGE_CONFLINK
+	DA	Vis
 	EN	View
-	
+
 PLUGIN_RAOPBRIDGE_GENCONFIG
+	DA	Generér
 	EN	Generate
 
 PLUGIN_RAOPBRIDGE_AUTOSAVECONFIG
+	DA	Autogem
 	EN	Autosave
 
 PLUGIN_RAOPBRIDGE_DELCONFIG
+	DA	Slet
 	EN	Erase
-	
+
 PLUGIN_RAOPBRIDGE_NETWORK
+	DA	Netværksarbejde
 	EN	Networking
-	
+
 PLUGIN_RAOPBRIDGE_NETWORK_DESC
+	DA	Dette sætter forskellige globale parametre for netværksarbejde
+	DA	<br>- <i>Tilladte porte</i>: Indstil brugbare porte til indgående forbindelse (RTP & HTTP) med formatet &lt;baseport&gt;[:&lt;count&gt;]. Lad den stå tom
+	DA	eller til 0:0 for automatisk (tilfældig) portvalg. Brug dette til at begrænse dine firewall-åbnede porte. Bemærk, at der kræves 3 porte pr. spiller.
+	DA	<br>- <i>grænseflade</i>: Netværksgrænsefladenavnet eller IP-adressen (xxx.xxx.xxx.xxx), der bruges af broen. Dette er især nyttigt, hvis du har en
+	DA	computer med flere netværksgrænseflader. Brug ? for at lade broen bestemme eller markere "brug LMS' netværksgrænseflade" for at sikre,
+	DA	at broen bruger det samme netværk som LMS
 	EN	This set different global parameters for networking 
 	EN	<br>- <i>Authorized ports</i>: set usable ports for incoming connection (RTP & HTTP) with format &lt;base port&gt;[:&lt;count&gt;]. Leave it to empty or
 	EN	to 0:0 for automatic (random) port selection. Use this to limit your firewall opened ports. Note that 3 ports are needed per player. 
@@ -146,43 +201,66 @@ PLUGIN_RAOPBRIDGE_NETWORK_DESC
 	EN	interface" to make sure the Bridge uses the same network as LMS
 
 PLUGIN_RAOPBRIDGE_INBOUNDPORTS
+	DA	Tilladte porte
 	EN	Authorized ports 
-			
+
 PLUGIN_RAOPBRIDGE_INTERFACE
+	DA	Grænseflade
 	EN	Interface 
-	
+
 PLUGIN_RAOPBRIDGE_USELMSSOCKET
+	DA	Brug LMS' netværksgrænseflade
 	EN	Use LMS' network interface
-	
+
 PLUGIN_RAOPBRIDGE_TEXTDEFAULT
+	DA	Følgende parametre gælder for ALLE afspillere - indtast "default" (uden ") i tekstbokse for at indstille til standardværdier
 	EN	The following parameters apply to ALL players - enter "default" (without ") in text boxes to set to default values
 
 PLUGIN_RAOPBRIDGE_AUDIOPARAM
+	DA	Audio parametre
 	EN	Audio parameters
 
 PLUGIN_RAOPBRIDGE_CODECS
 	EN	Codecs
 
 PLUGIN_RAOPBRIDGE_AUDIOPARAM_DESC
+	DA	Flere codecs understøttes af en AirPlay-afspiller. De vil blive rapporteret til LMS, som beslutter, hvornår der skal foretages omkodning.
+	DA	De kan være en kombination af <b>afspilning med tab</b>:aac,ogg,ops,mp3 <b>tabsfri</b>:flc,ogf,alc og <b>ukomprimeret</b>:wav,pcm,aif
 	EN	Several codecs are supported by an AirPlay player. They will be reported to LMS that will decide 
 	EN	when to do transcoding. They can be a combination of <b>lossy</b>:aac,ogg,ops,mp3 <b>lossless</b>:flc,ogf,alc <b>uncompressed</b>:wav,pcm,aif 
 
 PLUGIN_RAOPBRIDGE_VOLUMEMGMT
+	DA	Lydstyrkeregulering
 	EN	Volume management
-	
+
 PLUGIN_RAOPBRIDGE_VOLUMEIGNORE
+	DA	ignorér
 	EN	ignore
-	
+
 PLUGIN_RAOPBRIDGE_VOLUMESOFT
 	EN	software
-	
+
 PLUGIN_RAOPBRIDGE_VOLUMEHARD
 	EN	hardware
-	
+
 PLUGIN_RAOPBRIDGE_VOLUMERAW
 	EN	raw
 
 PLUGIN_RAOPBRIDGE_VOLUMEMGMT_DESC
+	DA	<b>Standard</b>: Sæt opstartsværdi for lydstyrke, når broen forbindes til afspilleren. Dette vil blive tilsidesat af LMS,
+	DA	hvis det er tilladt af parameteren "modus". Indstil til -1 for at deaktivere denne
+	DA	<br><b>Modus</b>: Indstiller, hvordan LMS-kommandoer for lydstyrke håndteres
+	DA	<br>- <i>ignorér</i>: LMS kan ikke kontrollere lydstyrken (Lydstyrke-kommandoen sendes kun, hvis den er indstillet ved oprettelse af forbindelse)
+	DA	<br>- <i>hardware</i>: LMS-lydstyrke omkodes til AirPlay-kommandoer (<b>anbefales STÆRKT</b>)
+	DA	<br>- <i>software</i>: LMS-lydstyrke reguleres ved justering af digitale samples. Bemærk, at lydstyrkefeedback er deaktiveret
+	DA	<br><b>Slå lyden fra ved pause</b>: Tillad LMS at slå afspilleren fra, mens den er sat på pause
+	DA	<br><b>Feedback</b>: Tillader enhedens fjernbetjening at ændre LMS-lydstyrken - se parameteren "Mapping" og læs brugervejledningen for at indstille til "raw"
+	DA	<br><b>Mapping</b>: Definerer nogle få matchende punkter mellem AirPlay-volumen (-30...0) og LMS-volumen (1..100).
+	DA	Dette er et kommasepareret sæt af talpar som "a1:l1, a2:l2 ... an:ln" (a=AirPlay, l=LMS).
+	DA	Dette er nødvendigt for afspillere, hvis lydstyrkeskala 1..100 ikke er proportional med AirPlay-skalaen -30..0, i hvilket tilfælde
+	DA	lydstyrkefeedbacken vil være forkert (f.eks.: -17,5 på en AirPlay-skala er 50 på LMS-skalaen). Sæt nogle få matchende punkter,
+	DA	og broen vil beregne manglende værdier. Bemærk, at LMS volumen 0 er mute og som standard er oversat til -144.0,
+	DA	så du må *ikke* tilføje dette matchende punkt
 	EN	<b>Default</b>: Set the initial volume value when the bridge connects to the player. This will be over-ridden by 
 	EN	LMS if authorized by "mode" parameter. Set to -1 to disable it
 	EN	<br><b>Mode</b>: Sets how LMS volume commands are handled
@@ -197,14 +275,17 @@ PLUGIN_RAOPBRIDGE_VOLUMEMGMT_DESC
 	EN	the volume feedback will be incorrect (eg: -17.5 on an AirPlay scale is 50 on LMS scale). Set a few matching point 
 	EN	and the bridge will compute missing values. Note that LMS volume 0 is mute and is by default translated to -144.0, 
 	EN	so do *not* add this matching point
-	
+
 PLUGIN_RAOPBRIDGE_PLAYERVOLUME
+	DA	Standard
 	EN	Default
 
 PLUGIN_RAOPBRIDGE_VOLUMEMODE
+	DA	Modus
 	EN	Mode
-	
+
 PLUGIN_RAOPBRIDGE_MUTEONPAUSE
+	DA	Slå lyden fra ved pause
 	EN	Mute on Pause
 
 PLUGIN_RAOPBRIDGE_VOLUMEFEEDBACK
@@ -215,32 +296,45 @@ PLUGIN_RAOPBRIDGE_VOLUMEMAPPING
 
 PLUGIN_RAOPBRIDGE_SERVER
 	EN	LMS Server
-	
+
 PLUGIN_RAOPBRIDGE_REMOVETIMEOUT
+	DA	Fjern timeout
 	EN	Remove timeout
 
 PLUGIN_RAOPBRIDGE_ENABLED
+	DA	Aktiveret
 	EN	Enabled
-	
+
 PLUGIN_RAOPBRIDGE_PLAYERINFO
+	DA	Afspillerinformation
 	EN	Player information
-	
+
 PLUGIN_RAOPBRIDGE_PLAYERINFO_DESC
+	DA	Afspillerens navn og MAC-adresse kan ændres her. <i>Navn</i> erstattes af værdi på LMS-afspillerens konfigurationsside
 	EN	The Name and MAC address of the player can be changed here. The <i>Name</i> is superseeded by value in LMS player's configuration page
-		
+
 PLUGIN_RAOPBRIDGE_PLAYERNAME
+	DA	Navn
 	EN	Name
-	
+
 PLUGIN_RAOPBRIDGE_PLAYERMAC
+	DA	MAC adresse
 	EN	MAC address
 
 PLUGIN_RAOPBRIDGE_DELETEPLAYER
+	DA	Slet
 	EN	Delete
 
 PLUGIN_RAOPBRIDGE_MDNSMGMT
+	DA	Indstillinger for afspilleropdagelse
 	EN	Player discovery options
-	
+
 PLUGIN_RAOPBRIDGE_MDNSMGMT_DESC
+	DA	Diverse indstillinger
+	DA	<br>- For standardlisten kan nyopdagede afspillere automatisk tilføjes til LMS
+	DA	<br>– For individuelle afspillere kan en afspiller aktiveres eller deaktiveres
+	DA	<br>- Tving LMS-server (? til automatisk opdagelse)
+	DA	<br>- Fjern timeout indstiller tiden (ms) for at beholde en afspiller i LMS, efter at den er blevet afkoblet (-1 = aldrig, 0 = automatisk)
 	EN	Misc options
 	EN	<br>- For the default list newly discovered players can be automatically added to LMS 
 	EN	<br>– For individual players a player can be enabled or disabled
@@ -248,26 +342,45 @@ PLUGIN_RAOPBRIDGE_MDNSMGMT_DESC
 	EN	<br>- Remove timeout sets the time (ms) to keep a player in LMS after is has disconnected (-1 = never, 0 = automatic)
 
 PLUGIN_RAOPBRIDGE_ENABLEDEFS
+	DA	Afspilleren er aktiveret
 	EN	Player is enabled
 
 PLUGIN_RAOPBRIDGE_SENDMETADATA
+	DA	Send LMS metadata til afspilleren
 	EN	Send LMS metadata to player
-	
+
 PLUGIN_RAOPBRIDGE_SEND_COVERART
+	DA	Inkludér albumbilleder
 	EN	Include artwork
 
 PLUGIN_RAOPBRIDGE_RESOLUTION
+	DA	Opløsning
 	EN	Resolution
 
 PLUGIN_RAOPBRIDGE_SENDMETADATA_DESC
+	DA	Når du bruger en AirPlay-enhed med skærmfunktioner, kan LMS sende metadata (titel, kunstner, album) til den.
+	DA	<br>- Brug <b>opløsning</b> til at tvinge en fast coverart-opløsning (f.eks.: 300x300) - ellers lad den stå tom.
+	DA	Du skal bruge LMS til proxy artwork, ikke mysqueezebox.com, for at det virker
+	DA	<br>Dette <b>VIRKER IKKE</b>, hvis du har indstillet en adgangskode til LMS-kommandoadgang
 	EN	When using an AirPlay device with display capabilities, LMS can send metadata (title, artist, album) to it. 
-	EN	<br>- Use <b>resolution</b> to force a fixed coverart resolution (eg: 300x300) - leave it empty otherwise. You must use LMS to 	EN	proxy artwork, not mysqueezebox.com for that to work
+	EN	<br>- Use <b>resolution</b> to force a fixed coverart resolution (eg: 300x300) - leave it empty otherwise. You must use LMS to
+	EN	proxy artwork, not mysqueezebox.com for that to work
 	EN	<br>This <b>DOES NOT</b> work if you have set a password for LMS command access
-	
+
 PLUGIN_RAOPBRIDGE_PLAYEROPTIONS
+	DA	AirPlay indstillinger
 	EN	AirPlay options
 
 PLUGIN_RAOPBRIDGE_PLAYEROPTIONS_DESC
+	DA	<b>Forbindelsestimeout</b>: Broen overtager eksklusivt ejerskab af enheden, når den spiller. Etablering af en sådan forbindelse kan tage
+	DA	et par sekunder, og den frigives derfor ikke, når afspilleren stoppes/pause, så genstart kan være hurtig. Men en frigivelse skal ske, for
+	DA	at andre AirPlay-controllere kan oprette forbindelse. Dvs. efter timeout frigives forbindelsen
+	DA	<br><b>Lydbuffer</b>: Sætter antallet af millisekunders lydbuffer i afspilleren. Dette er vigtigt for at absorbere netværksgennemstrømningsjitter
+	DA	Bemærk, at genoptagelsen efter en pause vil springe over mængden af ​​tid og lydstyrkeændringer vil blive forsinket med samme mængde,
+	DA	når du bruger digital lydstyrkeregulering
+	DA	<br><b>Kryptér</b>: Brug kryptering, hvis tilgængelig (nødvendig til ShairTunes og alle billige AirPlay-bokse)
+	DA	<br><b>Komprimér</b>: Omkode lyd ved hjælp af ALAC (gemmer netværksbåndbredde, men bruger CPU)
+	DA	<br><b>Adgangskode</b>: Adgangskode til enheden
 	EN	<b>Connection timeout</b>: The bridge takes exclusive ownership of the device when playing. Establishing such connection can take a
 	EN	a few seconds hence it is not released when the player is stopped/pause, so that restart can be quick. But a release must happen for
 	EN	other AirPlay controller to connect. So after the timeout, the connection is released
@@ -279,52 +392,62 @@ PLUGIN_RAOPBRIDGE_PLAYEROPTIONS_DESC
 	EN	<br><b>Password</b>: Device password
 
 PLUGIN_RAOPBRIDGE_READAHEAD
+	DA	Lydbuffer (ms)
 	EN	Audio buffer (ms)	 
-	
+
 PLUGIN_RAOPBRIDGE_IDLETIMEOUT
+	DA	Forbindelsestimeout
 	EN	Connection timeout
 
 PLUGIN_RAOPBRIDGE_IDLETIMEOUT_2
 	EN	(s)
-    
+
 PLUGIN_RAOPBRIDGE_PASSWORD
+	DA	Adgangskode
 	EN	Password    
 
 PLUGIN_RAOPBRIDGE_ENCRYPTION
+	DA	Kryptér
 	EN	Encrypt
 
 PLUGIN_RAOPBRIDGE_ALACENCODE
+	DA	Komprimér
 	EN	Compress
-	
+
 PLUGIN_RAOPBRIDGE_PLAYERLIST
+	DA	Liste over afspillere p.t. i konfigurationsfil - Bemærk, at flere enheder muligvis er blevet opdaget
 	EN	List of players currently in configuration file - Note that more devices might have been discovered
 
 PLUGIN_RAOPBRIDGE_PAIR
+	DA	Par
 	EN	Pair
 
 PLUGIN_RAOPBRIDGE_SUBMIT
+	DA	Indsend
 	EN	Submit
-		
+
 PLUGIN_RAOPBRIDGE_PINCODE
+	DA	Indtast PIN-kode
 	EN	Enter PIN code
 
 PLUGIN_RAOPBRIDGE_NOCONFIG
+	DA	Konfigurationsfil mangler - opret en ved at klikke på "generér" eller, hvis automatisk lagring er aktiveret, opdater denne side
 	EN	Configuration file missing - create one by clicking "generate" or, if autosave is on, refresh this page
 
 PLUGIN_RAOPBRIDGE_INFO_UNIX
+	DA	RaoBridge bruger Squeeze2raop softwareafspilleren, som er installeret som en del af udvidelsesmodulet.
+	DA	Du kan styre den fra serverens webgrænseflade eller enhver anden Squeezebox kontrolapplikation.
 	EN	RaopBridge uses the Squeeze2raop software player which is installed as part of the plugin.  You can control it from the server
 	EN	web interface or any other Squeezebox control application.
 
 PLUGIN_RAOPBRIDGE_INFO_WIN
+	DA	RaoBridge bruger Squeeze2raop softwareafspilleren, som er installeret som en del af udvidelsesmodulet.
+	DA	Du kan styre den fra serverens webgrænseflade eller enhver anden Squeezebox kontrolapplikation.
 	EN	RaopBridge uses the Squeeze2raop software player which is installed as part of the plugin.  You can control it from the server
 	EN	web interface or any other Squeezebox control application.
 
 PLUGIN_RAOPBRIDGE_INFO_MAC
+	DA	RaoBridge bruger Squeeze2raop softwareafspilleren, som er installeret som en del af udvidelsesmodulet.
+	DA	Du kan styre den fra serverens webgrænseflade eller enhver anden Squeezebox kontrolapplikation.
 	EN	RaopBridge uses the Squeeze2raop software player which is installed as part of the plugin.  You can control it from the server
 	EN	web interface or any other Squeezebox control application.
-	
-	
-	
-
-	
-
