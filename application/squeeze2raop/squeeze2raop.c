@@ -438,7 +438,7 @@ static void* GetRequest(cross_queue_t* Queue, pthread_mutex_t* Mutex, pthread_co
 /*----------------------------------------------------------------------------*/
 static void *PlayerThread(void *args) {
 	struct sMR *Device = (struct sMR*) args;
-	uint32_t KeepAlive = 0, Last = 0;
+	uint32_t Last = 0;
 
 	Device->Running = true;
 
@@ -493,9 +493,6 @@ static void *PlayerThread(void *args) {
 
 			// after that, only check what's needed when running
 			if (!Device->TrackRunning) continue;
-
-			// seems that HomePod requires regular RTSP exchange
-			if (!(KeepAlive++ & 0x0f)) raopcl_keepalive(Device->Raop);
 
 			pthread_mutex_lock(&Device->Mutex);
 

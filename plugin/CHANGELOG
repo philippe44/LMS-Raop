@@ -1,5 +1,9 @@
 Note: beware of crypto version (see shairtunes)
 
+1.8.0
+ - openSSL 3.x
+ - rename lib/ to elib/ so that we can push the path at the end of INC and not impact the whole system
+
 1.7.7
  - change OggFlac library detection 
  - fix f-up builds
