@@ -13,39 +13,6 @@ use XML::Simple;
 use Slim::Utils::Prefs;
 use Slim::Utils::Log;
 
-BEGIN {
-	my $basedir = Slim::Utils::PluginManager->allPlugins->{'RaopBridge'}->{'basedir'};
-	my $perlmajorversion = $Config{'version'};
-	$perlmajorversion =~ s/\.\d+$//;
-
-	my $arch = $Config::Config{'archname'};		
-	
-	# align arch names with LMS' expectations (see Slim::Utils::PluginManager)
-	$arch =~ s/^i[3456]86-/i686-/;
-	$arch =~ s/gnu-//;
-	my $is64bitint = $arch =~ /64int/;
-	
-	if ( $arch =~ /^arm.*linux/ ) {
-		$arch = $arch =~ /gnueabihf/
-				? 'arm-linux-gnueabihf-thread-multi'
-				: 'arm-linux-gnueabi-thread-multi';
-		$arch .= '-64int' if $is64bitint;
-	}
-
-	if ( $arch =~ /^(?:ppc|powerpc).*linux/ ) {
-		$arch = 'powerpc-linux-thread-multi';
-		$arch .= '-64int' if $is64bitint;
-	}
-	
-	# add these at the end of INC so that system libs take precedence
-	push @INC, (
-		"$basedir/elib", 
-		"$basedir/elib/$perlmajorversion",
-		"$basedir/elib/$perlmajorversion/$arch",
-		"$basedir/elib/$perlmajorversion/$arch/auto"
-	);
-}		
-	
 my $prefs = preferences('plugin.raopbridge');
 my $fade_volume;
 

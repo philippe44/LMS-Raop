@@ -1,5 +1,9 @@
 Note: beware of crypto version (see shairtunes)
 
+1.8.2
+ - use require for all pairing modules and load them only on demand
+ - do not change global's INC 
+ 
 1.8.1
  - remove libatomic dependency
 

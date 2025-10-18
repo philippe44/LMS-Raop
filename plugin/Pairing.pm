@@ -4,12 +4,10 @@ use strict;
 
 use base qw(Slim::Plugin::Base);
 
+use Config;
 use Data::Dumper;
 use File::Spec::Functions;
 use XML::Simple;
-use Data::Plist::BinaryWriter;
-use Data::Plist::BinaryReader;
-use Date::Parse;
 use Encode qw(decode encode);
 use version;
 
@@ -21,22 +19,85 @@ use Slim::Utils::Misc qw(parseRevision);
 my $prefs = preferences('plugin.raopbridge');
 my $log   = logger('plugin.raopbridge');
 
+sub loadModules {
+	$log->info( "Loading modules required for paiting on " . $Config{'archname'} );
+	$log->info( "Using INC", Dumper(\@INC) );
+	
+	my $basedir = Slim::Utils::PluginManager->allPlugins->{'RaopBridge'}->{'basedir'};
+	my $perlmajorversion = $Config{'version'};
+	$perlmajorversion =~ s/\.\d+$//;
+
+	my $arch = $Config::Config{'archname'};		
+	
+	# align arch names with LMS' expectations (see Slim::Utils::PluginManager)
+	$arch =~ s/^i[3456]86-/i686-/;
+	$arch =~ s/gnu-//;
+	my $is64bitint = $arch =~ /64int/;
+	
+	if ( $arch =~ /^arm.*linux/ ) {
+		$arch = $arch =~ /gnueabihf/
+				? 'arm-linux-gnueabihf-thread-multi'
+				: 'arm-linux-gnueabi-thread-multi';
+		$arch .= '-64int' if $is64bitint;
+	}
+
+	if ( $arch =~ /^(?:ppc|powerpc).*linux/ ) {
+		$arch = 'powerpc-linux-thread-multi';
+		$arch .= '-64int' if $is64bitint;
+	}
+	
+	my @modules = (
+		'Math/BigInt.pm',
+		'Data/Plist/BinaryWriter.pm',
+		'Data/Plist/BinaryReader.pm',
+		'Date/Parse.pm',
+		
+		'CryptX.pm',
+		'Crypt/SRP.pm',
+		'Crypt/Digest/SHA512.pm',
+		'Crypt/Ed25519.pm',
+		'Crypt/AuthEnc/GCM.pm',
+	);	
+	
+	foreach my $module ( @modules ) {
+		eval { require $module };
+		
+		if ($@) {
+			$log->warn("cannot find system $module, using local version [", $INC{$module} || '', "]");
+			delete $INC{$module};
+	
+			local @INC = (
+				"$basedir/elib", 
+				"$basedir/elib/$perlmajorversion",
+				"$basedir/elib/$perlmajorversion/$arch",
+				"$basedir/elib/$perlmajorversion/$arch/auto",
+				@INC
+			);
+			
+			require $module;
+			return undef if $@;
+		}	
+		
+		$log->info("$module loaded from $INC{$module}");
+	}
+	
+	Math::BigInt->import( try => 'LTM, GMP, Pari' );
+	my $BigInt = Math::BigInt->config->{lib};
+	$log->warn("Loaded $BigInt which is not accelerated") if $BigInt =~ /calc/i;
+	
+	CryptX->import;
+	
+	Crypt::Digest::SHA512->import( qw(sha512) );
+	Crypt::AuthEnc::GCM->import( qw(gcm_encrypt_authenticate gcm_decrypt_verify) );
+	
+	return 1;
+}
+
 sub displayPIN {
 	my ($host) = @_;
-
-	eval {
-		require CryptX;
-		CryptX->import;
-		require Crypt::SRP;
-		require Crypt::Digest::SHA512;
-		require Crypt::Ed25519;
-		require Crypt::AuthEnc::GCM;
-		Crypt::Digest::SHA512->import( qw(sha512) );
-		Crypt::AuthEnc::GCM->import( qw(gcm_encrypt_authenticate gcm_decrypt_verify) );
-	};
 	
-	if ($@) {
-		$log->error("Cannot load crypto modules, please check your configuration", $@);
+	if (!loadModules()) {
+		$log->error("Cannot load required modules for pairing");
 		return undef;
 	}	
 	
