@@ -105,7 +105,7 @@ static void *output_raop_thread(struct thread_ctx_s *ctx) {
 		UNLOCK;
 
 		// nothing to do, sleep
-		if (!ran) usleep(10000);
+		if (!ran) usleep(2000);
 	}
 
 	return 0;
