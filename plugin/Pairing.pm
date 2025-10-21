@@ -46,8 +46,33 @@ sub loadModules {
 		$arch .= '-64int' if $is64bitint;
 	}
 	
+	# this never fails
+	require Math::BigInt;
+	
+	foreach ('LTM', 'GMP', 'Pari') {
+		eval { Math::BigInt->import( only => $_ ) };
+		last unless $@;
+	}
+	
+	# if we have not loaded anything, force our local version
+	if ($@) {
+		local @INC = (
+			"$basedir/elib", 
+			"$basedir/elib/$perlmajorversion",
+			"$basedir/elib/$perlmajorversion/$arch",
+			"$basedir/elib/$perlmajorversion/$arch/auto",
+			@INC
+		);
+		$log->info("No accelerated Math::BigInt in system, trying local LTM for $arch");
+		Math::BigInt->import( try => 'LTM, FastCalc');
+	}	
+
+	# at this point, something is imported
+	my $BigInt = Math::BigInt->config->{lib};
+	$log->info("Using $BigInt for large integer");
+	$log->warn("Loaded $BigInt which is not accelerated") if $BigInt =~ /calc/i;
+		
 	my @modules = (
-		'Math/BigInt.pm',
 		'Data/Plist/BinaryWriter.pm',
 		'Data/Plist/BinaryReader.pm',
 		'Date/Parse.pm',
@@ -80,10 +105,6 @@ sub loadModules {
 		
 		$log->info("$module loaded from $INC{$module}");
 	}
-	
-	Math::BigInt->import( try => 'LTM, GMP, Pari' );
-	my $BigInt = Math::BigInt->config->{lib};
-	$log->warn("Loaded $BigInt which is not accelerated") if $BigInt =~ /calc/i;
 	
 	CryptX->import;
 	
