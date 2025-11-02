@@ -90,6 +90,8 @@ static void *output_raop_thread(struct thread_ctx_s *ctx) {
 					ctx->output.track_start_time = NTP2MS(playtime);
 					LOG_INFO("[%p]: track actual start time:%u (gap:%d)", ctx, ctx->output.track_start_time,
 										(s32_t) (ctx->output.track_start_time - ctx->output.start_at));
+					raopcl_flush(ctx->output.device);
+					raopcl_stop(ctx->output.device);
 				}
 
 				ctx->output.buf_frames = 0;
