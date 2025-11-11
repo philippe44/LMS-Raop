@@ -210,6 +210,14 @@ frames_t _output_frames(frames_t avail, struct thread_ctx_s *ctx) {
 		}
 	}
 
+	if (!ctx->output.detect_end_time && !silence && ctx->output.state == OUTPUT_RUNNING && _buf_used(ctx->outputbuf) == 0) {
+		ctx->output.detect_end_time = true;
+		ctx->output.last_track_end_time = gettime_ms();
+		LOG_INFO("[%p]: track end detected at %u ms", ctx, ctx->output.last_track_end_time);
+	} else if (silence) {
+		ctx->output.detect_end_time = false;
+	}
+
 	LOG_SDEBUG("[%p]: wrote %u frames", ctx, frames);
 
 	return frames;
@@ -306,6 +314,7 @@ void output_init_common(void *device, unsigned outputbuf_size, u32_t sample_rate
 	ctx->output.device = device;
 	ctx->output.error_opening = false;
 	ctx->output.detect_start_time = false;
+	ctx->output.detect_end_time = false;
 
 	ctx->output.current_sample_rate = ctx->output.default_sample_rate = sample_rate;
 	ctx->output.supported_rates[0] = sample_rate;
