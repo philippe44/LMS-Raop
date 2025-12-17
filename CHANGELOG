@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+1.8.5
+ - fix crash on malformed HTTP responsed from players (Sonos One)
+
 1.8.4
  - try all system-accelerated options before using our own Math::BigInt::LTM
 
