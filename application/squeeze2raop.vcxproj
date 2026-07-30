@@ -116,12 +116,12 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Static|Win32'">
     <ClCompile>
-      <PreprocessorDefinitions>LINKALL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ProgramDataBaseFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(TEMP)vc$(PlatformToolsetVersion)$(ProjectName).pd</ProgramDataBaseFileName>
+      <PreprocessorDefinitions>SSL_STATIC_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+	  <ProgramDataBaseFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(TEMP)vc$(PlatformToolsetVersion)$(ProjectName).pd</ProgramDataBaseFileName>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>libopenssl\targets\win32\$(PlatformTarget);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libopenssl_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libopenssl_static.lib;Crypt32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Manifest>
       <AdditionalManifestFiles>manifest.xml</AdditionalManifestFiles>

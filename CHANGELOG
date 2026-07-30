@@ -1,5 +1,10 @@
 Note: beware of crypto version (see shairtunes)
 
+1.8.6
+ - update flac to stock version
+ - fix a oggflac chaining issue
+ - Windows static version was not so static
+
 1.8.5
  - fix crash on malformed HTTP responsed from players (Sonos One)
 
