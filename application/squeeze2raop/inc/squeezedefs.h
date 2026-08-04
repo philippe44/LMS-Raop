@@ -9,7 +9,7 @@
 
 #pragma once
 
-#define VERSION "v1.8.6"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v1.8.7"" ("__DATE__" @ "__TIME__")"
 
 #define STR_LEN 256
 

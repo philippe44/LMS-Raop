@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+1.8.7
+ - various fixes following libcodecs and libraop
+ 
 1.8.6
  - update flac to stock version
  - fix a oggflac chaining issue
