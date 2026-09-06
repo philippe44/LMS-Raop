@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+1.8.8
+ - fix some volume timestamp rollover
+
 1.8.7
  - various fixes following libcodecs and libraop
  

@@ -340,7 +340,7 @@ bool sq_callback(void *caller, sq_action_t action, ...)
 			uint32_t Volume = LMSVolumeMap[va_arg(args, int)];
 			uint32_t now = gettime_ms();
 
-			if (device->Config.VolumeMode == VOLUME_HARD &&	now > device->VolumeStampRx + 1000 &&
+			if (device->Config.VolumeMode == VOLUME_HARD &&	now - device->VolumeStampRx > 1000 &&
 				(Volume || device->Config.MuteOnPause || sq_get_mode(device->SqueezeHandle) == device->sqState)) {
 				
 				device->Volume = Volume;
@@ -711,7 +711,7 @@ static bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop
 		}
 
 		// device creation so search a free spot.
-		for (Device = glMRDevices; Device->Running && Device < glMRDevices + MAX_RENDERERS; Device++);
+		for (Device = glMRDevices; Device < glMRDevices + MAX_RENDERERS && Device->Running; Device++);
 
 		// no more room !
 		if (Device == glMRDevices + MAX_RENDERERS) {
