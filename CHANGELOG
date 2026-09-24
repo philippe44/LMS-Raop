@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+1.8.10
+ - build cleanup
+ 
 1.8.9
  - fix some potential buffer overflow (crosstools/libraop)
 
