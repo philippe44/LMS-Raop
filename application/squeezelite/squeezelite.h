@@ -437,6 +437,8 @@ struct outputstate {
 	};
 	u8_t  *track_start;        // set in decode thread
 	bool  detect_start_time;   // use in audio extractor
+	bool  detect_end_time;     // use in audio extractor
+	u32_t last_track_end_time;
 	u32_t gainL;               // set by slimproto
 	u32_t gainR;               // set by slimproto
 	u32_t next_replay_gain;    // set by slimproto
