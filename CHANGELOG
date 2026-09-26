@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+1.8.11
+ - fix crosstools regression
+ 
 1.8.10
  - build cleanup
  
