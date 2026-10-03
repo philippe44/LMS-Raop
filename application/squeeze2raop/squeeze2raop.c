@@ -961,7 +961,7 @@ static bool AddRaopDevice(struct sMR *Device, mdnssd_service_t *s) {
 								 glDACPid, Device->ActiveRemote,
 								 Device->Config.AlacEncode ? RAOP_ALAC : RAOP_ALAC_RAW , FRAMES_PER_BLOCK,
 								 (uint32_t) MS2TS(Device->Config.ReadAhead, Device->SampleRate ? atoi(Device->SampleRate) : 44100),
-								 Crypto, Auth, Secret, password, Device->Crypto, md,
+								 Crypto, Auth, Secret, password, Device->Crypto, md, am,
 								 Device->SampleRate ? atoi(Device->SampleRate) : 44100,
 								 Device->SampleSize ? atoi(Device->SampleSize) : 16,
 								 Device->Channels ? atoi(Device->Channels) : 2,

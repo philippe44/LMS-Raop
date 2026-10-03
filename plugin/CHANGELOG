@@ -1,5 +1,8 @@
 Note: beware of crypto version (see shairtunes)
 
+1.8.12
+ - libraop: change user-agent for AppleTV and HomePods
+
 1.8.11
  - fix crosstools regression
  
