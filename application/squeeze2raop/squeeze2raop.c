@@ -909,6 +909,7 @@ static bool AddRaopDevice(struct sMR *Device, mdnssd_service_t *s) {
 	}
 
 	strcpy(Device->FriendlyName, s->hostname);
+	url_decode(Device->FriendlyName);
 	p = strcasestr(Device->FriendlyName, ".local");
 	if (p) *p = '\0';
 

@@ -16,6 +16,9 @@ my $log   = logger('plugin.raopbridge');
 
 my $squeeze2raop;
 my $binary;
+my $restartAttempts = 0;
+my $maxRestartAttempts = 5;
+my $restartBackoff = 30;  # seconds
 
 sub binaries {
 	my $os = Slim::Utils::OSDetect::details();
@@ -174,20 +177,33 @@ sub start {
 
 sub beat {
 	my ($class, $path, @args) = @_;
-	
+
 	if ($prefs->get('autorun') && !($squeeze2raop && $squeeze2raop->alive)) {
-		$log->error('crashed ... restarting');
-		
-		if ($prefs->get('logging')) {
-			open(my $fh, ">>", $class->logFile);
-			print $fh "\nRestarting Squeeze2raop after crash: $path @args\n";
-			close $fh;
+		$restartAttempts++;
+
+		if ($restartAttempts <= $maxRestartAttempts) {
+			$log->error('crashed ... restarting (attempt %d/%d)', $restartAttempts, $maxRestartAttempts);
+
+			if ($prefs->get('logging')) {
+				open(my $fh, ">>", $class->logFile);
+				print $fh "\nRestarting Squeeze2raop after crash (attempt $restartAttempts/$maxRestartAttempts): $path @args\n";
+				close $fh;
+			}
+
+			eval { $squeeze2raop = Proc::Background->new({ 'die_upon_destroy' => 1 }, $path, @args); };
+
+			# Exponential backoff: 30s, 60s, 120s, 240s, 480s
+			$restartBackoff = 30 * (2 ** ($restartAttempts - 1));
+		} else {
+			$log->error('crashed %d times, giving up restarts', $restartAttempts);
 		}
-		
-		eval { $squeeze2raop = Proc::Background->new({ 'die_upon_destroy' => 1 }, $path, @args); };
-	}	
-	
-	Slim::Utils::Timers::setTimer($class, Time::HiRes::time() + 30, \&beat, $path, @args);
+	} else {
+		# Process is alive, reset restart counter
+		$restartAttempts = 0;
+		$restartBackoff = 30;
+	}
+
+	Slim::Utils::Timers::setTimer($class, Time::HiRes::time() + $restartBackoff, \&beat, $path, @args);
 }
 
 sub stop {
