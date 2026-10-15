@@ -137,7 +137,7 @@ static pthread_mutex_t		glMainMutex;
 static pthread_cond_t		glMainCond;
 static bool					glInteractive = true;
 static char					*glLogFile;
-static char 				glDACPid[] = "1A2B3D4EA1B2C3D4";
+static char					glDACPid[17];
 static struct mdnsd 		*gl_mDNSResponder;
 static int					glActiveRemoteSock;
 static pthread_t			glActiveRemoteThread;
@@ -896,10 +896,17 @@ static bool AddRaopDevice(struct sMR *Device, mdnssd_service_t *s) {
 	Device->Delete			= 0;
 
 	memset(Device->ActiveRemote, 0, 16);
+	memset(Device->DACPid, 0, 17);
 	SetVolumeMapping(Device);
 
 	strcpy(Device->UDN, s->name);
 	sprintf(Device->ActiveRemote, "%u", hash32(Device->UDN));
+	sprintf(Device->DACPid, "%08X%08X", hash32(Device->UDN), hash32(Device->UDN + strlen(Device->UDN)/2));
+
+	// Use first device's DACP-ID as global for mDNS service
+	if (glDACPid[0] == '\0') {
+		strcpy(glDACPid, Device->DACPid);
+	}
 
 	strcpy(Device->FriendlyName, s->hostname);
 	p = strcasestr(Device->FriendlyName, ".local");
@@ -958,7 +965,7 @@ static bool AddRaopDevice(struct sMR *Device, mdnssd_service_t *s) {
 	}
 
 	Device->Raop = raopcl_create(glHost, glPortBase, glPortRange,
-								 glDACPid, Device->ActiveRemote,
+								 Device->DACPid, Device->ActiveRemote,
 								 Device->Config.AlacEncode ? RAOP_ALAC : RAOP_ALAC_RAW , FRAMES_PER_BLOCK,
 								 (uint32_t) MS2TS(Device->Config.ReadAhead, Device->SampleRate ? atoi(Device->SampleRate) : 44100),
 								 Crypto, Auth, Secret, password, Device->Crypto, md, am,

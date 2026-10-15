@@ -110,6 +110,7 @@ struct sMR {
 	char *Codecs;
 	char *Crypto;
 	char ActiveRemote[16];
+	char DACPid[17];
 	uint32_t SkipStart;
 	bool SkipDir;
 };
