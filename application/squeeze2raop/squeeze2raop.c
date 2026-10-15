@@ -477,7 +477,7 @@ static void *PlayerThread(void *args) {
 		if (!req) {
 			LOG_DEBUG("[%p]: tick %u", Device, now);
 
-			if (Device->DiscWait && (Device->LastFlush + (Device->Config.IdleTimeout * 1000) - now > 1000) ) {
+			if (Device->DiscWait && (now - Device->LastFlush > (Device->Config.IdleTimeout * 1000)) ) {
 				LOG_INFO("[%p]: Disconnecting %u", Device, now);
 				raopcl_disconnect(Device->Raop);
 				Device->DiscWait = false;
@@ -485,10 +485,14 @@ static void *PlayerThread(void *args) {
 
 			Device->Sane = raopcl_is_sane(Device->Raop) ? 0 : Device->Sane + 1;
 			if (Device->Sane > 3) {
-				LOG_WARN("[%p]: broken connection: switching off player", Device);
-				pthread_mutex_lock(&Device->Mutex);
-				sq_notify(Device->SqueezeHandle, SQ_OFF);
-				pthread_mutex_unlock(&Device->Mutex);
+				LOG_WARN("[%p]: broken connection: attempting repair", Device);
+				if (!raopcl_repair(Device->Raop, true)) {
+					LOG_WARN("[%p]: repair failed, switching off player", Device);
+					pthread_mutex_lock(&Device->Mutex);
+					sq_notify(Device->SqueezeHandle, SQ_OFF);
+					pthread_mutex_unlock(&Device->Mutex);
+				}
+				Device->Sane = 0;
 			}
 
 			// after that, only check what's needed when running
