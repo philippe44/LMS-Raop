@@ -341,7 +341,7 @@ bool sq_callback(void *caller, sq_action_t action, ...)
 			uint32_t now = gettime_ms();
 
 			if (device->Config.VolumeMode == VOLUME_HARD &&	now - device->VolumeStampRx > 1000 &&
-				(Volume || device->Config.MuteOnPause || sq_get_mode(device->SqueezeHandle) == device->sqState)) {
+				(!Volume || device->Config.MuteOnPause || sq_get_mode(device->SqueezeHandle) == device->sqState)) {
 				
 				device->Volume = Volume;
 				
