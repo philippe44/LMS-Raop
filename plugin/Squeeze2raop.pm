@@ -105,6 +105,7 @@ sub start {
 	
 	if ($prefs->get('useLMSsocket')) {
 		push @params, ("-b", Slim::Utils::Network::serverAddr());
+		push @params, ("-s", Slim::Utils::Network::serverAddr());
 	}
 
 	if ($prefs->get('logging')) {
