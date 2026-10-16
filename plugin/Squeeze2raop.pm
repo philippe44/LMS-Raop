@@ -105,7 +105,6 @@ sub start {
 	
 	if ($prefs->get('useLMSsocket')) {
 		push @params, ("-b", Slim::Utils::Network::serverAddr());
-		push @params, ("-s", Slim::Utils::Network::serverAddr());
 	}
 
 	if ($prefs->get('logging')) {
@@ -183,7 +182,7 @@ sub beat {
 		$restartAttempts++;
 
 		if ($restartAttempts <= $maxRestartAttempts) {
-			$log->error('crashed ... restarting (attempt %d/%d)', $restartAttempts, $maxRestartAttempts);
+			$log->error("crashed ... restarting (attempt $restartAttempts/$maxRestartAttempts)");
 
 			if ($prefs->get('logging')) {
 				open(my $fh, ">>", $class->logFile);
@@ -196,7 +195,7 @@ sub beat {
 			# Exponential backoff: 30s, 60s, 120s, 240s, 480s
 			$restartBackoff = 30 * (2 ** ($restartAttempts - 1));
 		} else {
-			$log->error('crashed %d times, giving up restarts', $restartAttempts);
+			$log->error("crashed $restartAttempts times, giving up restarts");
 		}
 	} else {
 		# Process is alive, reset restart counter
