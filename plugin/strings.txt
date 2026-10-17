@@ -1,26 +1,34 @@
 PLUGIN_RAOPBRIDGE
 	EN	AirPlay bridge
+	DA	AirPlay bridge
 
 PLUGIN_RAOPBRIDGE_DESC
-	EN	Use AirPlay compatible devices in LMS 
-	
+	EN	Use AirPlay compatible devices in LMS
+	DA	Brug AirPlay-kompatible enheder i LMS
+
 PLUGIN_RAOPBRIDGE_YES
 	EN	Yes
-		
+	DA	Ja
+
 PLUGIN_RAOPBRIDGE_NO
 	EN	No
-	
+	DA	Nej
+
 PLUGIN_RAOPBRIDGE_AUTORUN
 	EN	Start the Bridge
+	DA	Start broen
 
 PLUGIN_RAOPBRIDGE_AUTORUN_DESC
 	EN	Automatically start the AirPlay bridge instance when the server starts.
+	DA	Start automatisk AirPlay-bro instansen når serveren starter.
 
 PLUGIN_RAOPBRIDGE_RUNNING_0
 	EN	Not Running
+	DA	Kører ikke
 
 PLUGIN_RAOPBRIDGE_RUNNING_1
 	EN	Running
+	DA	Kører
 	
 PLUGIN_RAOPBRIDGE_USERGUIDELINK
 	EN	View User Guide

@@ -137,7 +137,7 @@ static pthread_mutex_t		glMainMutex;
 static pthread_cond_t		glMainCond;
 static bool					glInteractive = true;
 static char					*glLogFile;
-static char 				glDACPid[] = "1A2B3D4EA1B2C3D4";
+static char					glDACPid[17];
 static struct mdnsd 		*gl_mDNSResponder;
 static int					glActiveRemoteSock;
 static pthread_t			glActiveRemoteThread;
@@ -477,7 +477,7 @@ static void *PlayerThread(void *args) {
 		if (!req) {
 			LOG_DEBUG("[%p]: tick %u", Device, now);
 
-			if (Device->DiscWait && (Device->LastFlush + (Device->Config.IdleTimeout * 1000) - now > 1000) ) {
+			if (Device->DiscWait && (now - Device->LastFlush > (Device->Config.IdleTimeout * 1000)) ) {
 				LOG_INFO("[%p]: Disconnecting %u", Device, now);
 				raopcl_disconnect(Device->Raop);
 				Device->DiscWait = false;
@@ -485,10 +485,14 @@ static void *PlayerThread(void *args) {
 
 			Device->Sane = raopcl_is_sane(Device->Raop) ? 0 : Device->Sane + 1;
 			if (Device->Sane > 3) {
-				LOG_WARN("[%p]: broken connection: switching off player", Device);
-				pthread_mutex_lock(&Device->Mutex);
-				sq_notify(Device->SqueezeHandle, SQ_OFF);
-				pthread_mutex_unlock(&Device->Mutex);
+				LOG_WARN("[%p]: broken connection: attempting repair", Device);
+				if (!raopcl_repair(Device->Raop, true)) {
+					LOG_WARN("[%p]: repair failed, switching off player", Device);
+					pthread_mutex_lock(&Device->Mutex);
+					sq_notify(Device->SqueezeHandle, SQ_OFF);
+					pthread_mutex_unlock(&Device->Mutex);
+				}
+				Device->Sane = 0;
 			}
 
 			// after that, only check what's needed when running
@@ -896,12 +900,20 @@ static bool AddRaopDevice(struct sMR *Device, mdnssd_service_t *s) {
 	Device->Delete			= 0;
 
 	memset(Device->ActiveRemote, 0, 16);
+	memset(Device->DACPid, 0, 17);
 	SetVolumeMapping(Device);
 
 	strcpy(Device->UDN, s->name);
 	sprintf(Device->ActiveRemote, "%u", hash32(Device->UDN));
+	sprintf(Device->DACPid, "%08X%08X", hash32(Device->UDN), hash32(Device->UDN + strlen(Device->UDN)/2));
+
+	// Use first device's DACP-ID as global for mDNS service
+	if (glDACPid[0] == '\0') {
+		strcpy(glDACPid, Device->DACPid);
+	}
 
 	strcpy(Device->FriendlyName, s->hostname);
+	url_decode(Device->FriendlyName);
 	p = strcasestr(Device->FriendlyName, ".local");
 	if (p) *p = '\0';
 
@@ -958,7 +970,7 @@ static bool AddRaopDevice(struct sMR *Device, mdnssd_service_t *s) {
 	}
 
 	Device->Raop = raopcl_create(glHost, glPortBase, glPortRange,
-								 glDACPid, Device->ActiveRemote,
+								 Device->DACPid, Device->ActiveRemote,
 								 Device->Config.AlacEncode ? RAOP_ALAC : RAOP_ALAC_RAW , FRAMES_PER_BLOCK,
 								 (uint32_t) MS2TS(Device->Config.ReadAhead, Device->SampleRate ? atoi(Device->SampleRate) : 44100),
 								 Crypto, Auth, Secret, password, Device->Crypto, md, am,
