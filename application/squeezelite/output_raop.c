@@ -66,6 +66,24 @@ void output_close(struct thread_ctx_s *ctx)
 	free(ctx->output.buf);
 }
 
+/*---------------------------------------------------------------------------*/
+static void _raop_flush_at_track_start(struct thread_ctx_s *ctx) {
+	u32_t gap;
+	u32_t safety_ms = 200;
+
+	if (!ctx->output.detect_end_time) {
+		return;
+	}
+	ctx->output.detect_end_time = false;
+	gap = gettime_ms() - ctx->output.last_track_end_time;
+	if (gap > safety_ms) {
+		LOG_INFO("[%p]: gap between last track end and current track start is large(%u ms > %u ms), sync device time",
+			ctx, gap, safety_ms);
+		// flush and stop to sync device time
+		raopcl_flush(ctx->output.device);
+		raopcl_stop(ctx->output.device);
+	}
+}
 
 /*---------------------------------------------------------------------------*/
 static void *output_raop_thread(struct thread_ctx_s *ctx) {
@@ -90,6 +108,7 @@ static void *output_raop_thread(struct thread_ctx_s *ctx) {
 					ctx->output.track_start_time = NTP2MS(playtime);
 					LOG_INFO("[%p]: track actual start time:%u (gap:%d)", ctx, ctx->output.track_start_time,
 										(s32_t) (ctx->output.track_start_time - ctx->output.start_at));
+					_raop_flush_at_track_start(ctx);
 				}
 
 				ctx->output.buf_frames = 0;
